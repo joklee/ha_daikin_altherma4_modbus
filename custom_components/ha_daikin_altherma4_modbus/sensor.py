@@ -1,0 +1,217 @@
+import logging
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.const import EntityCategory
+from .const import INPUT_REGISTERS, DOMAIN, CALCULATED_SENSORS, UNIQUE_ID_PREFIX, DEVICE_INFO
+
+_LOGGER = logging.getLogger(__name__)
+
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Setup aller Sensors über Config Entry."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+    entities = []
+
+    # Input-Register Sensoren
+    for item in INPUT_REGISTERS:
+        name = item["name"]
+        address = item["address"]
+        unit = item["unit"]
+        scale = item["scale"]
+        dtype = item["dtype"]
+        count = item.get("count", 1)
+        icon = item.get("icon", "mdi:information")
+        enum_map = item.get("enum_map")
+        entity_category = item.get("entity_category")
+
+        entities.append(
+            DaikinInputSensor(
+                coordinator=coordinator,
+                entry=entry,
+                name=name,
+                address=address,
+                unit=unit,
+                dtype=dtype,
+                scale=scale,
+                count=count,
+                icon=icon,
+                enum_map=enum_map,
+                entity_category=entity_category,
+            )
+        )
+
+    # Berechnete Sensoren
+    for calc in CALCULATED_SENSORS:
+        if calc["type"] == "heat_power":
+            entities.append(
+                CalculatedHeatPowerSensor(
+                    coordinator=coordinator,
+                    entry=entry,
+                    name=calc["name"],
+                    unique_id=calc["unique_id"],
+                    unit=calc["unit"],
+                    device_class=calc["device_class"],
+                )
+            )
+        elif calc["type"] == "cop":
+            entities.append(
+                CalculatedCoPSensor(
+                    coordinator=coordinator,
+                    entry=entry,
+                    name=calc["name"],
+                    unique_id=calc["unique_id"],
+                    unit=calc["unit"],
+                    device_class=calc["device_class"],
+                )
+            )
+        elif calc["type"] == "last_triggered":
+            entities.append(
+                LastTriggeredSensor(
+                    coordinator=coordinator,
+                    entry=entry,
+                    name=calc["name"],
+                    unique_id=calc["unique_id"],
+                    unit=calc["unit"],
+                    device_class=calc["device_class"],
+                    trigger_address=calc["trigger_address"],
+                )
+            )
+
+    async_add_entities(entities)
+
+
+class DaikinInputSensor(CoordinatorEntity, SensorEntity):
+    """Ein Sensor für Input-Register."""
+
+    def __init__(self, coordinator, entry, name, address, unit, dtype, scale, count, icon, enum_map, entity_category=None):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._address = address
+        self._dtype = dtype
+        self._scale = scale
+        self._count = count
+        self._icon = icon
+        self._enum_map = enum_map
+        self._attr_name = name
+        self._attr_unique_id = f"{UNIQUE_ID_PREFIX}input_{address}"
+        self._attr_native_unit_of_measurement = unit
+        self._attr_icon = self._icon
+        self._attr_device_info = DEVICE_INFO
+        
+        # Entity category setzen
+        if entity_category == "diagnostic":
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def native_value(self):
+        val = self.coordinator.data.get(self._address)
+        if val is None:
+            return None
+
+        # ENUM Mapping
+        if self._enum_map:
+            val = self._enum_map.get(val, val)
+
+        # Skalierung anwenden
+        return val * self._scale
+
+
+class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
+    """Berechneter Sensor für Wärmepumpenleistung."""
+
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_name = name
+        self._attr_unique_id = unique_id
+        self._attr_native_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr_icon = "mdi:fire"
+        self._attr_device_info = DEVICE_INFO
+
+    @property
+    def native_value(self):
+        """Berechnet die Wärmeleistung in kW."""
+        # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren
+        flow_raw = self.coordinator.data.get(48, 0)  # Flow rate (roh)
+        temp_vl_raw = self.coordinator.data.get(39, 0)  # Leaving water temperature PHE (roh)
+        temp_rl_raw = self.coordinator.data.get(41, 0)  # Return water temperature (roh)
+
+        flow = flow_raw * 0.1  # L/min
+        temp_vl = temp_vl_raw # °C
+        temp_rl = temp_rl_raw # °C
+
+        delta_t = temp_vl - temp_rl
+        value = flow * delta_t * 0.07  # Berechnung Wärmeleistung in kW
+        return round(value, 2)
+
+
+class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
+    """Berechneter Sensor für Coefficient of Performance (CoP)."""
+
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_name = name
+        self._attr_unique_id = unique_id
+        self._attr_native_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr_state_class = "measurement"
+        self._attr_icon = "mdi:gauge"
+        self._attr_device_info = DEVICE_INFO
+
+    @property
+    def native_value(self):
+        """Berechnet den CoP als Verhältnis von Heizleistung zu elektrischer Leistung."""
+        # Heizleistung berechnen (wie in CalculatedHeatPowerSensor)
+        flow_raw = self.coordinator.data.get(48, 0)  # Flow rate (roh)
+        temp_vl_raw = self.coordinator.data.get(39, 0)  # Leaving water temperature PHE (roh)
+        temp_rl_raw = self.coordinator.data.get(41, 0)  # Return water temperature (roh)
+
+        flow = flow_raw * 0.01  # L/min
+        temp_vl = temp_vl_raw * 0.01  # °C
+        temp_rl = temp_rl_raw * 0.01  # °C
+
+        delta_t = temp_vl - temp_rl
+        heat_power = flow * delta_t * 0.07  # Wärmeleistung in kW
+
+        # Elektrische Leistung
+        electric_power_sensor = self._entry.data.get("electric_power_sensor")
+        if electric_power_sensor:
+            # Externer Sensor
+            state = self.coordinator.hass.states.get(electric_power_sensor)
+            if state and state.state not in [None, "unknown", "unavailable"]:
+                try:
+                    electric_power = float(state.state)
+                except ValueError:
+                    electric_power = None
+            else:
+                electric_power = None
+        else:
+            # Modbus
+            electric_power_raw = self.coordinator.data.get(50, 0)  # Heat pump power consumption (roh)
+            electric_power = electric_power_raw * 0.01  # in kW
+
+        if electric_power and electric_power > 0 and heat_power > 0:
+            cop = heat_power / electric_power
+            return round(cop, 2)
+        else:
+            return None
+
+
+class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
+    """Sensor für das letzte Auslösen eines Binärsensors."""
+
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, trigger_address):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._trigger_address = trigger_address
+        self._attr_name = name
+        self._attr_unique_id = unique_id
+        self._attr_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr_device_info = DEVICE_INFO
+
+    @property
+    def native_value(self):
+        """Gibt den Zeitstempel des letzten Auslösens zurück."""
+        return self.coordinator.data.get(f"last_triggered_{self._trigger_address}")
