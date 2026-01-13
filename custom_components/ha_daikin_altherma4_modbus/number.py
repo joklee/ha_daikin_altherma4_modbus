@@ -1,6 +1,6 @@
 from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN, HOLDING_REGISTERS
+from ...const import DOMAIN, HOLDING_REGISTERS
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
