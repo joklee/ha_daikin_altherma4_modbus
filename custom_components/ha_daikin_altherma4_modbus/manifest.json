@@ -1,5 +1,5 @@
 {
-    "domain": "daikin_altherma4_modbus",
+    "domain": "ha_daikin_altherma4_modbus",
     "name": "Daikin Altherma 4 Modbus",
     "version": "0.1.0",
     "documentation": "https://github.com/joklee/ha_daikin_altherma4_modbus",

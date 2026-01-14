@@ -1,4 +1,4 @@
-DOMAIN = "daikin_altherma4_modbus"
+DOMAIN = "ha_daikin_altherma4_modbus"
 DEFAULT_PORT = 502
 DEFAULT_SCAN_INTERVAL = 15
 UNIQUE_ID_PREFIX = "altherma4_modbus_"
