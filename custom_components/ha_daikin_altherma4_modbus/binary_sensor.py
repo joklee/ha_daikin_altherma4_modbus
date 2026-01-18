@@ -2,7 +2,7 @@ import logging
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import EntityCategory
-from .const import DOMAIN, BINARY_SENSORS, UNIQUE_ID_PREFIX, DEVICE_INFO
+from .const import DOMAIN, BINARY_SENSORS, DEVICE_INFO
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,6 +20,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 address=binary["address"],
                 device_class=binary["device_class"],
                 entity_category=binary.get("entity_category"),
+                unique_id=binary.get("unique_id"),
             )
         )
 
@@ -29,19 +30,21 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Ein Binary Sensor für Modbus-Register."""
 
-    def __init__(self, coordinator, entry, name, address, device_class, entity_category=None):
+    def __init__(self, coordinator, entry, name, address, device_class, entity_category=None, unique_id=None):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
         self._attr_name = name
-        self._attr_unique_id = f"{UNIQUE_ID_PREFIX}binary_{address}"
+        self._attr_unique_id = unique_id or f"{DOMAIN}_{address}"
         self._attr_device_class = device_class
-        if entity_category == "diagnostic":
-            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._attr_entity_category = entity_category
         self._attr_device_info = DEVICE_INFO
 
     @property
     def is_on(self):
         """Gibt True zurück, wenn der Wert 1 ist."""
-        val = self.coordinator.data.get(self._address)
+        data = self.coordinator.data.get(self._attr_unique_id)
+        if data is None:
+            return False
+        val = data.get("value")
         return val == 1

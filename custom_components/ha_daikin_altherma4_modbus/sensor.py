@@ -2,7 +2,7 @@ import logging
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import EntityCategory
-from .const import INPUT_REGISTERS, DOMAIN, CALCULATED_SENSORS, UNIQUE_ID_PREFIX, DEVICE_INFO
+from .const import INPUT_REGISTERS, DOMAIN, CALCULATED_SENSORS, DEVICE_INFO
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -10,19 +10,21 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Setup aller Sensors über Config Entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
+    _LOGGER.error(f"start sensor")
 
     # Input-Register Sensoren
     for item in INPUT_REGISTERS:
         name = item["name"]
         address = item["address"]
-        unit = item["unit"]
-        scale = item["scale"]
-        dtype = item["dtype"]
+        unit = item.get("unit", "")
+        dtype = item.get("dtype", "uint16")
+        scale = item.get("scale", 1)
         count = item.get("count", 1)
         icon = item.get("icon", "mdi:information")
         enum_map = item.get("enum_map")
         entity_category = item.get("entity_category")
-
+        unique_id = item.get("unique_id", f"{DOMAIN}_input_{address}")
+        
         entities.append(
             DaikinInputSensor(
                 coordinator=coordinator,
@@ -35,7 +37,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 count=count,
                 icon=icon,
                 enum_map=enum_map,
-                entity_category=entity_category,
+                entity_category=None,
+                unique_id=unique_id,
             )
         )
 
@@ -50,6 +53,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
+                    entity_category=calc["entity_category"]
                 )
             )
         elif calc["type"] == "cop":
@@ -61,6 +65,19 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
+                    entity_category=calc["entity_category"]
+                )
+            )
+        elif calc["type"] == "last_defrost_restart":
+            entities.append(
+                CalculatedLastDefrostRestartSensor(
+                    coordinator=coordinator,
+                    entry=entry,
+                    name=calc["name"],
+                    unique_id=calc["unique_id"],
+                    unit=calc["unit"],
+                    device_class=calc["device_class"],
+                    entity_category=calc["entity_category"],
                 )
             )
         elif calc["type"] == "last_triggered":
@@ -73,6 +90,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     unit=calc["unit"],
                     device_class=calc["device_class"],
                     trigger_address=calc["trigger_address"],
+                    entity_category=calc["entity_category"],
                 )
             )
 
@@ -82,7 +100,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class DaikinInputSensor(CoordinatorEntity, SensorEntity):
     """Ein Sensor für Input-Register."""
 
-    def __init__(self, coordinator, entry, name, address, unit, dtype, scale, count, icon, enum_map, entity_category=None):
+    def __init__(self, coordinator, entry, name, address, unit, dtype, scale, count, icon, enum_map, entity_category=None, unique_id=None):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
@@ -92,18 +110,21 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._icon = icon
         self._enum_map = enum_map
         self._attr_name = name
-        self._attr_unique_id = f"{UNIQUE_ID_PREFIX}input_{address}"
+        self._attr_unique_id = unique_id or f"{DOMAIN}_{address}"
         self._attr_native_unit_of_measurement = unit
         self._attr_icon = self._icon
         self._attr_device_info = DEVICE_INFO
         
         # Entity category setzen
-        if entity_category == "diagnostic":
-            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._attr_entity_category = entity_category
 
     @property
     def native_value(self):
-        val = self.coordinator.data.get(self._address)
+        data = self.coordinator.data.get(self._attr_unique_id)
+        if data is None:
+            return None
+        
+        val = data.get("value")
         if val is None:
             return None
 
@@ -118,7 +139,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
 class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Wärmepumpenleistung."""
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class):
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_name = name
@@ -127,14 +148,18 @@ class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = device_class
         self._attr_icon = "mdi:fire"
         self._attr_device_info = DEVICE_INFO
+        self._attr_entity_category = entity_category
 
     @property
     def native_value(self):
         """Berechnet die Wärmeleistung in kW."""
         # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren
-        flow_raw = self.coordinator.data.get(48, 0)  # Flow rate (roh)
-        temp_vl_raw = self.coordinator.data.get(39, 0)  # Leaving water temperature PHE (roh)
-        temp_rl_raw = self.coordinator.data.get(41, 0)  # Return water temperature (roh)
+        flow_data = self.coordinator.data.get(f"{DOMAIN}_input_48", {})
+        flow_raw = flow_data.get("value", 0)  # Flow rate (roh)
+        temp_vl_data = self.coordinator.data.get(f"{DOMAIN}_input_39", {})
+        temp_vl_raw = temp_vl_data.get("value", 0)  # Leaving water temperature PHE (roh)
+        temp_rl_data = self.coordinator.data.get(f"{DOMAIN}_input_41", {})
+        temp_rl_raw = temp_rl_data.get("value", 0)  # Return water temperature (roh)
 
         flow = flow_raw * 0.1  # L/min
         temp_vl = temp_vl_raw # °C
@@ -148,7 +173,7 @@ class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
 class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Coefficient of Performance (CoP)."""
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class):
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_name = name
@@ -158,14 +183,18 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         self._attr_state_class = "measurement"
         self._attr_icon = "mdi:gauge"
         self._attr_device_info = DEVICE_INFO
+        self._attr_entity_category = entity_category
 
     @property
     def native_value(self):
         """Berechnet den CoP als Verhältnis von Heizleistung zu elektrischer Leistung."""
         # Heizleistung berechnen (wie in CalculatedHeatPowerSensor)
-        flow_raw = self.coordinator.data.get(48, 0)  # Flow rate (roh)
-        temp_vl_raw = self.coordinator.data.get(39, 0)  # Leaving water temperature PHE (roh)
-        temp_rl_raw = self.coordinator.data.get(41, 0)  # Return water temperature (roh)
+        flow_data = self.coordinator.data.get(f"{DOMAIN}_input_48", {})
+        flow_raw = flow_data.get("value", 0)  # Flow rate (roh)
+        temp_vl_data = self.coordinator.data.get(f"{DOMAIN}_input_39", {})
+        temp_vl_raw = temp_vl_data.get("value", 0)  # Leaving water temperature PHE (roh)
+        temp_rl_data = self.coordinator.data.get(f"{DOMAIN}_input_41", {})
+        temp_rl_raw = temp_rl_data.get("value", 0)  # Return water temperature (roh)
 
         flow = flow_raw * 0.01  # L/min
         temp_vl = temp_vl_raw * 0.01  # °C
@@ -188,7 +217,8 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
                 electric_power = None
         else:
             # Modbus
-            electric_power_raw = self.coordinator.data.get(50, 0)  # Heat pump power consumption (roh)
+            power_data = self.coordinator.data.get(f"{DOMAIN}_input_50", {})
+            electric_power_raw = power_data.get("value", 0)  # Heat pump power consumption (roh)
             electric_power = electric_power_raw * 0.01  # in kW
 
         if electric_power and electric_power > 0 and heat_power > 0:
@@ -201,7 +231,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
 class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
     """Sensor für das letzte Auslösen eines Binärsensors."""
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, trigger_address):
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, trigger_address, entity_category=None):
         super().__init__(coordinator)
         self._entry = entry
         self._trigger_address = trigger_address
@@ -210,6 +240,7 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
         self._attr_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_device_info = DEVICE_INFO
+        self._attr_entity_category = entity_category
 
     @property
     def native_value(self):
