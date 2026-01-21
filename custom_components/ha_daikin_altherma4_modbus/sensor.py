@@ -10,7 +10,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Setup aller Sensors über Config Entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
-    _LOGGER.error(f"start sensor")
 
     # Input-Register Sensoren
     for item in INPUT_REGISTERS:

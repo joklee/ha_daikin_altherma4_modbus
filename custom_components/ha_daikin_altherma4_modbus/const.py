@@ -435,7 +435,20 @@ HOLDING_REGISTERS = [
             1: "On (Automatic)", 
             2: "On (Manual)"
         }
-    }
+    },
+    {
+        "name": "Weather-dependent mode Main LWT Heating setpoint offset",
+        "address": 53,
+        "unit": "°C",
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_53",
+        "min_value": -5,
+        "max_value": 5,
+        "step": 1
+    },
 ]
 
 # Berechnete Sensoren
