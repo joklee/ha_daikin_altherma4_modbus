@@ -5,7 +5,7 @@ from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from .const import INPUT_REGISTERS, DOMAIN, BINARY_SENSORS, HOLDING_REGISTERS
+from .const import INPUT_REGISTERS, DOMAIN, BINARY_SENSORS, HOLDING_REGISTERS, SELECT_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,14 +73,20 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                         "address": address
                     }
             
-            # HOLDING_REGISTERS verarbeiten (wenn vorhanden)
+            # HOLDING_REGISTERS und SELECT_REGISTERS verarbeiten (wenn vorhanden)
+            all_holding_registers = []
             if HOLDING_REGISTERS:
-                _LOGGER.info(f"Verarbeite {len(HOLDING_REGISTERS)} Holding-Register")
+                all_holding_registers.extend(HOLDING_REGISTERS)
+            if SELECT_REGISTERS:
+                all_holding_registers.extend(SELECT_REGISTERS)
+            
+            if all_holding_registers:
+                _LOGGER.info(f"Verarbeite {len(all_holding_registers)} Holding-Register")
                 try:
                     hr = await self.client.read_holding_registers(address=0, count=60)
                     if not hr.isError():
                         _LOGGER.info(f"Holding-Register erfolgreich gelesen: {len(hr.registers)} Register")
-                        for item in HOLDING_REGISTERS:
+                        for item in all_holding_registers:
                             address = item["address"]
                             input_type = item.get("input_type", "holding")
                             unique_id = item.get("unique_id", f"holding_{address}")
@@ -100,7 +106,7 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                 except Exception as e:
                     _LOGGER.warning(f"Konnte Holding-Register nicht lesen: {e}")
                     # Fallback bei Exception
-                    for item in HOLDING_REGISTERS:
+                    for item in all_holding_registers:
                         address = item["address"]
                         input_type = item.get("input_type", "holding")
                         unique_id = item.get("unique_id", f"holding_{address}")

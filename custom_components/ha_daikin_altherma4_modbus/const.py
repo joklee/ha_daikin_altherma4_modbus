@@ -139,17 +139,18 @@ INPUT_REGISTERS = [
         "unique_id": f"{DOMAIN}_input_43",
         "entity_category": None
     },
-    {
-        "name": "Liquid refrigerant temperature",
-        "address": 44,
-        "unit": "°C",
-        "scale": 0.001,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_44",
-        "entity_category": None
-    },
+    # Wrong data
+    # {
+    #     "name": "Liquid refrigerant temperature",
+    #     "address": 44,
+    #     "unit": "°C",
+    #     "scale": 0.001,
+    #     "dtype": "int16",
+    #     "icon": "mdi:thermometer",
+    #     "input_type": "input",
+    #     "unique_id": f"{DOMAIN}_input_44",
+    #     "entity_category": None
+    # },
 
     # Durchfluss
     {
@@ -261,50 +262,52 @@ INPUT_REGISTERS = [
         "unique_id": f"{DOMAIN}_input_56",
         "entity_category": None
     },
-    {
-        "name": "Leaving water Add Heating setpoint lower",
-        "address": 57,
-        "unit": "°C",
-        "scale": 0.001,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_57",
-        "entity_category": None
-    },
-    {
-        "name": "Leaving water Add Heating setpoint upper",
-        "address": 58,
-        "unit": "°C",
-        "scale": 0.001,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_58",
-        "entity_category": None
-    },
-    {
-        "name": "Leaving water Add Cooling setpoint lower",
-        "address": 59,
-        "unit": "°C",
-        "scale": 0.001,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_59",
-        "entity_category": None
-    },
-    {
-        "name": "Leaving water Add Cooling setpoint upper",
-        "address": 60,
-        "unit": "°C",
-        "scale": 0.001,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_60",
-        "entity_category": None
-    },
+
+    # Wrong data
+    # {
+    #     "name": "Leaving water Add Heating setpoint lower",
+    #     "address": 57,
+    #     "unit": "°C",
+    #     "scale": 0.001,
+    #     "dtype": "int16",
+    #     "icon": "mdi:thermometer",
+    #     "input_type": "input",
+    #     "unique_id": f"{DOMAIN}_input_57",
+    #     "entity_category": None
+    # },
+    # {
+    #     "name": "Leaving water Add Heating setpoint upper",
+    #     "address": 58,
+    #     "unit": "°C",
+    #     "scale": 0.001,
+    #     "dtype": "int16",
+    #     "icon": "mdi:thermometer",
+    #     "input_type": "input",
+    #     "unique_id": f"{DOMAIN}_input_58",
+    #     "entity_category": None
+    # },
+    # {
+    #     "name": "Leaving water Add Cooling setpoint lower",
+    #     "address": 59,
+    #     "unit": "°C",
+    #     "scale": 0.001,
+    #     "dtype": "int16",
+    #     "icon": "mdi:thermometer",
+    #     "input_type": "input",
+    #     "unique_id": f"{DOMAIN}_input_59",
+    #     "entity_category": None
+    # },
+    # {
+    #     "name": "Leaving water Add Cooling setpoint upper",
+    #     "address": 60,
+    #     "unit": "°C",
+    #     "scale": 0.001,
+    #     "dtype": "int16",
+    #     "icon": "mdi:thermometer",
+    #     "input_type": "input",
+    #     "unique_id": f"{DOMAIN}_input_60",
+    #     "entity_category": None
+    # },
 
     # Sonstige Status / Flags
     {
@@ -404,6 +407,24 @@ INPUT_REGISTERS = [
 
 HOLDING_REGISTERS = [
     {
+        "name": "Weather-dependent mode Main LWT Heating setpoint offset",
+        "address": 53,
+        "unit": "°C",
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_53",
+        "min_value": -5,
+        "max_value": 5,
+        "step": 1
+    },
+]
+
+# Select Register (für Dropdown-Listen)
+
+SELECT_REGISTERS = [
+    {
         "name": "Operation mode",
         "address": 2,
         "min_v": 0,
@@ -435,19 +456,6 @@ HOLDING_REGISTERS = [
             1: "On (Automatic)", 
             2: "On (Manual)"
         }
-    },
-    {
-        "name": "Weather-dependent mode Main LWT Heating setpoint offset",
-        "address": 53,
-        "unit": "°C",
-        "scale": 1,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_53",
-        "min_value": -5,
-        "max_value": 5,
-        "step": 1
     },
 ]
 
