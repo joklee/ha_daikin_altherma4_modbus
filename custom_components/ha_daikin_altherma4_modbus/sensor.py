@@ -41,6 +41,20 @@ async def async_setup_entry(hass, entry, async_add_entities):
             )
         )
 
+    # Externer elektrischer Leistungssensor (immer erstellen, Verfügbarkeit wird über available property gesteuert)
+    _LOGGER.info(f"Creating ExternalElectricPowerSensor")
+    entities.append(
+        ExternalElectricPowerSensor(
+            coordinator=coordinator,
+            entry=entry,
+            name="External Electric Power",
+            unique_id=f"{DOMAIN}_external_electric_power",
+            unit="W",
+            device_class="power",
+            entity_category=EntityCategory.DIAGNOSTIC
+        )
+    )
+
     # Berechnete Sensoren
     for calc in CALCULATED_SENSORS:
         if calc["type"] == "heat_power":
@@ -119,14 +133,18 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
+        """Return the state of the sensor."""
         data = self.coordinator.data.get(self._attr_unique_id)
         if data is None:
             return None
-        
         val = data.get("value")
         if val is None:
             return None
-
+        
+        # Handle signed 16-bit integers
+        if val > 32767:  # If value is negative (2's complement)
+            val = val - 65536
+            
         # ENUM Mapping
         if self._enum_map:
             val = self._enum_map.get(val, val)
@@ -200,10 +218,12 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         temp_rl = temp_rl_raw * 0.01  # °C
 
         delta_t = temp_vl - temp_rl
-        heat_power = flow * delta_t * 0.07  # Wärmeleistung in kW
+        heat_power = flow * delta_t * 70  # Wärmeleistung in W
+        _LOGGER.info(f"Wärmeleistung: {heat_power}")
 
         # Elektrische Leistung
         electric_power_sensor = self._entry.data.get("electric_power_sensor")
+        _LOGGER.info(f"electric_power_sensor: {electric_power_sensor}")
         if electric_power_sensor:
             # Externer Sensor
             state = self.coordinator.hass.states.get(electric_power_sensor)
@@ -215,15 +235,23 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
             else:
                 electric_power = None
         else:
+            electric_power = None
+        
+        if electric_power is None:
             # Modbus
             power_data = self.coordinator.data.get(f"{DOMAIN}_input_50", {})
+            _LOGGER.info(f"power_data: {power_data}")
             electric_power_raw = power_data.get("value", 0)  # Heat pump power consumption (roh)
-            electric_power = electric_power_raw * 0.01  # in kW
+            electric_power = electric_power_raw * power_data.get("scale", 10);  # in W
 
+        _LOGGER.info(f"electric_power: {electric_power}")
         if electric_power and electric_power > 0 and heat_power > 0:
+            # Convert electric power from W to kW for CoP calculation
             cop = heat_power / electric_power
+            _LOGGER.info(f"cop: {cop}")
             return round(cop, 2)
         else:
+            _LOGGER.info(f"cop: None")
             return None
 
 
@@ -245,3 +273,50 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
     def native_value(self):
         """Gibt den Zeitstempel des letzten Auslösens zurück."""
         return self.coordinator.data.get(f"last_triggered_{self._trigger_address}")
+
+
+class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
+    """Sensor für externen elektrischen Leistungssensor."""
+
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_name = name
+        self._attr_unique_id = unique_id
+        self._attr_native_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr_state_class = "measurement"
+        self._attr_icon = "mdi:flash"
+        self._attr_device_info = DEVICE_INFO
+        self._attr_entity_category = entity_category
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        # Check if electric_power_sensor is configured
+        electric_power_sensor = self._entry.data.get("electric_power_sensor")
+        _LOGGER.info(f"ExternalElectricPowerSensor available check: electric_power_sensor = {electric_power_sensor}")
+        
+        if not electric_power_sensor:
+            _LOGGER.info("ExternalElectricPowerSensor: Not available - no electric_power_sensor configured")
+            return False
+        
+        # Check if the referenced sensor exists and is available
+        state = self.coordinator.hass.states.get(electric_power_sensor)
+        is_available = state is not None and state.state not in [None, "unknown", "unavailable"]
+        _LOGGER.info(f"ExternalElectricPowerSensor: Referenced sensor available = {is_available}")
+        return is_available
+
+    @property
+    def native_value(self):
+        """Gibt den Wert des externen elektrischen Leistungssensors zurück."""
+        electric_power_sensor = self._entry.data.get("electric_power_sensor")
+        if electric_power_sensor:
+            state = self.coordinator.hass.states.get(electric_power_sensor)
+            if state and state.state not in [None, "unknown", "unavailable"]:
+                try:
+                    return float(state.state)
+                except ValueError:
+                    _LOGGER.error(f"ExternalElectricPowerSensor: Cannot convert {state.state} to float")
+                    return None
+        return None

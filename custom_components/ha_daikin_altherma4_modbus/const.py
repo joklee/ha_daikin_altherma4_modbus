@@ -166,24 +166,24 @@ INPUT_REGISTERS = [
     },
 
     # Remote / Raum
-    {
-        "name": "Remote controller room temperature",
-        "address": 49,
-        "unit": "°C",
-        "scale": 0.001,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_49",
-        "entity_category": None
-    },
+    # {
+    #     "name": "Remote controller room temperature",
+    #     "address": 49,
+    #     "unit": "°C",
+    #     "scale": 0.001,
+    #     "dtype": "int16",
+    #     "icon": "mdi:thermometer",
+    #     "input_type": "input",
+    #     "unique_id": f"{DOMAIN}_input_49",
+    #     "entity_category": None
+    # },
 
     # Leistungswerte
     {
         "name": "Heat pump power consumption",
         "address": 50,
-        "unit": "kW",
-        "scale": 0.01,
+        "unit": "W",
+        "scale": 10,
         "dtype": "uint16",
         "icon": "mdi:power",
         "input_type": "input",
