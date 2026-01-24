@@ -4,6 +4,43 @@
 
 **Note: Not all registers may provide valid values depending on your heat pump model and configuration. Some registers might return zero, error codes, or unexpected values. Always verify values against your heat pump's display or official documentation.**
 
+## Daikin Altherma 4 Modbus Activation
+
+Before using this integration, you need to enable Modbus TCP communication on your Daikin Altherma 4 heat pump.
+
+### Modbus TCP/IP for Daikin Altherma
+
+**NOTICE**: If the unit receives commands from both Modbus and Cloud interfaces, it will execute the command that was received most recently.
+
+#### Modbus Protocol
+The following Modbus protocol can be used:
+- Modbus TCP/IP
+
+**Modbus TCP/IP Parameters:**
+- **Network**: Ethernet (Wifi not supported)
+- **Port**: 
+  - No encryption: 502
+  - TLS encryption: 802 (not tested)
+- **IP Address**: IP address of Daikin Altherma 4
+
+**Change-based Algorithm**
+The Modbus algorithm is change based. This means the unit is only updated if a change in configuration is detected. To prevent changes being lost due to communication outages, it is recommended to periodically refresh the state from client side.
+
+**Connection Limits**
+**INFORMATION**: A total of 3 concurrent connections is possible.
+Examples:
+- 3x using the 502 port
+- 3x using the 802 port  
+- Combination of both, e.g. 1x 502 and 2x 802
+
+### Prerequisites
+- Daikin Altherma 4 heat pump (EPSX series)
+- MMI Version 2.2.0 or higher
+- Access to the heat pump's controller interface
+- Network connection over Ethernet/RJ45 to the heat pump
+
+### Step-by-Step Activation
+
 This custom integration allows you to monitor and control your Daikin Altherma 4 heat pump via Modbus TCP.
 
 ## Features
@@ -62,6 +99,7 @@ This custom integration allows you to monitor and control your Daikin Altherma 4
 ## Configuration
 
 ### Required Parameters
+- **Connection**: Only ethernet cable
 - **Host**: IP address of your Daikin heat pump
 - **Port**: Modbus TCP port (default: 502)
 - **Scan Interval**: Update frequency in seconds (default: 15)
