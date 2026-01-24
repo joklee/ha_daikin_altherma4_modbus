@@ -552,7 +552,8 @@ SELECT_REGISTERS = [
         "enum_map": {
             0: "Reheat",
             1: "Schedule and reheat",
-            2: "Scheduled"
+            2: "Scheduled",
+            32766: "Unknown"
         }
     },
 ]

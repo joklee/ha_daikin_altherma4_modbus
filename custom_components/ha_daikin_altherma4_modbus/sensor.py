@@ -56,7 +56,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     )
 
     # Berechnete Sensoren
+    _LOGGER.info(f"Processing {len(CALCULATED_SENSORS)} calculated sensors")
     for calc in CALCULATED_SENSORS:
+        _LOGGER.info(f"Processing calculated sensor: {calc['name']} (type: {calc['type']})")
         if calc["type"] == "heat_power":
             entities.append(
                 CalculatedHeatPowerSensor(

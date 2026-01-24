@@ -16,7 +16,7 @@ async def async_setup_entry(hass, entry):
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "number", "select"])
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "number", "select", "climate"])
     return True
 
 
