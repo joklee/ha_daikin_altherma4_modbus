@@ -67,11 +67,11 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         return val * self._scale
 
     @property
-    def native_options(self):
-        """Gibt die Optionen für enum_map zurück."""
+    def mode(self):
+        """Gibt den Modus für enum_map zurück."""
         if self._enum_map:
-            return list(self._enum_map.keys())
-        return None
+            return "slider"  # Force slider mode for enum
+        return "slider"
 
     async def async_set_native_value(self, value):
         raw = int(value / self._scale)

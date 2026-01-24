@@ -83,7 +83,7 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
             if all_holding_registers:
                 _LOGGER.info(f"Verarbeite {len(all_holding_registers)} Holding-Register")
                 try:
-                    hr = await self.client.read_holding_registers(address=0, count=60)
+                    hr = await self.client.read_holding_registers(address=0, count=80)
                     if not hr.isError():
                         _LOGGER.info(f"Holding-Register erfolgreich gelesen: {len(hr.registers)} Register")
                         for item in all_holding_registers:

@@ -48,7 +48,8 @@ INPUT_REGISTERS = [
         "icon": "mdi:alert-circle",
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_22",
-        "entity_category": EntityCategory.DIAGNOSTIC
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enum_map": {32766: "No error"}
     },
 
     # Status / Betriebsflags
@@ -407,6 +408,32 @@ INPUT_REGISTERS = [
 
 HOLDING_REGISTERS = [
     {
+        "name": "DHW reheat setpoint",
+        "address": 9,
+        "unit": "°C",
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_9",
+        "min_value": 30,
+        "max_value": 85,
+        "step": 1
+    },
+    {
+        "name": "DHW Single heat-up setpoint (Manual)",
+        "address": 15,
+        "unit": "°C",
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_15",
+        "min_value": 30,
+        "max_value": 85,
+        "step": 1
+    },
+    {
         "name": "Weather-dependent mode Main LWT Heating setpoint offset",
         "address": 53,
         "unit": "°C",
@@ -417,6 +444,19 @@ HOLDING_REGISTERS = [
         "unique_id": f"{DOMAIN}_holding_53",
         "min_value": -5,
         "max_value": 5,
+        "step": 1
+    },
+    {
+        "name": "Weather-dependent mode Add LWT Heating setpoint offset",
+        "address": 65,
+        "unit": "°C",
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_65",
+        "min_value": -10,
+        "max_value": 10,
         "step": 1
     },
 ]
@@ -455,6 +495,64 @@ SELECT_REGISTERS = [
             0: "Off",
             1: "On (Automatic)", 
             2: "On (Manual)"
+        }
+    },
+    {
+        "name": "DHW booster mode ON/OFF (Powerful)",
+        "address": 12,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:power",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_12",
+        "enum_map": {
+            0: "Off",
+            1: "On (Powerful)"
+        }
+    },
+    {
+        "name": "DHW Single heat-up ON/OFF (Manual)",
+        "address": 14,
+        "unit": None,
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:power",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_14",
+        "enum_map": {
+            0: "Off",
+            1: "On"
+        }
+    },
+    {
+        "name": "Weather-dependent mode Heating Main",
+        "address": 67,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:thermostat",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_67",
+        "enum_map": {
+            0: "Fixed",
+            1: "Weather dependent"
+        }
+    },
+# Invalud input value 
+    {
+        "name": "DHW mode setting",
+        "address": 79,
+        "unit": None,
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:water-boiler",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_79",
+        "enum_map": {
+            0: "Reheat",
+            1: "Schedule and reheat",
+            2: "Scheduled"
         }
     },
 ]
