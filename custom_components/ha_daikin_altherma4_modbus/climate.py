@@ -19,6 +19,11 @@ REGISTER_OPERATION_MODE = 2  # Operation mode
 REGISTER_QUIET_MODE = 8     # Quiet mode operation
 REGISTER_COMPRESSOR = 30    # Compressor status
 
+# Fan mode constants (quiet mode)
+FAN_OFF = "OFF"
+FAN_AUTO = "On (Automatic)"
+FAN_MANUAL = "On (Manual)"
+
 class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     """Climate Entity for Daikin Altherma 4 Thermostat Control."""
     
@@ -29,7 +34,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         self._attr_unique_id = f"{DOMAIN}_thermostat_climate"
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE
+            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
         )
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
         self._attr_device_info = DEVICE_INFO
@@ -88,6 +93,20 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         """Return the maximum offset value from const.py."""
         config = self._get_offset_register_config()
         return float(config.get("max_value", 5))
+
+    @property
+    def fan_mode(self):
+        """Return the current fan mode (quiet mode)."""
+        quiet_data = self.coordinator.data.get(f"{DOMAIN}_holding_{REGISTER_QUIET_MODE}", {})
+        quiet_raw = quiet_data.get("value", 0)
+        
+        fan_map = {0: FAN_OFF, 1: FAN_AUTO, 2: FAN_MANUAL}
+        return fan_map.get(quiet_raw, FAN_OFF)
+
+    @property
+    def fan_modes(self):
+        """Return the list of available fan modes."""
+        return [FAN_OFF, FAN_AUTO, FAN_MANUAL]
 
     @property
     def hvac_mode(self):
@@ -150,6 +169,18 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
             _LOGGER.info(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
         except Exception as e:
             _LOGGER.error(f"Failed to set HVAC mode: {e}")
+
+    async def async_set_fan_mode(self, fan_mode):
+        """Set new fan mode (quiet mode)."""
+        fan_map = {FAN_OFF: 0, FAN_AUTO: 1, FAN_MANUAL: 2}
+        mode_raw = fan_map.get(fan_mode, 0)
+        
+        try:
+            await self.coordinator.client.write_register(REGISTER_QUIET_MODE, mode_raw)
+            await self.coordinator.async_request_refresh()
+            _LOGGER.info(f"Set fan mode to {fan_mode} (raw: {mode_raw})")
+        except Exception as e:
+            _LOGGER.error(f"Failed to set fan mode: {e}")
 
     @property
     def extra_state_attributes(self):
