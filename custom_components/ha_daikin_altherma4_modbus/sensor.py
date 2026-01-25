@@ -36,7 +36,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 count=count,
                 icon=icon,
                 enum_map=enum_map,
-                entity_category=None,
+                entity_category=entity_category,
                 unique_id=unique_id,
             )
         )
