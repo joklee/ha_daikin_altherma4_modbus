@@ -539,23 +539,23 @@ SELECT_REGISTERS = [
             1: "Weather dependent"
         }
     },
-# Invalud input value 
-    {
-        "name": "DHW mode setting",
-        "address": 79,
-        "unit": None,
-        "scale": 1,
-        "dtype": "int16",
-        "icon": "mdi:water-boiler",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_79",
-        "enum_map": {
-            0: "Reheat",
-            1: "Schedule and reheat",
-            2: "Scheduled",
-            32766: "Unknown"
-        }
-    },
+# Holding register not readable 
+    # {
+    #     "name": "DHW mode setting",
+    #     "address": 79,
+    #     "unit": None,
+    #     "scale": 1,
+    #     "dtype": "int16",
+    #     "icon": "mdi:water-boiler",
+    #     "input_type": "holding",
+    #     "unique_id": f"{DOMAIN}_holding_79",
+    #     "enum_map": {
+    #         0: "Reheat",
+    #         1: "Schedule and reheat",
+    #         2: "Scheduled",
+    #         32766: "Unknown"
+    #     }
+    # },
 ]
 
 # Berechnete Sensoren
@@ -576,6 +576,14 @@ CALCULATED_SENSORS = [
         "device_class": None,
         "entity_category": None,
         "type": "cop"
+    },
+    {
+        "name": "Delta-T",
+        "unique_id": f"{DOMAIN}_delta_t",
+        "unit": "°C",
+        "device_class": "temperature",
+        "entity_category": None,
+        "type": "delta_t"
     },
     {
         "name": "Last Defrost/Restart",

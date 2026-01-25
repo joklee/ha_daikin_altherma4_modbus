@@ -108,6 +108,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     entity_category=calc["entity_category"],
                 )
             )
+        elif calc["type"] == "delta_t":
+            entities.append(
+                DeltaTSensor(
+                    coordinator=coordinator,
+                    entry=entry,
+                    name=calc["name"],
+                    unique_id=calc["unique_id"],
+                    unit=calc["unit"],
+                    device_class=calc["device_class"],
+                )
+            )
 
     async_add_entities(entities)
 
@@ -322,3 +333,35 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
                     _LOGGER.error(f"ExternalElectricPowerSensor: Cannot convert {state.state} to float")
                     return None
         return None
+
+
+class DeltaTSensor(CoordinatorEntity, SensorEntity):
+    """Calculated sensor for temperature difference (Delta-T)."""
+    
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_name = name
+        self._attr_unique_id = unique_id
+        self._attr_native_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr_state_class = "measurement"
+        self._attr_icon = "mdi:thermometer-lines"
+        self._attr_device_info = DEVICE_INFO
+
+    @property
+    def native_value(self):
+        """Calculate the temperature difference between flow and return."""
+        # Vorlauftemperatur (Leaving water temperature PHE)
+        flow_temp_data = self.coordinator.data.get(f"{DOMAIN}_input_39", {})
+        flow_temp_raw = flow_temp_data.get("value", 0)
+        flow_temp = flow_temp_raw * flow_temp_data.get("scale", 0.01)  # °C
+        
+        # Rücklauftemperatur (Return water temperature)
+        return_temp_data = self.coordinator.data.get(f"{DOMAIN}_input_41", {})
+        return_temp_raw = return_temp_data.get("value", 0)
+        return_temp = return_temp_raw * return_temp_data.get("scale", 0.01)  # °C
+        
+        # Delta-T berechnen
+        delta_t = flow_temp - return_temp
+        return round(delta_t, 1)
