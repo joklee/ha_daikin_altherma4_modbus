@@ -1,7 +1,7 @@
 from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import EntityCategory
-from .const import DOMAIN, HOLDING_REGISTERS, DEVICE_INFO
+from .const import DOMAIN, HOLDING_REGISTERS, HOLDING_DEVICE_INFO
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         self._attr_native_step = step
         self._attr_native_unit_of_measurement = unit
         self._attr_entity_category = entity_category
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = HOLDING_DEVICE_INFO
 
     @property
     def native_value(self):

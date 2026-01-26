@@ -8,7 +8,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN, DEVICE_INFO, HOLDING_REGISTERS
+from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
             ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
         )
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = HOLDING_DEVICE_INFO
 
     def _get_offset_register_config(self):
         """Get configuration for holding register 53 (offset)."""
@@ -56,7 +56,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         temp_data = self.coordinator.data.get(f"{DOMAIN}_input_{REGISTER_CURRENT_TEMP}", {})
         temp_raw = temp_data.get("value", 0)
         temp = temp_raw * temp_data.get("scale", 0.01)  # °C
-        return round(temp, 1)
+        return round(temp, 2)
 
     @property
     def target_temperature(self):
@@ -207,8 +207,8 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         
         return {
             "quiet_mode": quiet_mode,
-            "offset": round(offset, 1),
-            "calculated_setpoint": round(calculated_setpoint, 1),
+            "offset": round(offset, 2),
+            "calculated_setpoint": round(calculated_setpoint, 2),
             "current_temperature": current_temp,
             "register_config": {
                 "address": REGISTER_OFFSET,

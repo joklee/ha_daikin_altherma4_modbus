@@ -3,7 +3,7 @@ import logging
 from homeassistant.components.select import SelectEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import EntityCategory
-from .const import DOMAIN, SELECT_REGISTERS, DEVICE_INFO
+from .const import DOMAIN, SELECT_REGISTERS, HOLDING_DEVICE_INFO
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
 
         self._attr_name = name
         self._attr_unique_id = unique_id or f"{DOMAIN}_{address}"
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = HOLDING_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_options = list(enum_map.values())
 

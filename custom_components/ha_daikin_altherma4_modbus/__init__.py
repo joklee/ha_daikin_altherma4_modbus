@@ -5,11 +5,29 @@ from .coordinator import DaikinAlthermaCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry):
+    # Create dynamic device info with connection parameters
+    host = entry.data["host"]
+    port = entry.data["port"]
+    scan_interval = entry.data["scan_interval"]
+    
+    # Create device info with connection parameters
+    device_info = {
+        "identifiers": {("daikin_altherma_modbus", "altherma_main")},
+        "name": "Daikin Altherma 4",
+        "manufacturer": "Daikin",
+        "model": "EPSX",
+        "configuration_url": f"http://{host}",
+        "sw_version": f"Modbus TCP {host}:{port} (Interval: {scan_interval}s)",
+    }
+    
+    # Store device info in hass data for platforms to use
+    hass.data.setdefault(f"{DOMAIN}_device_info", {})[entry.entry_id] = device_info
+    
     coordinator = DaikinAlthermaCoordinator(
         hass,
-        entry.data["host"],
-        entry.data["port"],
-        entry.data["scan_interval"],
+        host,
+        port,
+        scan_interval,
     )
     await coordinator.async_config_entry_first_refresh()
 
@@ -53,3 +71,14 @@ async def async_update_entry(hass, entry):
     _LOGGER.info("Reloading entry...")
     await hass.config_entries.async_reload(entry.entry_id)
     _LOGGER.info("=== async_update_entry completed ===")
+
+
+async def async_unload_entry(hass, entry):
+    """Handle config entry unload."""
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor", "binary_sensor", "number", "select", "climate"])
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+        # Clean up device info
+        if f"{DOMAIN}_device_info" in hass.data:
+            hass.data[f"{DOMAIN}_device_info"].pop(entry.entry_id, None)
+    return unload_ok

@@ -2,7 +2,17 @@ import logging
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import EntityCategory
-from .const import INPUT_REGISTERS, DOMAIN, CALCULATED_SENSORS, DEVICE_INFO
+from .const import (
+    DOMAIN,
+    INPUT_DEVICE_INFO,
+    CALCULATED_DEVICE_INFO,
+    INPUT_REGISTERS,
+    HOLDING_REGISTERS,
+    SELECT_REGISTERS,
+    CALCULATED_SENSORS,
+    DEFAULT_SCAN_INTERVAL,
+)
+from .device_info import get_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,11 +48,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 enum_map=enum_map,
                 entity_category=entity_category,
                 unique_id=unique_id,
+                device_info=INPUT_DEVICE_INFO
             )
         )
 
     # Externer elektrischer Leistungssensor (immer erstellen, Verfügbarkeit wird über available property gesteuert)
-    _LOGGER.info(f"Creating ExternalElectricPowerSensor")
+    _LOGGER.info(f"Creating External Electric Power Sensor")
     entities.append(
         ExternalElectricPowerSensor(
             coordinator=coordinator,
@@ -51,7 +62,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
             unique_id=f"{DOMAIN}_external_electric_power",
             unit="W",
             device_class="power",
-            entity_category=EntityCategory.DIAGNOSTIC
+            entity_category=EntityCategory.DIAGNOSTIC,
+            device_info=CALCULATED_DEVICE_INFO
         )
     )
 
@@ -68,7 +80,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
-                    entity_category=calc["entity_category"]
+                    entity_category=calc["entity_category"],
+                    device_info=CALCULATED_DEVICE_INFO
                 )
             )
         elif calc["type"] == "cop":
@@ -80,7 +93,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
-                    entity_category=calc["entity_category"]
+                    entity_category=calc["entity_category"],
+                    device_info=CALCULATED_DEVICE_INFO
                 )
             )
         elif calc["type"] == "last_defrost_restart":
@@ -92,7 +106,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
+                    trigger_address=calc["trigger_address"],
                     entity_category=calc["entity_category"],
+                    device_info=CALCULATED_DEVICE_INFO
                 )
             )
         elif calc["type"] == "last_triggered":
@@ -106,6 +122,21 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     device_class=calc["device_class"],
                     trigger_address=calc["trigger_address"],
                     entity_category=calc["entity_category"],
+                    device_info=CALCULATED_DEVICE_INFO
+                )
+            )
+        elif calc["type"] == "last_compressor_run":
+            entities.append(
+                LastTriggeredSensor(
+                    coordinator=coordinator,
+                    entry=entry,
+                    name=calc["name"],
+                    unique_id=calc["unique_id"],
+                    unit=calc["unit"],
+                    device_class=calc["device_class"],
+                    trigger_address=calc["trigger_address"],
+                    entity_category=calc["entity_category"],
+                    device_info=CALCULATED_DEVICE_INFO
                 )
             )
         elif calc["type"] == "delta_t":
@@ -117,6 +148,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
+                    device_info=CALCULATED_DEVICE_INFO
                 )
             )
 
@@ -126,7 +158,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class DaikinInputSensor(CoordinatorEntity, SensorEntity):
     """Ein Sensor für Input-Register."""
 
-    def __init__(self, coordinator, entry, name, address, unit, dtype, scale, count, icon, enum_map, entity_category=None, unique_id=None):
+    def __init__(self, coordinator, entry, name, address, unit, dtype, scale, count, icon, enum_map, entity_category=None, unique_id=None, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
@@ -139,7 +171,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = unique_id or f"{DOMAIN}_{address}"
         self._attr_native_unit_of_measurement = unit
         self._attr_icon = self._icon
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = device_info or INPUT_DEVICE_INFO
         
         # Entity category setzen
         self._attr_entity_category = entity_category
@@ -163,13 +195,19 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
             val = self._enum_map.get(val, val)
 
         # Skalierung anwenden
-        return val * self._scale
+        scaled_value = val * self._scale
+        
+        # Auf 2 Nachkommastellen runden bei °C Sensoren
+        if self._attr_native_unit_of_measurement == "°C":
+            return round(scaled_value, 2)
+        
+        return scaled_value
 
 
 class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Wärmepumpenleistung."""
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None):
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_name = name
@@ -177,7 +215,7 @@ class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_icon = "mdi:fire"
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
 
     @property
@@ -203,7 +241,7 @@ class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
 class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Coefficient of Performance (CoP)."""
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None):
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_name = name
@@ -212,7 +250,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = device_class
         self._attr_state_class = "measurement"
         self._attr_icon = "mdi:gauge"
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
 
     @property
@@ -271,7 +309,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
 class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
     """Sensor für das letzte Auslösen eines Binärsensors."""
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, trigger_address, entity_category=None):
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, trigger_address, entity_category=None, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
         self._trigger_address = trigger_address
@@ -279,7 +317,7 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = unique_id
         self._attr_unit_of_measurement = unit
         self._attr_device_class = device_class
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
 
     @property
@@ -291,7 +329,7 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
 class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
     """Sensor für externen elektrischen Leistungssensor."""
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None):
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_name = name
@@ -300,7 +338,7 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = device_class
         self._attr_state_class = "measurement"
         self._attr_icon = "mdi:flash"
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
 
     @property
@@ -338,7 +376,7 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
 class DeltaTSensor(CoordinatorEntity, SensorEntity):
     """Calculated sensor for temperature difference (Delta-T)."""
     
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class):
+    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_name = name
@@ -347,7 +385,7 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = device_class
         self._attr_state_class = "measurement"
         self._attr_icon = "mdi:thermometer-lines"
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
 
     @property
     def native_value(self):
@@ -362,6 +400,6 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
         return_temp_raw = return_temp_data.get("value", 0)
         return_temp = return_temp_raw * return_temp_data.get("scale", 0.01)  # °C
         
-        # Delta-T berechnen
+        # Delta-T berechnen und auf 2 Nachkommastellen runden
         delta_t = flow_temp - return_temp
-        return round(delta_t, 1)
+        return round(delta_t, 2)

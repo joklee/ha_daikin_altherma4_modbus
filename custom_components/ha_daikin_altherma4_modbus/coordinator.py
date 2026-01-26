@@ -5,7 +5,7 @@ from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from .const import INPUT_REGISTERS, DOMAIN, BINARY_SENSORS, HOLDING_REGISTERS, SELECT_REGISTERS
+from .const import INPUT_REGISTERS, DOMAIN, BINARY_SENSORS, HOLDING_REGISTERS, SELECT_REGISTERS, DISCRETE_INPUT_SENSORS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
 
         # Adressen sammeln
         addresses = [item["address"] for item in INPUT_REGISTERS]
-        start = min(addresses)
+        start = 0
         end = max(addresses)
         count = end - start + 1
 
@@ -57,7 +57,7 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                 scale = item.get("scale", 1)
                 input_type = item.get("input_type", "input")
                 unique_id = item.get("unique_id", f"{address}")
-
+                
                 if reg_count == 1:
                     raw_value = rr.registers[address - start]
                     data[unique_id] = {
@@ -72,6 +72,37 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                         "input_type": input_type,
                         "address": address
                     }
+
+            # DISCRETE_INPUT_SENSORS verarbeiten (mit separatem Modbus-Aufruf)
+            if DISCRETE_INPUT_SENSORS:
+                try:
+                    # Discrete Inputs mit Function Code 2 lesen
+                    discrete_addresses = [item["address"] for item in DISCRETE_INPUT_SENSORS]
+                    discrete_start = min(discrete_addresses)
+                    discrete_end = max(discrete_addresses)
+                    discrete_count = discrete_end - discrete_start + 1
+                    
+                    di = await self.client.read_discrete_inputs(address=discrete_start, count=discrete_count)
+                    if not di.isError():
+                        for item in DISCRETE_INPUT_SENSORS:
+                            address = item["address"]
+                            input_type = item.get("input_type", "discrete_input")
+                            unique_id = item.get("unique_id", f"discrete_{address}")
+                            
+                            # Discrete Inputs sind 0-basiert im Array
+                            if address - discrete_start < len(di.bits):
+                                raw_value = 1 if di.bits[address - discrete_start] else 0
+                                data[unique_id] = {
+                                    "value": raw_value,
+                                    "input_type": input_type,
+                                    "address": address
+                                }
+                            else:
+                                _LOGGER.warning(f"Discrete Input {address} nicht im gelesenen Bereich ({len(di.bits)} Bits)")
+                    else:
+                        _LOGGER.error(f"Discrete Input-Lesen fehlgeschlagen")
+                except Exception as e:
+                    _LOGGER.warning(f"Konnte Discrete Inputs nicht lesen: {e}")
             
             # HOLDING_REGISTERS und SELECT_REGISTERS verarbeiten (wenn vorhanden)
             all_holding_registers = []
@@ -81,11 +112,9 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                 all_holding_registers.extend(SELECT_REGISTERS)
             
             if all_holding_registers:
-                _LOGGER.info(f"Verarbeite {len(all_holding_registers)} Holding-Register")
                 try:
                     hr = await self.client.read_holding_registers(address=0, count=79)
                     if not hr.isError():
-                        _LOGGER.info(f"Holding-Register erfolgreich gelesen: {len(hr.registers)} Register")
                         for item in all_holding_registers:
                             address = item["address"]
                             input_type = item.get("input_type", "holding")
@@ -93,7 +122,6 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                             
                             if address < len(hr.registers):
                                 raw_value = hr.registers[address]
-                                _LOGGER.info(f"Entry {address, input_type, unique_id, raw_value}")
                                 data[unique_id] = {
                                     "value": raw_value,
                                     "input_type": input_type,

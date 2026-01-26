@@ -4,11 +4,32 @@ DOMAIN = "ha_daikin_altherma4_modbus"
 DEFAULT_PORT = 502
 DEFAULT_SCAN_INTERVAL = 15
 
-DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "altherma_main")},
-    "name": "Daikin Altherma 4",
+INPUT_DEVICE_INFO = {
+    "identifiers": {("daikin_altherma_modbus", "input_registers")},
+    "name": "Daikin Altherma 4 - Input Register",
     "manufacturer": "Daikin",
-    "model": "EPSX",
+    "model": "EPSX"
+}
+
+HOLDING_DEVICE_INFO = {
+    "identifiers": {("daikin_altherma_modbus", "holding_registers")},
+    "name": "Daikin Altherma 4 - Holding Register",
+    "manufacturer": "Daikin",
+    "model": "EPSX"
+}
+
+CALCULATED_DEVICE_INFO = {
+    "identifiers": {("daikin_altherma_modbus", "calculated_sensors")},
+    "name": "Daikin Altherma 4 - Enhanced",
+    "manufacturer": "Daikin",
+    "model": "EPSX"
+}
+
+DISCRETE_INPUT_DEVICE_INFO = {
+    "identifiers": {("daikin_altherma_modbus", "discrete_input_registers")},
+    "name": "Daikin Altherma 4 - Discrete Input",
+    "manufacturer": "Daikin",
+    "model": "EPSX"
 }
 
 # Alle Input-Register aus 7.2.2 Daikin Configuration reference guide MMI user interface
@@ -140,18 +161,6 @@ INPUT_REGISTERS = [
         "unique_id": f"{DOMAIN}_input_43",
         "entity_category": None
     },
-    # Wrong data
-    # {
-    #     "name": "Liquid refrigerant temperature",
-    #     "address": 44,
-    #     "unit": "°C",
-    #     "scale": 0.001,
-    #     "dtype": "int16",
-    #     "icon": "mdi:thermometer",
-    #     "input_type": "input",
-    #     "unique_id": f"{DOMAIN}_input_44",
-    #     "entity_category": None
-    # },
 
     # Durchfluss
     {
@@ -165,19 +174,6 @@ INPUT_REGISTERS = [
         "unique_id": f"{DOMAIN}_input_48",
         "entity_category": None
     },
-
-    # Remote / Raum
-    # {
-    #     "name": "Remote controller room temperature",
-    #     "address": 49,
-    #     "unit": "°C",
-    #     "scale": 0.001,
-    #     "dtype": "int16",
-    #     "icon": "mdi:thermometer",
-    #     "input_type": "input",
-    #     "unique_id": f"{DOMAIN}_input_49",
-    #     "entity_category": None
-    # },
 
     # Leistungswerte
     {
@@ -263,52 +259,6 @@ INPUT_REGISTERS = [
         "unique_id": f"{DOMAIN}_input_56",
         "entity_category": None
     },
-
-    # Wrong data
-    # {
-    #     "name": "Leaving water Add Heating setpoint lower",
-    #     "address": 57,
-    #     "unit": "°C",
-    #     "scale": 0.001,
-    #     "dtype": "int16",
-    #     "icon": "mdi:thermometer",
-    #     "input_type": "input",
-    #     "unique_id": f"{DOMAIN}_input_57",
-    #     "entity_category": None
-    # },
-    # {
-    #     "name": "Leaving water Add Heating setpoint upper",
-    #     "address": 58,
-    #     "unit": "°C",
-    #     "scale": 0.001,
-    #     "dtype": "int16",
-    #     "icon": "mdi:thermometer",
-    #     "input_type": "input",
-    #     "unique_id": f"{DOMAIN}_input_58",
-    #     "entity_category": None
-    # },
-    # {
-    #     "name": "Leaving water Add Cooling setpoint lower",
-    #     "address": 59,
-    #     "unit": "°C",
-    #     "scale": 0.001,
-    #     "dtype": "int16",
-    #     "icon": "mdi:thermometer",
-    #     "input_type": "input",
-    #     "unique_id": f"{DOMAIN}_input_59",
-    #     "entity_category": None
-    # },
-    # {
-    #     "name": "Leaving water Add Cooling setpoint upper",
-    #     "address": 60,
-    #     "unit": "°C",
-    #     "scale": 0.001,
-    #     "dtype": "int16",
-    #     "icon": "mdi:thermometer",
-    #     "input_type": "input",
-    #     "unique_id": f"{DOMAIN}_input_60",
-    #     "entity_category": None
-    # },
 
     # Sonstige Status / Flags
     {
@@ -402,6 +352,95 @@ INPUT_REGISTERS = [
         "unique_id": f"{DOMAIN}_input_70",
         "entity_category": None
     },
+    {
+        "name": "Mixing Leaving water temperature in mixing kit",
+        "address": 71,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_71",
+        "entity_category": None
+    },
+    {
+        "name": "Space heating/cooling target for Main zone in mixing kit",
+        "address": 72,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_72",
+        "entity_category": None
+    },
+    {
+        "name": "Leaving water temperature prePHE outdoor",
+        "address": 73,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_73",
+        "entity_category": None
+    },
+    {
+        "name": "Leaving water temperature Tank valve",
+        "address": 74,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_74",
+        "entity_category": None
+    },
+    {
+        "name": "Domestic Hot Water Upper temperature",
+        "address": 75,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_75",
+        "entity_category": None
+    },
+    {
+        "name": "Domestic Hot Water Lower temperature",
+        "address": 76,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_76",
+        "entity_category": None
+    },
+    {
+        "name": "Water pressure",
+        "address": 78,
+        "unit": "bar",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:gauge",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_78",
+        "entity_category": None
+    },
+    {
+        "name": "Unit operation mode",
+        "address": 82,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:cog",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_82",
+        "entity_category": None,
+        "enum_map": {0: "Stop", 1: "Tank Heat Up", 2: "Space heating", 3: "Space cooling", 4: "Actuator"}
+    }
 ]
 
 # Holding Register (beschreibbare Register)
@@ -424,11 +463,24 @@ HOLDING_REGISTERS = [
         "name": "DHW Single heat-up setpoint (Manual)",
         "address": 15,
         "unit": "°C",
-        "scale": 1,
+        "scale": 0.01,
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_15",
+        "min_value": 30,
+        "max_value": 85,
+        "step": 1
+    },
+    {
+        "name": "DHW boost setpoint (Powerful)",
+        "address": 13,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_13",
         "min_value": 30,
         "max_value": 85,
         "step": 1
@@ -480,6 +532,20 @@ SELECT_REGISTERS = [
             0: "Auto",
             1: "Heating", 
             2: "Cooling"
+        }
+    },
+    {
+        "name": "Space heating/cooling",
+        "address": 3,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:thermostat",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_3",
+        "enum_map": {
+            0: "OFF",
+            1: "ON"
         }
     },
     {
@@ -602,6 +668,219 @@ CALCULATED_SENSORS = [
         "type": "last_triggered",
         "entity_category": None,
         "trigger_address": 30
+    }
+]
+
+# Alle Discrete Input-Register aus 7.2.3 Daikin Configuration reference guide MMI user interface
+
+DISCRETE_INPUT_SENSORS = [
+    {
+        "name": "Shut-off valve",
+        "address": 0,  # 1-1
+        "device_class": "opening",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_0",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Backup heater relay 1",
+        "address": 1,  # 2-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_1",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Backup heater relay 2",
+        "address": 2,  # 3-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_2",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Backup heater relay 3",
+        "address": 3,  # 4-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_3",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Backup heater relay 4",
+        "address": 4,  # 5-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_4",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Backup heater relay 5",
+        "address": 5,  # 6-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_5",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Backup heater relay 6",
+        "address": 6,  # 7-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_6",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Booster heater",
+        "address": 7,  # 8-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_7",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Tank boiler",
+        "address": 8,  # 9-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_8",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Bivalent",
+        "address": 9,  # 10-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_9",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Compressor run",
+        "address": 10,  # 11-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_10",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Quiet mode active",
+        "address": 11,  # 12-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_11",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Holiday active",
+        "address": 12,  # 13-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_12",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Antifrost status",
+        "address": 13,  # 14-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_13",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Water pipe freeze prevention status",
+        "address": 14,  # 15-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_14",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Disinfection operation",
+        "address": 15,  # 16-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_15",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Defrost",
+        "address": 16,  # 17-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_16",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Hot start",
+        "address": 17,  # 18-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_17",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "DHW running",
+        "address": 18,  # 19-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_18",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Main zone running",
+        "address": 19,  # 20-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_19",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Additional zone running",
+        "address": 20,  # 21-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_20",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Powerful tank heat up request",
+        "address": 21,  # 22-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_21",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Manual tank heat up request",
+        "address": 22,  # 23-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_22",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Emergency active",
+        "address": 23,  # 24-1
+        "device_class": "problem",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_23",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Circulation pump running",
+        "address": 24,  # 25-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_24",
+        "entity_category": EntityCategory.DIAGNOSTIC
+    },
+    {
+        "name": "Imposed limit acceptance",
+        "address": 25,  # 26-1
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "unique_id": f"{DOMAIN}_discrete_25",
+        "entity_category": EntityCategory.DIAGNOSTIC
     }
 ]
 
