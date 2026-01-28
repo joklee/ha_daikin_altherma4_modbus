@@ -54,29 +54,41 @@ class OptionsFlow(config_entries.OptionsFlow):
         _LOGGER.info(f"OptionsFlow step_init. User input: {user_input}")
 
         if user_input is not None:
-            # Process the electric_power_sensor value
+            # Process all options
+            host = user_input.get("host")
+            port = user_input.get("port")
+            scan_interval = user_input.get("scan_interval")
             electric_power_sensor = user_input.get("electric_power_sensor")
             
             # Create options data
             options_data = {}
-            if electric_power_sensor and electric_power_sensor.strip():
-                options_data["electric_power_sensor"] = electric_power_sensor.strip()
-                _LOGGER.info(f"Setting electric_power_sensor to: {electric_power_sensor.strip()}")
-            else:
-                # Don't include the key in options_data for deletion
-                _LOGGER.info("Removing electric_power_sensor (empty/None value)")
             
-            _LOGGER.info(f"Creating entry with options data: {options_data}")
-            
-            # Update the config entry data directly
+            # Update config entry data with connection parameters
             new_data = dict(self._config_entry.data)
+            
+            # Update host
+            if host and host.strip():
+                new_data["host"] = host.strip()
+                _LOGGER.info(f"Updating host to: {host.strip()}")
+            
+            # Update port
+            if port is not None:
+                new_data["port"] = port
+                _LOGGER.info(f"Updating port to: {port}")
+            
+            # Update scan_interval
+            if scan_interval is not None:
+                new_data["scan_interval"] = scan_interval
+                _LOGGER.info(f"Updating scan_interval to: {scan_interval}")
+            
+            # Update electric_power_sensor
             if electric_power_sensor and electric_power_sensor.strip():
                 new_data["electric_power_sensor"] = electric_power_sensor.strip()
-                _LOGGER.info(f"Updating config entry: setting electric_power_sensor to {electric_power_sensor.strip()}")
+                _LOGGER.info(f"Updating electric_power_sensor to: {electric_power_sensor.strip()}")
             else:
                 if "electric_power_sensor" in new_data:
                     del new_data["electric_power_sensor"]
-                    _LOGGER.info("Updating config entry: removing electric_power_sensor")
+                    _LOGGER.info("Removing electric_power_sensor")
             
             _LOGGER.info(f"New config entry data will be: {new_data}")
             self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
@@ -85,14 +97,19 @@ class OptionsFlow(config_entries.OptionsFlow):
             _LOGGER.info(f"async_create_entry result: {result}")
             return result
 
-        current_value = self._config_entry.data.get("electric_power_sensor", "")
-        _LOGGER.info(f"OptionsFlow showing form. Current electric_power_sensor: '{current_value}'")
+        # Get current values
+        current_host = self._config_entry.data.get("host", "")
+        current_port = self._config_entry.data.get("port", DEFAULT_PORT)
+        current_scan_interval = self._config_entry.data.get("scan_interval", 10)
+        current_electric_power_sensor = self._config_entry.data.get("electric_power_sensor", "")
+        
+        _LOGGER.info(f"OptionsFlow showing form. Current values: host='{current_host}', port={current_port}, scan_interval={current_scan_interval}, electric_power_sensor='{current_electric_power_sensor}'")
         
         data_schema = vol.Schema({
-            vol.Optional(
-                "electric_power_sensor",
-                default=current_value
-            ): str,
+            vol.Required("host", default=current_host): str,
+            vol.Optional("port", default=current_port): int,
+            vol.Optional("scan_interval", default=current_scan_interval): int,
+            vol.Optional("electric_power_sensor", default=current_electric_power_sensor): str,
         })
 
         return self.async_show_form(step_id="init", data_schema=data_schema)

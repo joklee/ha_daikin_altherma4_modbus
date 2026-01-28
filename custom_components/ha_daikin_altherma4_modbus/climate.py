@@ -8,9 +8,17 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS
+from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS, INPUT_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def get_register_scale(address, register_list):
+    """Get scale factor for a register address from const.py."""
+    for register in register_list:
+        if register.get("address") == address:
+            return register.get("scale", 1)
+    return 1  # Default scale if not found
 
 # Register constants for Daikin Altherma 4
 REGISTER_CURRENT_TEMP = 40  # Leaving water temperature BUH
@@ -225,8 +233,128 @@ async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data["ha_daikin_altherma4_modbus"][entry.entry_id]
     
     entities = [
-        DaikinThermostatClimate(coordinator, entry)
+        DaikinThermostatClimate(coordinator, entry),
+        DaikinDHWManualThermostat(coordinator, entry)
     ]
     
     async_add_entities(entities)
-    _LOGGER.info("Setup Daikin Thermostat Climate entity")
+    _LOGGER.info("Setup Daikin Thermostat Climate entities")
+
+
+class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
+    """Ein Climate Entity für DHW Manual Heat-up."""
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_name = "DHW Manual Heat-up"
+        self._attr_unique_id = f"{DOMAIN}_dhw_manual_thermostat"
+        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_supported_features = (
+            ClimateEntityFeature.TARGET_TEMPERATURE
+        )
+        self._attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
+        self._attr_min_temp = 30
+        self._attr_max_temp = 85
+        self._attr_target_temperature_step = 1
+        self._attr_icon = "mdi:water-boiler"
+        self._attr_device_info = HOLDING_DEVICE_INFO
+
+    @property
+    def hvac_mode(self):
+        """Return current HVAC mode."""
+        # Check DHW Single heat-up ON/OFF (Manual) - address 14
+        data = self.coordinator.data.get(f"{DOMAIN}_holding_14")
+        if data is None:
+            return HVACMode.OFF
+        
+        val = data.get("value")
+        return HVACMode.HEAT if val == 1 else HVACMode.OFF
+
+    @property
+    def hvac_action(self):
+        """Return current HVAC action."""
+        if self.hvac_mode == HVACMode.OFF:
+            return HVACAction.OFF
+        
+        # Check if DHW is actually running
+        data = self.coordinator.data.get(f"{DOMAIN}_discrete_18")  # DHW running
+        if data is None:
+            return HVACAction.IDLE
+        
+        val = data.get("value")
+        return HVACAction.HEATING if val == 1 else HVACAction.IDLE
+
+    @property
+    def current_temperature(self):
+        """Return current temperature."""
+        # Use DHW temperature as current temperature
+        data = self.coordinator.data.get(f"{DOMAIN}_input_42")
+        if data is None:
+            return None
+        
+        # Get scale factor from const.py for DHW temperature (address 42)
+        scale_factor = get_register_scale(42, INPUT_REGISTERS)
+        raw_value = data.get("value")
+        return raw_value * scale_factor if raw_value is not None else None
+
+    @property
+    def target_temperature(self):
+        """Return target temperature."""
+        # Get DHW Single heat-up setpoint (Manual) - address 15
+        data = self.coordinator.data.get(f"{DOMAIN}_holding_15")
+        if data is None:
+            return None
+        
+        # Get scale factor from const.py for holding register (address 15)
+        scale_factor = get_register_scale(15, HOLDING_REGISTERS)
+        raw_value = data.get("value")
+        return raw_value * scale_factor if raw_value is not None else None
+
+    async def async_set_hvac_mode(self, hvac_mode):
+        """Set HVAC mode."""
+        if hvac_mode == HVACMode.HEAT:
+            # Turn ON DHW Single heat-up (Manual) - address 14
+            try:
+                result = await self.coordinator.client.write_register(14, 1)
+                if result.isError():
+                    _LOGGER.error(f"Failed to turn on DHW manual heat-up: {result}")
+                else:
+                    _LOGGER.info("Successfully turned on DHW manual heat-up")
+                    await self.coordinator.async_request_refresh()
+            except Exception as e:
+                _LOGGER.error(f"Error turning on DHW manual heat-up: {e}")
+        elif hvac_mode == HVACMode.OFF:
+            # Turn OFF DHW Single heat-up (Manual) - address 14
+            try:
+                result = await self.coordinator.client.write_register(14, 0)
+                if result.isError():
+                    _LOGGER.error(f"Failed to turn off DHW manual heat-up: {result}")
+                else:
+                    _LOGGER.info("Successfully turned off DHW manual heat-up")
+                    await self.coordinator.async_request_refresh()
+            except Exception as e:
+                _LOGGER.error(f"Error turning off DHW manual heat-up: {e}")
+
+    async def async_set_temperature(self, **kwargs):
+        """Set target temperature."""
+        temperature = kwargs.get("temperature")
+        if temperature is None:
+            return
+        
+        # Get scale factor from const.py for holding register (address 15)
+        scale_factor = get_register_scale(15, HOLDING_REGISTERS)
+        
+        # Convert temperature to raw register value
+        raw_value = int(temperature / scale_factor) if scale_factor != 0 else int(temperature)
+        
+        # Set DHW Single heat-up setpoint (Manual) - address 15
+        try:
+            result = await self.coordinator.client.write_register(15, raw_value)
+            if result.isError():
+                _LOGGER.error(f"Failed to set DHW manual heat-up temperature: {result}")
+            else:
+                _LOGGER.info(f"Successfully set DHW manual heat-up temperature to {temperature}°C (raw: {raw_value})")
+                await self.coordinator.async_request_refresh()
+        except Exception as e:
+            _LOGGER.error(f"Error setting DHW manual heat-up temperature: {e}")

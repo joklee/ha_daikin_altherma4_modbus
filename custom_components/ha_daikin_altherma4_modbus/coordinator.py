@@ -5,12 +5,21 @@ from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from .const import INPUT_REGISTERS, DOMAIN, BINARY_SENSORS, HOLDING_REGISTERS, SELECT_REGISTERS, DISCRETE_INPUT_SENSORS
+from .const import (
+    DOMAIN,
+    INPUT_REGISTERS,
+    HOLDING_REGISTERS,
+    SELECT_REGISTERS,
+    DISCRETE_INPUT_SENSORS,
+    COIL_SENSORS,
+    BINARY_SENSORS,
+    DEFAULT_SCAN_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 class DaikinAlthermaCoordinator(DataUpdateCoordinator):
-    """Koordinator für alle Input-Register."""
+    """Koordinator für alle Register."""
 
     def __init__(self, hass, host: str, port: int, scan_interval: int = 10):
         super().__init__(
@@ -27,13 +36,38 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
         self.last_triggered = {}
 
     async def _async_update_data(self):
-        """Lese alle Input-Register blockweise."""
+        """Lese alle Register blockweise."""
         if self.client is None:
+            _LOGGER.info(f"Creating new Modbus TCP client for {self.host}:{self.port}")
             self.client = AsyncModbusTcpClient(self.host, port=self.port)
-            await self.client.connect()
-            await asyncio.sleep(0.1)
+            _LOGGER.info(f"Connecting to Modbus TCP server at {self.host}:{self.port}")
+            
+            try:
+                await self.client.connect()
+                await asyncio.sleep(0.1)
+                if not self.client.connected:
+                    _LOGGER.error(f"Modbus connection failed to {self.host}:{self.port}")
+                    raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen")
+                else:
+                    _LOGGER.info(f"Successfully connected to Modbus TCP server at {self.host}:{self.port}")
+            except Exception as e:
+                _LOGGER.error(f"Exception during Modbus connection to {self.host}:{self.port}: {e}")
+                raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen: {e}")
+        else:
+            # Check if existing client is still connected
             if not self.client.connected:
-                raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen")
+                _LOGGER.warning(f"Modbus client disconnected, attempting reconnection to {self.host}:{self.port}")
+                try:
+                    await self.client.connect()
+                    await asyncio.sleep(0.1)
+                    if not self.client.connected:
+                        _LOGGER.error(f"Modbus reconnection failed to {self.host}:{self.port}")
+                        raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen")
+                    else:
+                        _LOGGER.info(f"Successfully reconnected to Modbus TCP server at {self.host}:{self.port}")
+                except Exception as e:
+                    _LOGGER.error(f"Exception during Modbus reconnection to {self.host}:{self.port}: {e}")
+                    raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen: {e}")
 
         # Adressen sammeln
         addresses = [item["address"] for item in INPUT_REGISTERS]
@@ -103,6 +137,37 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                         _LOGGER.error(f"Discrete Input-Lesen fehlgeschlagen")
                 except Exception as e:
                     _LOGGER.warning(f"Konnte Discrete Inputs nicht lesen: {e}")
+
+            # COIL_SENSORS verarbeiten (mit separatem Modbus-Aufruf)
+            if COIL_SENSORS:
+                try:
+                    # Coils mit Function Code 1 lesen
+                    coil_addresses = [item["address"] for item in COIL_SENSORS]
+                    coil_start = min(coil_addresses)
+                    coil_end = max(coil_addresses)
+                    coil_count = coil_end - coil_start + 1
+                    
+                    coils = await self.client.read_coils(address=coil_start, count=coil_count)
+                    if not coils.isError():
+                        for item in COIL_SENSORS:
+                            address = item["address"]
+                            input_type = item.get("input_type", "coil")
+                            unique_id = item.get("unique_id", f"coil_{address}")
+                            
+                            # Coils sind 0-basiert im Array
+                            if address - coil_start < len(coils.bits):
+                                raw_value = 1 if coils.bits[address - coil_start] else 0
+                                data[unique_id] = {
+                                    "value": raw_value,
+                                    "input_type": input_type,
+                                    "address": address
+                                }
+                            else:
+                                _LOGGER.warning(f"Coil {address} nicht im gelesenen Bereich ({len(coils.bits)} Bits)")
+                    else:
+                        _LOGGER.error(f"Coil-Lesen fehlgeschlagen")
+                except Exception as e:
+                    _LOGGER.warning(f"Konnte Coils nicht lesen: {e}")
             
             # HOLDING_REGISTERS und SELECT_REGISTERS verarbeiten (wenn vorhanden)
             all_holding_registers = []

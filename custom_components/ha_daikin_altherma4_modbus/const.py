@@ -32,6 +32,13 @@ DISCRETE_INPUT_DEVICE_INFO = {
     "model": "EPSX"
 }
 
+COIL_DEVICE_INFO = {
+    "identifiers": {("daikin_altherma_modbus", "coil_registers")},
+    "name": "Daikin Altherma 4 - Coil",
+    "manufacturer": "Daikin",
+    "model": "EPSX"
+}
+
 # Alle Input-Register aus 7.2.2 Daikin Configuration reference guide MMI user interface
 
 INPUT_REGISTERS = [
@@ -182,7 +189,7 @@ INPUT_REGISTERS = [
         "unit": "W",
         "scale": 10,
         "dtype": "uint16",
-        "icon": "mdi:power",
+        "icon": "mdi:lightning-bolt",
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_50",
         "entity_category": None
@@ -511,6 +518,19 @@ HOLDING_REGISTERS = [
         "max_value": 10,
         "step": 1
     },
+    {
+        "name": "Imposed power limit",
+        "address": 57,
+        "unit": "kW",
+        "scale": 0.001,
+        "dtype": "uint16",
+        "icon": "mdi:lightning-bolt",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_57",
+        "min_value": 0,
+        "max_value": 20,
+        "step": 0.5
+    },
 ]
 
 # Select Register (für Dropdown-Listen)
@@ -652,15 +672,6 @@ CALCULATED_SENSORS = [
         "type": "delta_t"
     },
     {
-        "name": "Last Defrost/Restart",
-        "unique_id": f"{DOMAIN}_last_defrost_restart",
-        "unit": None,
-        "device_class": "timestamp",
-        "type": "last_triggered",
-        "entity_category": None,
-        "trigger_address": 34
-    },
-    {
         "name": "Last Compressor Run",
         "unique_id": f"{DOMAIN}_last_compressor_run",
         "unit": None,
@@ -668,10 +679,35 @@ CALCULATED_SENSORS = [
         "type": "last_triggered",
         "entity_category": None,
         "trigger_address": 30
+    },
+    {
+        "name": "Last Defrost",
+        "unique_id": f"{DOMAIN}_last_defrost",
+        "unit": None,
+        "device_class": "timestamp",
+        "type": "last_triggered",
+        "entity_category": None,
+        "trigger_address": 16
+    },
+    {
+        "name": "Last Booster Heater",
+        "unique_id": f"{DOMAIN}_last_booster_heater",
+        "unit": None,
+        "device_class": "timestamp",
+        "type": "last_triggered",
+        "entity_category": None,
+        "trigger_address": 7
+    },
+    {
+        "name": "Last DHW running",
+        "unique_id": f"{DOMAIN}_last_dhw_running",
+        "unit": None,
+        "device_class": "timestamp",
+        "type": "last_triggered",
+        "entity_category": None,
+        "trigger_address": 18
     }
 ]
-
-# Alle Discrete Input-Register aus 7.2.3 Daikin Configuration reference guide MMI user interface
 
 DISCRETE_INPUT_SENSORS = [
     {
@@ -881,6 +917,35 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_25",
         "entity_category": EntityCategory.DIAGNOSTIC
+    }
+]
+
+# Alle Coil-Register aus 7.2.4 Daikin Configuration reference guide
+
+COIL_SENSORS = [
+    {
+        "name": "Domestic Hot Water ON/OFF",
+        "address": 0,
+        "device_class": "switch",
+        "input_type": "coil",
+        "unique_id": f"{DOMAIN}_coil_1",
+        "entity_category": None
+    },
+    {
+        "name": "Main zone ON/OFF",
+        "address": 1,
+        "device_class": "switch",
+        "input_type": "coil",
+        "unique_id": f"{DOMAIN}_coil_2",
+        "entity_category": None
+    },
+    {
+        "name": "Additional zone ON/OFF",
+        "address": 2,
+        "device_class": "switch",
+        "input_type": "coil",
+        "unique_id": f"{DOMAIN}_coil_3",
+        "entity_category": None
     }
 ]
 
