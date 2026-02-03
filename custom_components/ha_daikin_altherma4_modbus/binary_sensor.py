@@ -36,6 +36,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 device_class=discrete["device_class"],
                 entity_category=discrete.get("entity_category"),
                 unique_id=discrete.get("unique_id"),
+                translation_key=discrete.get("translation_key"),
             )
         )
 
@@ -44,12 +45,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Ein Binary Sensor für Modbus-Register."""
+    
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, entry, name, address, device_class, entity_category=None, unique_id=None):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
-        self._attr_name = name
         self._attr_unique_id = unique_id or f"{DOMAIN}_{address}"
         self._attr_device_class = device_class
         self._attr_entity_category = entity_category
@@ -66,17 +68,19 @@ class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
 
 class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
-    """Ein Binary Sensor für Discrete Input Register."""
+    """A Binary Sensor for Discrete Input Register."""
+    
+    _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, name, address, device_class, entity_category=None, unique_id=None):
+    def __init__(self, coordinator, entry, name, address, device_class, entity_category=None, unique_id=None, translation_key=None):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
-        self._attr_name = name
         self._attr_unique_id = unique_id or f"{DOMAIN}_discrete_{address}"
         self._attr_device_class = device_class
         self._attr_entity_category = entity_category
         self._attr_device_info = DISCRETE_INPUT_DEVICE_INFO
+        self._attr_translation_key = translation_key
 
     @property
     def is_on(self):

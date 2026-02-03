@@ -21,6 +21,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 name=coil["name"],
                 address=coil["address"],
                 unique_id=coil.get("unique_id"),
+                translation_key=coil.get("translation_key"),
             )
         )
 
@@ -28,16 +29,18 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
-    """Ein Switch für Coil Register."""
+    """A Switch for Coil Register."""
+    
+    _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, name, address, unique_id=None):
+    def __init__(self, coordinator, entry, name, address, unique_id=None, translation_key=None):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
-        self._attr_name = name
         self._attr_unique_id = unique_id or f"{DOMAIN}_coil_{address}"
         self._attr_device_info = COIL_DEVICE_INFO
         self._attr_icon = "mdi:power"
+        self._attr_translation_key = translation_key
 
     @property
     def is_on(self):

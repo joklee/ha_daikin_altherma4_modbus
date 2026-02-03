@@ -8,6 +8,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity import DeviceInfo
 from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS, INPUT_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,11 +22,11 @@ def get_register_scale(address, register_list):
     return 1  # Default scale if not found
 
 # Register constants for Daikin Altherma 4
-REGISTER_CURRENT_TEMP = 40  # Leaving water temperature BUH
-REGISTER_OFFSET = 53        # Weather-dependent mode Main LWT Heating setpoint offset
-REGISTER_OPERATION_MODE = 2  # Operation mode
-REGISTER_QUIET_MODE = 8     # Quiet mode operation
-REGISTER_COMPRESSOR = 30    # Compressor status
+REGISTER_CURRENT_TEMP = 41  # Leaving water temperature BUH
+REGISTER_OFFSET = 54        # Weather-dependent mode Main LWT Heating setpoint offset
+REGISTER_OPERATION_MODE = 3  # Operation mode
+REGISTER_QUIET_MODE = 9     # Quiet mode operation
+REGISTER_COMPRESSOR = 31    # Compressor status
 
 # Fan mode constants (quiet mode)
 FAN_OFF = "OFF"
@@ -35,10 +36,11 @@ FAN_MANUAL = "On (Manual)"
 class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     """Climate Entity for Daikin Altherma 4 Thermostat Control."""
     
+    _attr_has_entity_name = True
+    
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_name = "Daikin Thermostat Control"
         self._attr_unique_id = f"{DOMAIN}_thermostat_climate"
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = (
@@ -46,6 +48,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         )
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
         self._attr_device_info = HOLDING_DEVICE_INFO
+        self._attr_translation_key = "daikin_thermostat_climate"
 
     def _get_offset_register_config(self):
         """Get configuration for holding register 53 (offset)."""
@@ -242,12 +245,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
-    """Ein Climate Entity für DHW Manual Heat-up."""
+    """Climate Entity for DHW Manual Heat-up."""
+    
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, entry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_name = "DHW Manual Heat-up"
         self._attr_unique_id = f"{DOMAIN}_dhw_manual_thermostat"
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = (
@@ -259,6 +263,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
         self._attr_target_temperature_step = 1
         self._attr_icon = "mdi:water-boiler"
         self._attr_device_info = HOLDING_DEVICE_INFO
+        self._attr_translation_key = "daikin_dhw_manual_thermostat"
 
     @property
     def hvac_mode(self):

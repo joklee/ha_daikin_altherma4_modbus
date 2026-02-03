@@ -1,0 +1,446 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Daikin Altherma 4 Modbus",
+        "description": "Konfiguriere die Daikin Altherma 4 Modbus Integration",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Scan-Intervall",
+          "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Daikin Altherma 4 Optionen",
+        "description": "Konfiguriere die Daikin Altherma 4 Modbus Integration Optionen",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Scan-Intervall",
+          "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID"
+        }
+      }
+    }
+  },
+  "error": {
+    "invalid_host": "Ungültiger Host",
+    "invalid_port": "Ungültiger Port",
+    "cannot_connect": "Verbindung fehlgeschlagen",
+    "invalid_auth": "Ungültige Authentifizierung"
+  },
+  "device": {
+    "daikin_altherma_modbus_input_registers": {
+      "name": "Daikin Altherma 4 - Eingaberegister"
+    },
+    "daikin_altherma_modbus_holding_registers": {
+      "name": "Daikin Altherma 4 - Halteregister"
+    },
+    "daikin_altherma_modbus_calculated_sensors": {
+      "name": "Daikin Altherma 4 - Erweitert"
+    },
+    "daikin_altherma_modbus_discrete_input_registers": {
+      "name": "Daikin Altherma 4 - Diskrete Eingänge"
+    },
+    "daikin_altherma_modbus_coil_registers": {
+      "name": "Daikin Altherma 4 - Spulen"
+    }
+  },
+  "entity": {
+    "climate": {
+      "daikin_thermostat_climate": {
+        "name": "Heizungs-Thermostatsteuerung"
+      },
+      "daikin_dhw_manual_thermostat": {
+        "name": "Warmwasser-Thermostatsteuerung"
+      }
+    },
+    "switch": {
+      "coil_1": {
+        "name": "Brauchwasser"
+      },
+      "coil_2": {
+        "name": "Hauptzone"
+      },
+      "coil_3": {
+        "name": "Zusatzzone"
+      }
+    },
+    "binary_sensor": {
+      "discrete_0": {
+        "name": "Absperrventil"
+      },
+      "discrete_1": {
+        "name": "Reserveheizung-Relais 1"
+      },
+      "discrete_2": {
+        "name": "Reserveheizung-Relais 2"
+      },
+      "discrete_3": {
+        "name": "Reserveheizung-Relais 3"
+      },
+      "discrete_4": {
+        "name": "Reserveheizung-Relais 4"
+      },
+      "discrete_5": {
+        "name": "Reserveheizung-Relais 5"
+      },
+      "discrete_6": {
+        "name": "Reserveheizung-Relais 6"
+      },
+      "discrete_7": {
+        "name": "Zusatzheizung"
+      },
+      "discrete_8": {
+        "name": "Speicherkessel"
+      },
+      "discrete_9": {
+        "name": "Bivalent"
+      },
+      "discrete_10": {
+        "name": "Verdichter läuft"
+      },
+      "discrete_11": {
+        "name": "Geräuscharmer Betrieb aktiv"
+      },
+      "discrete_12": {
+        "name": "Urlaub aktiv"
+      },
+      "discrete_13": {
+        "name": "Frostschutz-Status"
+      },
+      "discrete_14": {
+        "name": "Wasserleitung-Frostschutz Status"
+      },
+      "discrete_15": {
+        "name": "Desinfektionsbetrieb"
+      },
+      "discrete_16": {
+        "name": "Enteisen"
+      },
+      "discrete_17": {
+        "name": "Warmstart"
+      },
+      "discrete_18": {
+        "name": "Brauchwasser läuft"
+      },
+      "discrete_19": {
+        "name": "Hauptzone läuft"
+      },
+      "discrete_20": {
+        "name": "Zusatzzone läuft"
+      },
+      "discrete_21": {
+        "name": "Anforderung zum leistungsstarken Aufheizen des Speichers"
+      },
+      "discrete_22": {
+        "name": "Manuelle Anforderung zum Aufheizen des Speichers"
+      },
+      "discrete_23": {
+        "name": "Notfall aktiv"
+      },
+      "discrete_24": {
+        "name": "Umwälzpumpe läuft"
+      },
+      "discrete_25": {
+        "name": "Akzeptanz auferlegte Grenze(a)"
+      }
+    },
+    "sensor": {
+      "input_21": {
+        "name": "Unregelmäßigkeit bei der Einheit"
+      },
+      "input_22": {
+        "name": "Code für die Unregelmäßigkeit"
+      },
+      "input_23": {
+        "name": "Untercode für die Unregelmäßigkeit"
+      },
+      "input_30": {
+        "name": "Umwälzpumpe läuft"
+      },
+      "input_31": {
+        "name": "Verdichter läuft"
+      },
+      "input_32": {
+        "name": "Zusatzheizung läuft"
+      },
+      "input_33": {
+        "name": "Desinfektionsbetrieb"
+      },
+      "input_35": {
+        "name": "Abtauen/Neustart"
+      },
+      "input_36": {
+        "name": "Warmstart"
+      },
+      "input_37": {
+        "name": "3-Wege-Ventil"
+      },
+      "input_38": {
+        "name": "Betriebsart"
+      },
+      "input_40": {
+        "name": "Vorlauftemperatur PHE"
+      },
+      "input_41": {
+        "name": "Vorlauftemperatur BUH"
+      },
+      "input_42": {
+        "name": "Rücklauftemperatur des Wassers"
+      },
+      "input_43": {
+        "name": "Brauchwassertemperatur"
+      },
+      "input_44": {
+        "name": "Außenlufttemperatur"
+      },
+      "input_45": {
+        "name": "Temperatur der KältemittelFlüssigkeit"
+      },
+      "input_49": {
+        "name": "Durchflussmenge"
+      },
+      "input_50": {
+        "name": "Fernbedienung Raumtemperatur (Haupt)"
+      },
+      "input_51": {
+        "name": "Stromverbrauch Wärmepumpe"
+      },
+      "input_52": {
+        "name": "Brauchwasser-Normalbetrieb"
+      },
+      "input_53": {
+        "name": "Raumheizen/-kühlen Normalbetrieb"
+      },
+      "input_54": {
+        "name": "Vorlauf Haupt Heizen-Sollwert unterer Grenzwert"
+      },
+      "input_55": {
+        "name": "Vorlauf Haupt Heizen-Sollwert oberer Grenzwert"
+      },
+      "input_56": {
+        "name": "Vorlauf Haupt Kühlen-Sollwert unterer Grenzwert"
+      },
+      "input_57": {
+        "name": "Vorlauf Haupt Kühlen-Sollwert oberer Grenzwert"
+      },
+      "input_58": {
+        "name": "Vorlauf Zusatz Heizen-Sollwert unterer Grenzwert"
+      },
+      "input_59": {
+        "name": "Vorlauf Zusatz Heizen-Sollwert oberer Grenzwert"
+      },
+      "input_60": {
+        "name": "Vorlauf Zusatz Kühlen-Sollwert unterer Grenzwert"
+      },
+      "input_61": {
+        "name": "Vorlauf Zusatz Kühlen-Sollwert oberer Grenzwert"
+      },
+      "input_63": {
+        "name": "Desinfektionsstatus"
+      },
+      "input_64": {
+        "name": "Urlaubsmodus"
+      },
+      "input_65": {
+        "name": "Modus der Bedarfsanforderung"
+      },
+      "input_66": {
+        "name": "Bypass-Ventil Stellung"
+      },
+      "input_67": {
+        "name": "Speicherventil-Stellung"
+      },
+      "input_68": {
+        "name": "Drehzahl Umwälzpumpe"
+      },
+      "input_69": {
+        "name": "Gemischte Pumpe PWM im Mischsatz"
+      },
+      "input_70": {
+        "name": "Direkte Pumpe PWM im Mischsatz"
+      },
+      "input_71": {
+        "name": "Stellung des Mischventils im Mischsatz"
+      },
+      "input_72": {
+        "name": "Misch-Vorlauftemperatur im Mischsatz"
+      },
+      "input_73": {
+        "name": "Raumheiz-/-kühlziel für die Hauptzone im Mischsatz"
+      },
+      "input_74": {
+        "name": "Vorlauftemperatur Vor-PHE außen"
+      },
+      "input_75": {
+        "name": "Vorlauftemperatur Speicherventil"
+      },
+      "input_76": {
+        "name": "Brauchwasser obere Temperatur"
+      },
+      "input_77": {
+        "name": "Brauchwasser untere Temperatur"
+      },
+      "input_78": {
+        "name": "Fernbedienung Raumtemperatur (Zusatz)"
+      },
+      "input_79": {
+        "name": "Wasserdruck"
+      },
+      "input_80": {
+        "name": "Raumheiz-/-kühlziel für die Hauptzone"
+      },
+      "input_81": {
+        "name": "Raumheiz-/-kühlziel für die Zusatzzone"
+      },
+      "input_82": {
+        "name": "Gerätebetriebsart"
+      },
+      "input_83": {
+        "name": "Heizen-Sollwert Raum unterer Grenzwert"
+      },
+      "input_84": {
+        "name": "Heizen-Sollwert Raum oberer Grenzwert"
+      },
+      "input_85": {
+        "name": "Kühlen-Sollwert Raum unterer Grenzwert"
+      },
+      "input_86": {
+        "name": "Kühlen-Sollwert Raum oberer Grenzwert"
+      },
+      "input_87": {
+        "name": "Zähler Unregelmäßigkeit (Benutzer)"
+      },
+      "input_88": {
+        "name": "Gerätebetriebsart"
+      },
+      "input_89": {
+        "name": "Heizen-Sollwert Raum unterer Grenzwert"
+      },
+      "input_90": {
+        "name": "Heizen-Sollwert Raum oberer Grenzwert"
+      },
+      "input_91": {
+        "name": "Kühlen-Sollwert Raum unterer Grenzwert"
+      },
+      "input_92": {
+        "name": "Kühlen-Sollwert Raum oberer Grenzwert"
+      },
+      "pump_power_calc": {
+        "name": "Wärmepumpenleistung berechnet"
+      },
+      "cop": {
+        "name": "Leistungszahl (CoP)"
+      },
+      "t": {
+        "name": "Delta-T"
+      },
+      "compressor_run": {
+        "name": "Letzter Verdichterlauf"
+      },
+      "defrost": {
+        "name": "Letzte Abtauung"
+      },
+      "booster_heater": {
+        "name": "Letzter Zusatzheizer"
+      },
+      "dhw_running": {
+        "name": "Letzte Brauchwasserbereitung"
+      }
+    },
+    "number": {
+      "holding_1": {
+        "name": "Vorlauf Haupt Heizen-Sollwert"
+      },
+      "holding_2": {
+        "name": "Vorlauf Haupt Kühlen-Sollwert"
+      },
+      "holding_3": {
+        "name": "Betriebsart"
+      },
+      "holding_4": {
+        "name": "Raumheizen/-kühlen EIN/AUS"
+      },
+      "holding_6": {
+        "name": "Raumthermostat-Steuerung Heizen-Sollwert Haupt"
+      },
+      "holding_7": {
+        "name": "Raumthermostat-Steuerung Kühlen-Sollwert Haupt"
+      },
+      "holding_9": {
+        "name": "Geräuscharmer Betrieb"
+      },
+      "holding_10": {
+        "name": "Brauchwasser Warmhalten-Sollwert"
+      },
+      "holding_13": {
+        "name": "Brauchwasser Zusatzheizungsmodus EIN/AUS (leistungsstark)"
+      },
+      "holding_14": {
+        "name": "Brauchwasser Zusatz-Sollwert (leistungsstark)"
+      },
+      "holding_15": {
+        "name": "Brauchwasser Einzelaufheizung EIN/AUS (manuell)"
+      },
+      "holding_16": {
+        "name": "Brauchwasser Einzelaufheizung Sollwert (manuell)"
+      },
+      "holding_54": {
+        "name": "Witterungsgeführter Modus Haupt VLT-HeizenSollwertverschiebung"
+      },
+      "holding_55": {
+        "name": "Witterungsgeführter Modus Haupt VLT-KühlenSollwertverschiebung"
+      },
+      "holding_56": {
+        "name": "Smart Grid-Betriebsart"
+      },
+      "holding_58": {
+        "name": "Auferlegte Leistungsgrenze"
+      },
+      "holding_63": {
+        "name": "Vorlauf Zusatz Heizen-Sollwert"
+      },
+      "holding_64": {
+        "name": "Vorlauf Zusatz Kühlen-Sollwert"
+      },
+      "holding_66": {
+        "name": "Witterungsgeführter Modus Zusatz VLT-HeizenSollwertverschiebung"
+      },
+      "holding_67": {
+        "name": "Witterungsgeführter Modus Zusatz VLT-KühlenSollwertverschiebung"
+      },
+      "holding_68": {
+        "name": "Witterungsgeführter Modus Heizen Haupt"
+      },
+      "holding_69": {
+        "name": "Witterungsgeführter Modus Kühlen Haupt"
+      },
+      "holding_74": {
+        "name": "Thermostat Anforderung Haupt"
+      },
+      "holding_75": {
+        "name": "Thermostat Anforderung Zusatz"
+      },
+      "holding_76": {
+        "name": "Raumthermostat-Steuerung Heizen-Sollwert Haupt"
+      },
+      "holding_77": {
+        "name": "Raumthermostat-Steuerung Kühlen-Sollwert Haupt"
+      },
+      "holding_78": {
+        "name": "Raumthermostat-Steuerung Heizen-Sollwert Zusatz"
+      },
+      "holding_79": {
+        "name": "Raumthermostat-Steuerung Kühlen-Sollwert Zusatz"
+      },
+      "holding_80": {
+        "name": "Brauchwassermodus-Einstellung"
+      }
+    }
+  }
+}

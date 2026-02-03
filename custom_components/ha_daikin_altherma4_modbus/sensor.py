@@ -12,7 +12,6 @@ from .const import (
     CALCULATED_SENSORS,
     DEFAULT_SCAN_INTERVAL,
 )
-from .device_info import get_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +32,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         enum_map = item.get("enum_map")
         entity_category = item.get("entity_category")
         unique_id = item.get("unique_id", f"{DOMAIN}_input_{address}")
+        translation_key = item.get("translation_key")
         
         entities.append(
             DaikinInputSensor(
@@ -48,9 +48,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 enum_map=enum_map,
                 entity_category=entity_category,
                 unique_id=unique_id,
+                translation_key=translation_key,
                 device_info=INPUT_DEVICE_INFO
             )
         )
+        _LOGGER.info(f"name: {name} - translation_key {translation_key}")
 
     # Externer elektrischer Leistungssensor (immer erstellen, Verfügbarkeit wird über available property gesteuert)
     _LOGGER.info(f"Creating External Electric Power Sensor")
@@ -156,9 +158,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class DaikinInputSensor(CoordinatorEntity, SensorEntity):
-    """Ein Sensor für Input-Register."""
+    """A Sensor for Input-Register."""
+    
+    _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, name, address, unit, dtype, scale, count, icon, enum_map, entity_category=None, unique_id=None, device_info=None):
+    def __init__(self, coordinator, entry, name, address, unit, dtype, scale, count, icon, enum_map, entity_category=None, unique_id=None, device_info=None, translation_key=None):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
@@ -167,14 +171,11 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._count = count
         self._icon = icon
         self._enum_map = enum_map
-        self._attr_name = name
-        self._attr_unique_id = unique_id or f"{DOMAIN}_{address}"
+        self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
-        self._attr_icon = self._icon
-        self._attr_device_info = device_info or INPUT_DEVICE_INFO
-        
-        # Entity category setzen
         self._attr_entity_category = entity_category
+        self._attr_device_info = device_info
+        self._attr_translation_key = translation_key
 
     @property
     def native_value(self):
@@ -206,11 +207,12 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
 
 class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Wärmepumpenleistung."""
+    
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_name = name
         self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
@@ -240,11 +242,12 @@ class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
 
 class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Coefficient of Performance (CoP)."""
+    
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_name = name
         self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
@@ -308,12 +311,13 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
 
 class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
     """Sensor für das letzte Auslösen eines Binärsensors."""
+    
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, entry, name, unique_id, unit, device_class, trigger_address, entity_category=None, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
         self._trigger_address = trigger_address
-        self._attr_name = name
         self._attr_unique_id = unique_id
         self._attr_unit_of_measurement = unit
         self._attr_device_class = device_class
@@ -328,11 +332,12 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
 
 class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
     """Sensor für externen elektrischen Leistungssensor."""
+    
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_name = name
         self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
@@ -376,10 +381,11 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
 class DeltaTSensor(CoordinatorEntity, SensorEntity):
     """Calculated sensor for temperature difference (Delta-T)."""
     
+    _attr_has_entity_name = True
+    
     def __init__(self, coordinator, entry, name, unique_id, unit, device_class, device_info=None):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_name = name
         self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class

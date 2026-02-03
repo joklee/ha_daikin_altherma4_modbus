@@ -1,0 +1,383 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Daikin Altherma 4 Modbus",
+        "description": "Configure Daikin Altherma 4 Modbus integration",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Scan Interval",
+          "electric_power_sensor": "External Electric Power Sensor Entity ID"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Daikin Altherma 4 Options",
+        "description": "Configure Daikin Altherma 4 Modbus integration options",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Scan Interval",
+          "electric_power_sensor": "External Electric Power Sensor Entity ID"
+        }
+      }
+    }
+  },
+  "error": {
+    "invalid_host": "Invalid host",
+    "invalid_port": "Invalid port",
+    "cannot_connect": "Failed to connect",
+    "invalid_auth": "Invalid authentication"
+  },
+  "device": {
+    "daikin_altherma_modbus_input_registers": {
+      "name": "Daikin Altherma 4 - Input Register"
+    },
+    "daikin_altherma_modbus_holding_registers": {
+      "name": "Daikin Altherma 4 - Holding Register"
+    },
+    "daikin_altherma_modbus_calculated_sensors": {
+      "name": "Daikin Altherma 4 - Enhanced"
+    },
+    "daikin_altherma_modbus_discrete_input_registers": {
+      "name": "Daikin Altherma 4 - Discrete Input"
+    },
+    "daikin_altherma_modbus_coil_registers": {
+      "name": "Daikin Altherma 4 - Coil"
+    }
+  },
+  "entity": {
+    "climate": {
+      "daikin_thermostat_climate": {
+        "name": "Heating Thermostat Control"
+      },
+      "daikin_dhw_manual_thermostat": {
+        "name": "DHW Thermostat Control"
+      }
+    },
+    "switch": {
+      "coil_1": {
+        "name": "Domestic Hot Water"
+      },
+      "coil_2": {
+        "name": "Main zone"
+      },
+      "coil_3": {
+        "name": "Additional zone"
+      }
+    },
+    "binary_sensor": {
+      "discrete_0": {
+        "name": "Shut-off valve"
+      },
+      "discrete_1": {
+        "name": "Backup heater relay 1"
+      },
+      "discrete_2": {
+        "name": "Backup heater relay 2"
+      },
+      "discrete_3": {
+        "name": "Backup heater relay 3"
+      },
+      "discrete_4": {
+        "name": "Backup heater relay 4"
+      },
+      "discrete_5": {
+        "name": "Backup heater relay 5"
+      },
+      "discrete_6": {
+        "name": "Backup heater relay 6"
+      },
+      "discrete_7": {
+        "name": "Auxiliary heating"
+      },
+      "discrete_8": {
+        "name": "Storage tank"
+      },
+      "discrete_9": {
+        "name": "Bivalent"
+      },
+      "discrete_10": {
+        "name": "Compressor running"
+      },
+      "discrete_11": {
+        "name": "Quiet mode operation active"
+      },
+      "discrete_12": {
+        "name": "Holiday mode active"
+      },
+      "discrete_13": {
+        "name": "Antifrost status"
+      },
+      "discrete_14": {
+        "name": "Water pipe freeze prevention status"
+      },
+      "discrete_15": {
+        "name": "Disinfection operation"
+      },
+      "discrete_16": {
+        "name": "Defrost"
+      },
+      "discrete_17": {
+        "name": "Hot start"
+      },
+      "discrete_18": {
+        "name": "DHW running"
+      },
+      "discrete_19": {
+        "name": "Main zone running"
+      },
+      "discrete_20": {
+        "name": "Additional zone running"
+      },
+      "discrete_21": {
+        "name": "Powerful tank heat up request"
+      },
+      "discrete_22": {
+        "name": "Manual tank heat up request"
+      },
+      "discrete_23": {
+        "name": "Emergency active"
+      },
+      "discrete_24": {
+        "name": "Circulation pump running"
+      },
+      "discrete_25": {
+        "name": "Imposed limit acceptance"
+      }
+    },
+    "sensor": {
+      "input_21": {
+        "name": "Unit abnormality"
+      },
+      "input_22": {
+        "name": "Abnormality code"
+      },
+      "input_23": {
+        "name": "Subcode for abnormality"
+      },
+      "input_30": {
+        "name": "Circulation pump running"
+      },
+      "input_31": {
+        "name": "Compressor running"
+      },
+      "input_32": {
+        "name": "Auxiliary heating running"
+      },
+      "input_33": {
+        "name": "Disinfection operation"
+      },
+      "input_35": {
+        "name": "Defrost/Restart"
+      },
+      "input_36": {
+        "name": "Hot start"
+      },
+      "input_37": {
+        "name": "3-way valve"
+      },
+      "input_38": {
+        "name": "Operation mode"
+      },
+      "input_40": {
+        "name": "Leaving water temperature PHE"
+      },
+      "input_41": {
+        "name": "Leaving water temperature BUH"
+      },
+      "input_42": {
+        "name": "Water return temperature"
+      },
+      "input_43": {
+        "name": "DHW temperature"
+      },
+      "input_44": {
+        "name": "Outdoor air temperature"
+      },
+      "input_45": {
+        "name": "Refrigerant liquid temperature"
+      },
+      "input_49": {
+        "name": "Flow rate"
+      },
+      "input_50": {
+        "name": "Remote control room temperature (Main)"
+      },
+      "input_51": {
+        "name": "Heat pump power consumption"
+      },
+      "input_52": {
+        "name": "DHW normal operation"
+      },
+      "input_53": {
+        "name": "Space heating/cooling normal operation"
+      },
+      "input_54": {
+        "name": "Leaving water Main Heating setpoint lower limit"
+      },
+      "input_55": {
+        "name": "Leaving water Main Heating setpoint upper limit"
+      },
+      "input_56": {
+        "name": "Leaving water Main Cooling setpoint lower limit"
+      },
+      "input_57": {
+        "name": "Main cooling setpoint upper limit"
+      },
+      "input_58": {
+        "name": "Additional heating setpoint lower limit"
+      },
+      "input_59": {
+        "name": "Additional heating setpoint upper limit"
+      },
+      "input_60": {
+        "name": "Additional cooling setpoint lower limit"
+      },
+      "input_61": {
+        "name": "Additional cooling setpoint upper limit"
+      },
+      "input_63": {
+        "name": "Disinfection status"
+      },
+      "input_64": {
+        "name": "Holiday mode"
+      },
+      "input_65": {
+        "name": "Demand request mode"
+      },
+      "input_66": {
+        "name": "Bypass valve position"
+      },
+      "input_67": {
+        "name": "Storage valve position"
+      },
+      "input_68": {
+        "name": "Circulation pump speed"
+      },
+      "input_69": {
+        "name": "Mixed pump PWM in mixing ratio"
+      },
+      "input_70": {
+        "name": "Direct pump PWM in mixing ratio"
+      },
+      "input_71": {
+        "name": "Mixing valve position in mixing ratio"
+      },
+      "pump_power_calc": {
+        "name": "Heat Pump Power Calculated"
+      },
+      "cop": {
+        "name": "Coefficient of Performance"
+      },
+      "t": {
+        "name": "Delta-T"
+      },
+      "compressor_run": {
+        "name": "Last Compressor Run"
+      },
+      "defrost": {
+        "name": "Last Defrost"
+      },
+      "booster_heater": {
+        "name": "Last Booster Heater"
+      },
+      "dhw_running": {
+        "name": "Last DHW Running"
+      }
+    },
+    "number": {
+      "holding_1": {
+        "name": "Main heating setpoint"
+      },
+      "holding_2": {
+        "name": "Main cooling setpoint"
+      },
+      "holding_3": {
+        "name": "Operation mode"
+      },
+      "holding_4": {
+        "name": "Space heating/cooling ON/OFF"
+      },
+      "holding_6": {
+        "name": "Room thermostat control heating setpoint main"
+      },
+      "holding_7": {
+        "name": "Room thermostat control cooling setpoint main"
+      },
+      "holding_9": {
+        "name": "Quiet mode operation"
+      },
+      "holding_10": {
+        "name": "DHW keep warm setpoint"
+      },
+      "holding_13": {
+        "name": "DHW auxiliary heating mode ON/OFF (powerful)"
+      },
+      "holding_14": {
+        "name": "DHW additional setpoint (powerful)"
+      },
+      "holding_15": {
+        "name": "DHW single heat-up ON/OFF (manual)"
+      },
+      "holding_16": {
+        "name": "DHW single heat-up setpoint (manual)"
+      },
+      "holding_54": {
+        "name": "Weather-dependent mode main LWT heating setpoint offset"
+      },
+      "holding_55": {
+        "name": "Weather-dependent mode main LWT cooling setpoint offset"
+      },
+      "holding_56": {
+        "name": "Smart grid operation mode"
+      },
+      "holding_58": {
+        "name": "Imposed power limit"
+      },
+      "holding_63": {
+        "name": "Additional heating setpoint"
+      },
+      "holding_64": {
+        "name": "Additional cooling setpoint"
+      },
+      "holding_66": {
+        "name": "Weather-dependent mode additional LWT heating setpoint offset"
+      },
+      "holding_67": {
+        "name": "Weather-dependent mode additional LWT cooling setpoint offset"
+      },
+      "holding_68": {
+        "name": "Weather-dependent mode heating main"
+      },
+      "holding_69": {
+        "name": "Weather-dependent mode cooling main"
+      },
+      "holding_74": {
+        "name": "Thermostat request main"
+      },
+      "holding_75": {
+        "name": "Thermostat request additional"
+      },
+      "holding_76": {
+        "name": "Room thermostat control heating setpoint main"
+      },
+      "holding_77": {
+        "name": "Home thermostat control cooling setpoint main"
+      },
+      "holding_78": {
+        "name": "Room thermostat control heating setpoint additional"
+      },
+      "holding_79": {
+        "name": "Room thermostat control cooling setpoint additional"
+      },
+      "holding_80": {
+        "name": "DHW mode setting"
+      }
+    }
+  }
+}
