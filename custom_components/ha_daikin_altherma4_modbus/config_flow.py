@@ -15,7 +15,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     async def async_step_user(self, user_input=None):
-        """Schritt für Benutzer-Eingabe (Host, Port, Scan Interval)."""
+        """Handle the user step."""
         errors = {}
 
         if user_input is not None:
@@ -34,7 +34,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional("electric_power_sensor"): str,
         })
 
-        return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
+        return self.async_show_form(
+            step_id="user", 
+            data_schema=data_schema, 
+            errors=errors,
+            last_step=True
+        )
 
     @staticmethod
     def async_get_options_flow(config_entry):
@@ -43,7 +48,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class OptionsFlow(config_entries.OptionsFlow):
-    """Options flow für Daikin Altherma 4 Modbus."""
+    """Options flow for Daikin Altherma 4 Modbus."""
 
     def __init__(self, config_entry):
         """Initialize options flow."""
@@ -51,48 +56,81 @@ class OptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
+        errors = {}
         _LOGGER.info(f"OptionsFlow step_init. User input: {user_input}")
 
         if user_input is not None:
-            # Process the electric_power_sensor value
-            electric_power_sensor = user_input.get("electric_power_sensor")
+            # Validate host
+            host = user_input.get("host", "").strip()
+            if not host:
+                errors["host"] = "invalid_host"
             
-            # Create options data
-            options_data = {}
-            if electric_power_sensor and electric_power_sensor.strip():
-                options_data["electric_power_sensor"] = electric_power_sensor.strip()
-                _LOGGER.info(f"Setting electric_power_sensor to: {electric_power_sensor.strip()}")
-            else:
-                # Don't include the key in options_data for deletion
-                _LOGGER.info("Removing electric_power_sensor (empty/None value)")
+            # Validate port
+            port = user_input.get("port")
+            if port is not None and (port < 1 or port > 65535):
+                errors["port"] = "invalid_port"
             
-            _LOGGER.info(f"Creating entry with options data: {options_data}")
-            
-            # Update the config entry data directly
-            new_data = dict(self._config_entry.data)
-            if electric_power_sensor and electric_power_sensor.strip():
-                new_data["electric_power_sensor"] = electric_power_sensor.strip()
-                _LOGGER.info(f"Updating config entry: setting electric_power_sensor to {electric_power_sensor.strip()}")
-            else:
-                if "electric_power_sensor" in new_data:
-                    del new_data["electric_power_sensor"]
-                    _LOGGER.info("Updating config entry: removing electric_power_sensor")
-            
-            _LOGGER.info(f"New config entry data will be: {new_data}")
-            self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
-            
-            result = self.async_create_entry(title="", data=options_data)
-            _LOGGER.info(f"async_create_entry result: {result}")
-            return result
+            # If no errors, proceed with update
+            if not errors:
+                # Process all options
+                scan_interval = user_input.get("scan_interval")
+                electric_power_sensor = user_input.get("electric_power_sensor")
+                
+                # Create options data
+                options_data = {}
+                
+                # Update config entry data with connection parameters
+                new_data = dict(self._config_entry.data)
+                
+                # Update host
+                if host:
+                    new_data["host"] = host
+                    _LOGGER.info(f"Updating host to: {host}")
+                
+                # Update port
+                if port is not None:
+                    new_data["port"] = port
+                    _LOGGER.info(f"Updating port to: {port}")
+                
+                # Update scan_interval
+                if scan_interval is not None:
+                    new_data["scan_interval"] = scan_interval
+                    _LOGGER.info(f"Updating scan_interval to: {scan_interval}")
+                
+                # Update electric_power_sensor
+                if electric_power_sensor and electric_power_sensor.strip():
+                    new_data["electric_power_sensor"] = electric_power_sensor.strip()
+                    _LOGGER.info(f"Updating electric_power_sensor to: {electric_power_sensor.strip()}")
+                else:
+                    if "electric_power_sensor" in new_data:
+                        del new_data["electric_power_sensor"]
+                        _LOGGER.info("Removing electric_power_sensor")
+                
+                _LOGGER.info(f"New config entry data will be: {new_data}")
+                self.hass.config_entries.async_update_entry(self._config_entry, data=new_data)
+                
+                result = self.async_create_entry(title="", data=options_data)
+                _LOGGER.info(f"async_create_entry result: {result}")
+                return result
 
-        current_value = self._config_entry.data.get("electric_power_sensor", "")
-        _LOGGER.info(f"OptionsFlow showing form. Current electric_power_sensor: '{current_value}'")
+        # Get current values
+        current_host = self._config_entry.data.get("host", "")
+        current_port = self._config_entry.data.get("port", DEFAULT_PORT)
+        current_scan_interval = self._config_entry.data.get("scan_interval", 10)
+        current_electric_power_sensor = self._config_entry.data.get("electric_power_sensor", "")
+        
+        _LOGGER.info(f"OptionsFlow showing form. Current values: host='{current_host}', port={current_port}, scan_interval={current_scan_interval}, electric_power_sensor='{current_electric_power_sensor}'")
         
         data_schema = vol.Schema({
-            vol.Optional(
-                "electric_power_sensor",
-                default=current_value
-            ): str,
+            vol.Required("host", default=current_host): str,
+            vol.Optional("port", default=current_port): int,
+            vol.Optional("scan_interval", default=current_scan_interval): int,
+            vol.Optional("electric_power_sensor", default=current_electric_power_sensor): str,
         })
 
-        return self.async_show_form(step_id="init", data_schema=data_schema)
+        return self.async_show_form(
+            step_id="init", 
+            data_schema=data_schema, 
+            errors=errors,
+            last_step=True
+        )

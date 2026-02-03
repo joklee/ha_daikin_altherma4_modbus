@@ -5,12 +5,21 @@ from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
-from .const import INPUT_REGISTERS, DOMAIN, BINARY_SENSORS, HOLDING_REGISTERS, SELECT_REGISTERS
+from .const import (
+    DOMAIN,
+    INPUT_REGISTERS,
+    HOLDING_REGISTERS,
+    SELECT_REGISTERS,
+    DISCRETE_INPUT_SENSORS,
+    COIL_SENSORS,
+    BINARY_SENSORS,
+    DEFAULT_SCAN_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 class DaikinAlthermaCoordinator(DataUpdateCoordinator):
-    """Koordinator für alle Input-Register."""
+    """Koordinator für alle Register."""
 
     def __init__(self, hass, host: str, port: int, scan_interval: int = 10):
         super().__init__(
@@ -27,17 +36,42 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
         self.last_triggered = {}
 
     async def _async_update_data(self):
-        """Lese alle Input-Register blockweise."""
+        """Lese alle Register blockweise."""
         if self.client is None:
+            _LOGGER.info(f"Creating new Modbus TCP client for {self.host}:{self.port}")
             self.client = AsyncModbusTcpClient(self.host, port=self.port)
-            await self.client.connect()
-            await asyncio.sleep(0.1)
+            _LOGGER.info(f"Connecting to Modbus TCP server at {self.host}:{self.port}")
+            
+            try:
+                await self.client.connect()
+                await asyncio.sleep(0.1)
+                if not self.client.connected:
+                    _LOGGER.error(f"Modbus connection failed to {self.host}:{self.port}")
+                    raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen")
+                else:
+                    _LOGGER.info(f"Successfully connected to Modbus TCP server at {self.host}:{self.port}")
+            except Exception as e:
+                _LOGGER.error(f"Exception during Modbus connection to {self.host}:{self.port}: {e}")
+                raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen: {e}")
+        else:
+            # Check if existing client is still connected
             if not self.client.connected:
-                raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen")
+                _LOGGER.warning(f"Modbus client disconnected, attempting reconnection to {self.host}:{self.port}")
+                try:
+                    await self.client.connect()
+                    await asyncio.sleep(0.1)
+                    if not self.client.connected:
+                        _LOGGER.error(f"Modbus reconnection failed to {self.host}:{self.port}")
+                        raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen")
+                    else:
+                        _LOGGER.info(f"Successfully reconnected to Modbus TCP server at {self.host}:{self.port}")
+                except Exception as e:
+                    _LOGGER.error(f"Exception during Modbus reconnection to {self.host}:{self.port}: {e}")
+                    raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen: {e}")
 
-        # Adressen sammeln
-        addresses = [item["address"] for item in INPUT_REGISTERS]
-        start = min(addresses)
+        # Adressen sammeln und 1-basiert zu 0-basiert konvertieren
+        addresses = [item["address"] - 1 for item in INPUT_REGISTERS]
+        start = 0
         end = max(addresses)
         count = end - start + 1
 
@@ -51,15 +85,19 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
             
             # INPUT_REGISTERS verarbeiten
             for item in INPUT_REGISTERS:
-                address = item["address"]
+                address = item["address"] - 1  # 1-basierte zu 0-basierten Adressen konvertieren
                 reg_count = item.get("count", 1)
                 dtype = item.get("dtype", "uint16")
                 scale = item.get("scale", 1)
                 input_type = item.get("input_type", "input")
                 unique_id = item.get("unique_id", f"{address}")
-
+                
                 if reg_count == 1:
                     raw_value = rr.registers[address - start]
+                    # Entity nicht erstellen wenn Wert 32766 (Kein Fehler/Normalzustand)
+                    if raw_value == 32766:
+                        _LOGGER.debug(f"Register {address + 1} hat Wert 32766, wird übersprungen")
+                        continue
                     data[unique_id] = {
                         "value": raw_value,
                         "input_type": input_type,
@@ -67,11 +105,77 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                     }
                 else:
                     raw_value = rr.registers[address - start : address - start + reg_count]
+                    # Entity nicht erstellen wenn Wert 32766 (Kein Fehler/Normalzustand)
+                    if raw_value and raw_value[0] == 32766:
+                        _LOGGER.debug(f"Register {address + 1} hat Wert 32766, wird übersprungen")
+                        continue
                     data[unique_id] = {
                         "value": raw_value,
                         "input_type": input_type,
                         "address": address
                     }
+
+            # DISCRETE_INPUT_SENSORS verarbeiten (mit separatem Modbus-Aufruf)
+            if DISCRETE_INPUT_SENSORS:
+                try:
+                    # Discrete Inputs mit Function Code 2 lesen
+                    discrete_addresses = [item["address"] - 1 for item in DISCRETE_INPUT_SENSORS]  # 1-basiert zu 0-basiert
+                    discrete_start = min(discrete_addresses)
+                    discrete_end = max(discrete_addresses)
+                    discrete_count = discrete_end - discrete_start + 1
+                    
+                    di = await self.client.read_discrete_inputs(address=discrete_start, count=discrete_count)
+                    if not di.isError():
+                        for item in DISCRETE_INPUT_SENSORS:
+                            address = item["address"] - 1  # 1-basiert zu 0-basiert
+                            input_type = item.get("input_type", "discrete_input")
+                            unique_id = item.get("unique_id", f"discrete_{address}")
+                            
+                            # Discrete Inputs sind 0-basiert im Array
+                            if address - discrete_start < len(di.bits):
+                                raw_value = 1 if di.bits[address - discrete_start] else 0
+                                data[unique_id] = {
+                                    "value": raw_value,
+                                    "input_type": input_type,
+                                    "address": address + 1  # Original 1-basierte Adresse für Logging
+                                }
+                            else:
+                                _LOGGER.warning(f"Discrete Input {address + 1} nicht im gelesenen Bereich ({len(di.bits)} Bits)")
+                    else:
+                        _LOGGER.error(f"Discrete Input-Lesen fehlgeschlagen")
+                except Exception as e:
+                    _LOGGER.warning(f"Konnte Discrete Inputs nicht lesen: {e}")
+
+            # COIL_SENSORS verarbeiten (mit separatem Modbus-Aufruf)
+            if COIL_SENSORS:
+                try:
+                    # Coils mit Function Code 1 lesen
+                    coil_addresses = [item["address"] - 1 for item in COIL_SENSORS]  # 1-basiert zu 0-basiert
+                    coil_start = min(coil_addresses)
+                    coil_end = max(coil_addresses)
+                    coil_count = coil_end - coil_start + 1
+                    
+                    cr = await self.client.read_coils(address=coil_start, count=coil_count)
+                    if not cr.isError():
+                        for item in COIL_SENSORS:
+                            address = item["address"] - 1  # 1-basiert zu 0-basiert
+                            input_type = item.get("input_type", "coil")
+                            unique_id = item.get("unique_id", f"coil_{address}")
+                            
+                            # Coils sind 0-basiert im Array
+                            if address - coil_start < len(cr.bits):
+                                raw_value = 1 if cr.bits[address - coil_start] else 0
+                                data[unique_id] = {
+                                    "value": raw_value,
+                                    "input_type": input_type,
+                                    "address": address + 1  # Original 1-basierte Adresse für Logging
+                                }
+                            else:
+                                _LOGGER.warning(f"Coil {address + 1} nicht im gelesenen Bereich ({len(cr.bits)} Bits)")
+                    else:
+                        _LOGGER.error(f"Coil-Lesen fehlgeschlagen")
+                except Exception as e:
+                    _LOGGER.warning(f"Konnte Coils nicht lesen: {e}")
             
             # HOLDING_REGISTERS und SELECT_REGISTERS verarbeiten (wenn vorhanden)
             all_holding_registers = []
@@ -81,57 +185,66 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                 all_holding_registers.extend(SELECT_REGISTERS)
             
             if all_holding_registers:
-                _LOGGER.info(f"Verarbeite {len(all_holding_registers)} Holding-Register")
                 try:
                     hr = await self.client.read_holding_registers(address=0, count=79)
                     if not hr.isError():
-                        _LOGGER.info(f"Holding-Register erfolgreich gelesen: {len(hr.registers)} Register")
                         for item in all_holding_registers:
-                            address = item["address"]
+                            address = item["address"] - 1  # 1-basiert zu 0-basiert
                             input_type = item.get("input_type", "holding")
                             unique_id = item.get("unique_id", f"holding_{address}")
                             
                             if address < len(hr.registers):
                                 raw_value = hr.registers[address]
-                                _LOGGER.info(f"Entry {address, input_type, unique_id, raw_value}")
+                                # Entity nicht erstellen wenn Wert 32766 (Kein Fehler/Normalzustand)
+                                if raw_value == 32766:
+                                    _LOGGER.debug(f"Holding-Register {address + 1} hat Wert 32766, wird übersprungen")
+                                    continue
                                 data[unique_id] = {
                                     "value": raw_value,
                                     "input_type": input_type,
-                                    "address": address
+                                    "address": address + 1  # Original 1-basierte Adresse für Logging
                                 }
                             else:
-                                _LOGGER.warning(f"Holding-Register {address} nicht im gelesenen Bereich ({len(hr.registers)} Register)")
+                                _LOGGER.warning(f"Holding-Register {address + 1} nicht im gelesenen Bereich ({len(hr.registers)} Register)")
                     else:
                         _LOGGER.error(f"Holding-Register-Lesen fehlgeschlagen, nutze Input-Register als Fallback")
                 except Exception as e:
                     _LOGGER.warning(f"Konnte Holding-Register nicht lesen: {e}")
                     # Fallback bei Exception
                     for item in all_holding_registers:
-                        address = item["address"]
+                        address = item["address"] - 1  # 1-basiert zu 0-basiert
                         input_type = item.get("input_type", "holding")
                         unique_id = item.get("unique_id", f"holding_{address}")
                         
                         if address <= end and address >= start:
                             raw_value = rr.registers[address - start]
-                            _LOGGER.info(f"Holding-Register {address} als Input-Register gelesen (Exception): Wert {raw_value} -> {unique_id}")
+                            # Entity nicht erstellen wenn Wert 32766 (Kein Fehler/Normalzustand)
+                            if raw_value == 32766:
+                                _LOGGER.debug(f"Holding-Register {address + 1} hat Wert 32766, wird übersprungen (Fallback)")
+                                continue
+                            _LOGGER.info(f"Holding-Register {address + 1} als Input-Register gelesen (Exception): Wert {raw_value} -> {unique_id}")
                             data[unique_id] = {
                                 "value": raw_value,
                                 "input_type": input_type,
-                                "address": address
+                                "address": address + 1  # Original 1-basierte Adresse für Logging
                             }
             
             # BINARY_SENSORS verarbeiten (überschreibt keine INPUT_REGISTERS)
             for item in BINARY_SENSORS:
-                address = item["address"]
+                address = item["address"] - 1  # 1-basiert zu 0-basiert
                 input_type = item.get("input_type", "input")
                 unique_id = item.get("unique_id", f"binary_{address}")
                 
                 if unique_id not in data:  # Nur wenn nicht schon vorhanden
                     raw_value = rr.registers[address - start]
+                    # Entity nicht erstellen wenn Wert 32766 (Kein Fehler/Normalzustand)
+                    if raw_value == 32766:
+                        _LOGGER.debug(f"Binary-Sensor {address + 1} hat Wert 32766, wird übersprungen")
+                        continue
                     data[unique_id] = {
                         "value": raw_value,
                         "input_type": input_type,
-                        "address": address
+                        "address": address + 1  # Original 1-basierte Adresse für Logging
                     }
 
             self.data = data

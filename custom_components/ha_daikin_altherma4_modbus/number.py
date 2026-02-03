@@ -1,7 +1,7 @@
 from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import EntityCategory
-from .const import DOMAIN, HOLDING_REGISTERS, DEVICE_INFO
+from .const import DOMAIN, HOLDING_REGISTERS, HOLDING_DEVICE_INFO
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -22,30 +22,37 @@ async def async_setup_entry(hass, entry, async_add_entities):
         enum_map = item.get("enum_map")
         entity_category = item.get("entity_category")
         
+        # Extract translation key without domain prefix
+        translation_key = unique_id.replace(f"{DOMAIN}_", "") if unique_id else None
+        
         entities.append(
-            DaikinNumber(coordinator, entry, name, address, min_v, max_v, step, unit, scale, unique_id, enum_map, entity_category)
+            DaikinNumber(coordinator, entry, name, address, min_v, max_v, step, unit, scale, unique_id, enum_map, entity_category, translation_key=translation_key)
         )
 
     async_add_entities(entities)
 
 
 class DaikinNumber(CoordinatorEntity, NumberEntity):
-    def __init__(self, coordinator, entry, name, address, min_v, max_v, step, unit, scale, unique_id=None, enum_map=None, entity_category=None):
+    _attr_has_entity_name = True
+    
+    def __init__(self, coordinator, entry, name, address, min_v, max_v, step, unit, scale, unique_id=None, enum_map=None, entity_category=None, translation_key=None):
         super().__init__(coordinator)
 
         self._entry = entry
         self._address = address
-        self._scale = scale
-        self._enum_map = enum_map
-
-        self._attr_name = name
-        self._attr_unique_id = unique_id or f"{DOMAIN}_{address}"
+        self._min_value = min_v
+        self._max_value = max_v
+        self._step = step
+        self._attr_unique_id = unique_id
+        self._attr_native_unit_of_measurement = unit
         self._attr_native_min_value = min_v
         self._attr_native_max_value = max_v
         self._attr_native_step = step
-        self._attr_native_unit_of_measurement = unit
         self._attr_entity_category = entity_category
-        self._attr_device_info = DEVICE_INFO
+        self._attr_device_info = HOLDING_DEVICE_INFO
+        self._attr_translation_key = translation_key
+        self._enum_map = enum_map
+        self._scale = scale
 
     @property
     def native_value(self):
