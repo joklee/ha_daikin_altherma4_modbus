@@ -75,9 +75,13 @@ This custom integration allows you to monitor and control your Daikin Altherma 4
 - Holiday mode status
 
 ### Calculated Sensors
-- Heat pump power calculation
-- Coefficient of Performance (CoP)
-- Last triggered timestamps for key events
+- **Heat Pump Power Calculated**: Real-time calculation of heat pump power consumption based on electrical measurements
+- **Coefficient of Performance (CoP)**: Efficiency ratio showing thermal output vs electrical input
+- **Delta-T**: Temperature difference between supply and return water (system efficiency indicator)
+- **Last Compressor Run**: Timestamp of the most recent compressor activation
+- **Last Defrost**: Timestamp of the most recent defrost cycle completion
+- **Last Booster Heater**: Timestamp of the most recent auxiliary heater activation
+- **Last DHW Running**: Timestamp of the most recent domestic hot water heating cycle
 
 ## Installation
 
@@ -105,7 +109,31 @@ This custom integration allows you to monitor and control your Daikin Altherma 4
 - **Scan Interval**: Update frequency in seconds (default: 15)
 
 ### Optional Parameters
-- **Electric Power Sensor**: Reference sensor for power calculations
+- **Electric Power Sensor Entity ID**: Reference sensor for enhanced power calculations and CoP monitoring
+
+#### External Electric Power Sensor Configuration
+The **External Electric Power Sensor Entity ID** parameter allows you to integrate an external power measurement sensor for more accurate energy monitoring:
+
+**Purpose:**
+- Enhances the calculated **Coefficient of Performance (CoP)** with real electrical power data
+- Improves **Heat Pump Power Calculated** accuracy
+- Enables comprehensive energy consumption tracking
+
+**Compatible Sensors:**
+- Home Assistant energy monitoring sensors (e.g., from smart plugs, energy meters)
+- Modbus power sensors from your electrical system
+- Any sensor providing power measurements in **Watts (W)**
+
+**How to Use:**
+1. Enter the full entity ID of your power sensor (e.g., `sensor.shelly_em_power`, `sensor.modbus_electric_power`)
+2. The sensor must provide power readings in Watts
+3. The integration will automatically use this data for enhanced calculations
+
+**Benefits:**
+- More accurate CoP calculations
+- Real-time energy efficiency monitoring
+- Better understanding of system performance
+- Integration with Home Assistant Energy dashboard
 
 ## Register Support
 
