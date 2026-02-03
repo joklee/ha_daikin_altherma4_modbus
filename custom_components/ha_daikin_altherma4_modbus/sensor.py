@@ -69,6 +69,20 @@ async def async_setup_entry(hass, entry, async_add_entities):
         )
     )
 
+    # Externer elektrischer Leistungssensor (immer erstellen, Verfügbarkeit wird über available property gesteuert)
+    _LOGGER.info(f"Creating ExternalElectricPowerSensor")
+    entities.append(
+        ExternalElectricPowerSensor(
+            coordinator=coordinator,
+            entry=entry,
+            name="External Electric Power",
+            unique_id=f"{DOMAIN}_external_electric_power",
+            unit="W",
+            device_class="power",
+            entity_category=EntityCategory.DIAGNOSTIC
+        )
+    )
+
     # Berechnete Sensoren
     _LOGGER.info(f"Processing {len(CALCULATED_SENSORS)} calculated sensors")
     for calc in CALCULATED_SENSORS:
