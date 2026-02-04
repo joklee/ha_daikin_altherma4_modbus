@@ -19,9 +19,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
             unique_id = item.get("unique_id", f"{DOMAIN}_holding_{address}")
             enum_map = item["enum_map"]
             entity_category = item.get("entity_category")
+            translation_key = item.get("translation_key")
             
             entities.append(
-                DaikinSelect(coordinator, entry, name, address, unique_id, enum_map, entity_category)
+                DaikinSelect(coordinator, entry, address, unique_id, enum_map, entity_category, translation_key)
             )
 
     async_add_entities(entities)
@@ -30,37 +31,39 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class DaikinSelect(CoordinatorEntity, SelectEntity):
     """Select entity for Daikin Altherma 4."""
 
-    def __init__(self, coordinator, entry, name, address, unique_id, enum_map, entity_category=None):
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, entry, address, unique_id, enum_map, entity_category=None, translation_key=None):
         super().__init__(coordinator)
 
         self._entry = entry
         self._address = address
         self._enum_map = enum_map
 
-        self._attr_name = name
         self._attr_unique_id = unique_id or f"{DOMAIN}_{address}"
         self._attr_device_info = HOLDING_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_options = list(enum_map.values())
+        self._attr_translation_key = translation_key
 
     @property
     def current_option(self):
         """Return current selected option."""
         data = self.coordinator.data.get(self._attr_unique_id)
-        _LOGGER.debug(f"Select {self._attr_name} - data: {data}")
+        _LOGGER.debug(f"Select {self._attr_unique_id} - data: {data}")
         
         if data:
             val = data.get("value")
-            _LOGGER.debug(f"Select {self._attr_name} - raw value: {val}")
+            _LOGGER.debug(f"Select {self._attr_unique_id} - raw value: {val}")
             
             if val is not None and val in self._enum_map:
                 option = self._enum_map[val]
-                _LOGGER.debug(f"Select {self._attr_name} - mapped option: {option}")
+                _LOGGER.debug(f"Select {self._attr_unique_id} - mapped option: {option}")
                 return option
             else:
-                _LOGGER.warning(f"Select {self._attr_name} - value {val} not in enum_map: {self._enum_map}")
+                _LOGGER.warning(f"Select {self._attr_unique_id} - value {val} not in enum_map: {self._enum_map}")
         
-        _LOGGER.debug(f"Select {self._attr_name} - no data or value, returning None")
+        _LOGGER.debug(f"Select {self._attr_unique_id} - no data or value, returning None")
         return None
 
     async def async_select_option(self, option: str):

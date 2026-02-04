@@ -71,6 +71,27 @@
       }
     },
     "binary_sensor": {
+      "input_29": {
+        "name": "Umwälzpumpe läuft"
+      },
+      "input_30": {
+        "name": "Verdichter läuft"
+      },
+      "input_31": {
+        "name": "Zusatzheizung läuft"
+      },
+      "input_32": {
+        "name": "Desinfektionsbetrieb"
+      },
+      "input_34": {
+        "name": "Abtauen/Neustart"
+      },
+      "input_35": {
+        "name": "Warmstart"
+      },
+      "input_63": {
+        "name": "Desinfektionsstatus"
+      },
       "discrete_0": {
         "name": "Absperrventil"
       },
@@ -160,20 +181,8 @@
       "input_23": {
         "name": "Untercode für die Unregelmäßigkeit"
       },
-      "input_30": {
-        "name": "Umwälzpumpe läuft"
-      },
-      "input_31": {
-        "name": "Verdichter läuft"
-      },
-      "input_32": {
-        "name": "Zusatzheizung läuft"
-      },
       "input_33": {
         "name": "Desinfektionsbetrieb"
-      },
-      "input_35": {
-        "name": "Abtauen/Neustart"
       },
       "input_36": {
         "name": "Warmstart"
@@ -337,7 +346,7 @@
       "cop": {
         "name": "Leistungszahl (CoP)"
       },
-      "t": {
+      "delta_t": {
         "name": "Delta-T"
       },
       "compressor_run": {
@@ -351,6 +360,9 @@
       },
       "dhw_running": {
         "name": "Letzte Brauchwasserbereitung"
+      },
+      "external_electric_power": {
+        "name": "Externe elektrische Leistung"
       }
     },
     "number": {

@@ -12,7 +12,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities = []
 
     # Coil Switches
-    _LOGGER.info(f"Processing {len(COIL_SENSORS)} coil switches")
+    _LOGGER.debug(f"Processing {len(COIL_SENSORS)} coil switches")
     for coil in COIL_SENSORS:
         entities.append(
             DaikinCoilSwitch(
@@ -58,7 +58,7 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
             if result.isError():
                 _LOGGER.error(f"Failed to turn on coil {self._address}: {result}")
             else:
-                _LOGGER.info(f"Successfully turned on coil {self._address}")
+                _LOGGER.debug(f"Successfully turned on coil {self._address}")
                 await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.error(f"Error turning on coil {self._address}: {e}")
@@ -70,7 +70,7 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
             if result.isError():
                 _LOGGER.error(f"Failed to turn off coil {self._address}: {result}")
             else:
-                _LOGGER.info(f"Successfully turned off coil {self._address}")
+                _LOGGER.debug(f"Successfully turned off coil {self._address}")
                 await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.error(f"Error turning off coil {self._address}: {e}")

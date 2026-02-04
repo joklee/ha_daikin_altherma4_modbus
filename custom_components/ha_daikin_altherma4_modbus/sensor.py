@@ -22,7 +22,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Input-Register Sensoren
     for item in INPUT_REGISTERS:
-        name = item["name"]
         address = item["address"]
         unit = item.get("unit", "")
         dtype = item.get("dtype", "uint16")
@@ -38,7 +37,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
             DaikinInputSensor(
                 coordinator=coordinator,
                 entry=entry,
-                name=name,
                 address=address,
                 unit=unit,
                 dtype=dtype,
@@ -52,52 +50,38 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 device_info=INPUT_DEVICE_INFO
             )
         )
-        _LOGGER.info(f"name: {name} - translation_key {translation_key}")
+        _LOGGER.debug(f"unique_id: {unique_id} - translation_key {translation_key}")
 
     # Externer elektrischer Leistungssensor (immer erstellen, Verfügbarkeit wird über available property gesteuert)
-    _LOGGER.info(f"Creating External Electric Power Sensor")
+    _LOGGER.debug(f"Creating External Electric Power Sensor")
     entities.append(
         ExternalElectricPowerSensor(
             coordinator=coordinator,
             entry=entry,
-            name="External Electric Power",
             unique_id=f"{DOMAIN}_external_electric_power",
             unit="W",
             device_class="power",
             entity_category=EntityCategory.DIAGNOSTIC,
+            translation_key="external_electric_power",
             device_info=CALCULATED_DEVICE_INFO
         )
     )
 
-    # Externer elektrischer Leistungssensor (immer erstellen, Verfügbarkeit wird über available property gesteuert)
-    _LOGGER.info(f"Creating ExternalElectricPowerSensor")
-    entities.append(
-        ExternalElectricPowerSensor(
-            coordinator=coordinator,
-            entry=entry,
-            name="External Electric Power",
-            unique_id=f"{DOMAIN}_external_electric_power",
-            unit="W",
-            device_class="power",
-            entity_category=EntityCategory.DIAGNOSTIC
-        )
-    )
-
     # Berechnete Sensoren
-    _LOGGER.info(f"Processing {len(CALCULATED_SENSORS)} calculated sensors")
+    _LOGGER.debug(f"Processing {len(CALCULATED_SENSORS)} calculated sensors")
     for calc in CALCULATED_SENSORS:
-        _LOGGER.info(f"Processing calculated sensor: {calc['name']} (type: {calc['type']})")
+        _LOGGER.debug(f"Processing calculated sensor: {calc['name']} (type: {calc['type']})")
         if calc["type"] == "heat_power":
             entities.append(
                 CalculatedHeatPowerSensor(
                     coordinator=coordinator,
                     entry=entry,
-                    name=calc["name"],
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
                     entity_category=calc["entity_category"],
-                    device_info=CALCULATED_DEVICE_INFO
+                    device_info=CALCULATED_DEVICE_INFO,
+                    translation_key=calc.get("translation_key")
                 )
             )
         elif calc["type"] == "cop":
@@ -105,12 +89,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 CalculatedCoPSensor(
                     coordinator=coordinator,
                     entry=entry,
-                    name=calc["name"],
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
                     entity_category=calc["entity_category"],
-                    device_info=CALCULATED_DEVICE_INFO
+                    device_info=CALCULATED_DEVICE_INFO,
+                    translation_key=calc.get("translation_key")
                 )
             )
         elif calc["type"] == "last_defrost_restart":
@@ -118,13 +102,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 CalculatedLastDefrostRestartSensor(
                     coordinator=coordinator,
                     entry=entry,
-                    name=calc["name"],
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
                     trigger_address=calc["trigger_address"],
                     entity_category=calc["entity_category"],
-                    device_info=CALCULATED_DEVICE_INFO
+                    device_info=CALCULATED_DEVICE_INFO,
+                    translation_key=calc.get("translation_key")
                 )
             )
         elif calc["type"] == "last_triggered":
@@ -132,13 +116,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 LastTriggeredSensor(
                     coordinator=coordinator,
                     entry=entry,
-                    name=calc["name"],
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
                     trigger_address=calc["trigger_address"],
                     entity_category=calc["entity_category"],
-                    device_info=CALCULATED_DEVICE_INFO
+                    device_info=CALCULATED_DEVICE_INFO,
+                    translation_key=calc.get("translation_key")
                 )
             )
         elif calc["type"] == "last_compressor_run":
@@ -146,13 +130,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 LastTriggeredSensor(
                     coordinator=coordinator,
                     entry=entry,
-                    name=calc["name"],
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
                     trigger_address=calc["trigger_address"],
                     entity_category=calc["entity_category"],
-                    device_info=CALCULATED_DEVICE_INFO
+                    device_info=CALCULATED_DEVICE_INFO,
+                    translation_key=calc.get("translation_key")
                 )
             )
         elif calc["type"] == "delta_t":
@@ -160,11 +144,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 DeltaTSensor(
                     coordinator=coordinator,
                     entry=entry,
-                    name=calc["name"],
                     unique_id=calc["unique_id"],
                     unit=calc["unit"],
                     device_class=calc["device_class"],
-                    device_info=CALCULATED_DEVICE_INFO
+                    device_info=CALCULATED_DEVICE_INFO,
+                    translation_key=calc.get("translation_key")
                 )
             )
 
@@ -176,7 +160,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
     
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, name, address, unit, dtype, scale, count, icon, enum_map, entity_category=None, unique_id=None, device_info=None, translation_key=None):
+    def __init__(self, coordinator, entry, address, unit, dtype, scale, count, icon, enum_map, entity_category=None, unique_id=None, device_info=None, translation_key=None):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
@@ -224,7 +208,7 @@ class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
     
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None, device_info=None):
+    def __init__(self, coordinator, entry, unique_id, unit, device_class, entity_category=None, device_info=None, translation_key=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = unique_id
@@ -233,25 +217,33 @@ class CalculatedHeatPowerSensor(CoordinatorEntity, SensorEntity):
         self._attr_icon = "mdi:fire"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
+        self._attr_translation_key = translation_key
+
+    def _calculate_heat_power(self):
+        """Berechnet die Wärmeleistung in W."""
+        # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren
+        flow_data = self.coordinator.data.get(f"{DOMAIN}_input_49", {})
+        flow_raw = flow_data.get("value", 0)  # Flow rate (roh)
+        temp_vl_data = self.coordinator.data.get(f"{DOMAIN}_input_40", {})
+        temp_vl_raw = temp_vl_data.get("value", 0)  # Leaving water temperature PHE (roh)
+        temp_rl_data = self.coordinator.data.get(f"{DOMAIN}_input_42", {})
+        temp_rl_raw = temp_rl_data.get("value", 0)  # Return water temperature (roh)
+
+        flow = flow_raw * 0.01  # L/min (korrekte Skalierung)
+        temp_vl = temp_vl_raw * 0.01  # °C (korrekte Skalierung)
+        temp_rl = temp_rl_raw * 0.01  # °C (korrekte Skalierung)
+
+        delta_t = temp_vl - temp_rl
+        heat_power = flow * delta_t * 70  # Berechnung Wärmeleistung in W
+        _LOGGER.debug(f"flow: {flow} L/min")
+        _LOGGER.debug(f"delta_t: {delta_t} K")
+        _LOGGER.debug(f"heat_power: {heat_power} W")
+        return round(heat_power, 2)
 
     @property
     def native_value(self):
-        """Berechnet die Wärmeleistung in kW."""
-        # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren
-        flow_data = self.coordinator.data.get(f"{DOMAIN}_input_48", {})
-        flow_raw = flow_data.get("value", 0)  # Flow rate (roh)
-        temp_vl_data = self.coordinator.data.get(f"{DOMAIN}_input_39", {})
-        temp_vl_raw = temp_vl_data.get("value", 0)  # Leaving water temperature PHE (roh)
-        temp_rl_data = self.coordinator.data.get(f"{DOMAIN}_input_41", {})
-        temp_rl_raw = temp_rl_data.get("value", 0)  # Return water temperature (roh)
-
-        flow = flow_raw * 0.1  # L/min
-        temp_vl = temp_vl_raw # °C
-        temp_rl = temp_rl_raw # °C
-
-        delta_t = temp_vl - temp_rl
-        value = flow * delta_t * 0.07  # Berechnung Wärmeleistung in kW
-        return round(value, 2)
+        """Berechnet die Wärmeleistung in W."""
+        return self._calculate_heat_power()
 
 
 class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
@@ -259,7 +251,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
     
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None, device_info=None):
+    def __init__(self, coordinator, entry, unique_id, unit, device_class, entity_category=None, device_info=None, translation_key=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = unique_id
@@ -269,29 +261,36 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         self._attr_icon = "mdi:gauge"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
+        self._attr_translation_key = translation_key
+
+    def _calculate_heat_power(self):
+        """Berechnet die Wärmeleistung in W."""
+        # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren
+        flow_data = self.coordinator.data.get(f"{DOMAIN}_input_49", {})
+        flow_raw = flow_data.get("value", 0)  # Flow rate (roh)
+        temp_vl_data = self.coordinator.data.get(f"{DOMAIN}_input_40", {})
+        temp_vl_raw = temp_vl_data.get("value", 0)  # Leaving water temperature PHE (roh)
+        temp_rl_data = self.coordinator.data.get(f"{DOMAIN}_input_42", {})
+        temp_rl_raw = temp_rl_data.get("value", 0)  # Return water temperature (roh)
+
+        flow = flow_raw * 0.01  # L/min (korrekte Skalierung)
+        temp_vl = temp_vl_raw * 0.01  # °C (korrekte Skalierung)
+        temp_rl = temp_rl_raw * 0.01  # °C (korrekte Skalierung)
+
+        delta_t = temp_vl - temp_rl
+        heat_power = flow * delta_t * 70  # Berechnung Wärmeleistung in W
+        return round(heat_power, 2)
 
     @property
     def native_value(self):
         """Berechnet den CoP als Verhältnis von Heizleistung zu elektrischer Leistung."""
-        # Heizleistung berechnen (wie in CalculatedHeatPowerSensor)
-        flow_data = self.coordinator.data.get(f"{DOMAIN}_input_48", {})
-        flow_raw = flow_data.get("value", 0)  # Flow rate (roh)
-        temp_vl_data = self.coordinator.data.get(f"{DOMAIN}_input_39", {})
-        temp_vl_raw = temp_vl_data.get("value", 0)  # Leaving water temperature PHE (roh)
-        temp_rl_data = self.coordinator.data.get(f"{DOMAIN}_input_41", {})
-        temp_rl_raw = temp_rl_data.get("value", 0)  # Return water temperature (roh)
-
-        flow = flow_raw * 0.01  # L/min
-        temp_vl = temp_vl_raw * 0.01  # °C
-        temp_rl = temp_rl_raw * 0.01  # °C
-
-        delta_t = temp_vl - temp_rl
-        heat_power = flow * delta_t * 70  # Wärmeleistung in W
-        _LOGGER.info(f"Wärmeleistung: {heat_power}")
+        # Heizleistung aus der gleichen Berechnung wie CalculatedHeatPowerSensor
+        heat_power = self._calculate_heat_power()  # in W
+        _LOGGER.debug(f"Wärmeleistung: {heat_power} W")
 
         # Elektrische Leistung
         electric_power_sensor = self._entry.data.get("electric_power_sensor")
-        _LOGGER.info(f"electric_power_sensor: {electric_power_sensor}")
+        _LOGGER.debug(f"electric_power_sensor: {electric_power_sensor}")
         if electric_power_sensor:
             # Externer Sensor
             state = self.coordinator.hass.states.get(electric_power_sensor)
@@ -307,19 +306,19 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         
         if electric_power is None:
             # Modbus
-            power_data = self.coordinator.data.get(f"{DOMAIN}_input_50", {})
-            _LOGGER.info(f"power_data: {power_data}")
+            power_data = self.coordinator.data.get(f"{DOMAIN}_input_51", {})
+            _LOGGER.debug(f"power_data: {power_data}")
             electric_power_raw = power_data.get("value", 0)  # Heat pump power consumption (roh)
             electric_power = electric_power_raw * power_data.get("scale", 10);  # in W
 
-        _LOGGER.info(f"electric_power: {electric_power}")
+        _LOGGER.debug(f"electric_power: {electric_power}")
         if electric_power and electric_power > 0 and heat_power > 0:
-            # Convert electric power from W to kW for CoP calculation
+            # Beide Leistungen in W, direkte Berechnung
             cop = heat_power / electric_power
-            _LOGGER.info(f"cop: {cop}")
+            _LOGGER.debug(f"cop: {cop}")
             return round(cop, 2)
         else:
-            _LOGGER.info(f"cop: None")
+            _LOGGER.debug(f"cop: None")
             return None
 
 
@@ -328,7 +327,7 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
     
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, trigger_address, entity_category=None, device_info=None):
+    def __init__(self, coordinator, entry, unique_id, unit, device_class, trigger_address, entity_category=None, device_info=None, translation_key=None):
         super().__init__(coordinator)
         self._entry = entry
         self._trigger_address = trigger_address
@@ -337,6 +336,7 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = device_class
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
+        self._attr_translation_key = translation_key
 
     @property
     def native_value(self):
@@ -349,7 +349,7 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
     
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, entity_category=None, device_info=None):
+    def __init__(self, coordinator, entry, unique_id, unit, device_class, entity_category=None, device_info=None, translation_key=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = unique_id
@@ -359,22 +359,23 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
         self._attr_icon = "mdi:flash"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
+        self._attr_translation_key = translation_key
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
         # Check if electric_power_sensor is configured
         electric_power_sensor = self._entry.data.get("electric_power_sensor")
-        _LOGGER.info(f"ExternalElectricPowerSensor available check: electric_power_sensor = {electric_power_sensor}")
+        _LOGGER.debug(f"ExternalElectricPowerSensor available check: electric_power_sensor = {electric_power_sensor}")
         
         if not electric_power_sensor:
-            _LOGGER.info("ExternalElectricPowerSensor: Not available - no electric_power_sensor configured")
+            _LOGGER.debug("ExternalElectricPowerSensor: Not available - no electric_power_sensor configured")
             return False
         
         # Check if the referenced sensor exists and is available
         state = self.coordinator.hass.states.get(electric_power_sensor)
         is_available = state is not None and state.state not in [None, "unknown", "unavailable"]
-        _LOGGER.info(f"ExternalElectricPowerSensor: Referenced sensor available = {is_available}")
+        _LOGGER.debug(f"ExternalElectricPowerSensor: Referenced sensor available = {is_available}")
         return is_available
 
     @property
@@ -397,7 +398,7 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
     
     _attr_has_entity_name = True
     
-    def __init__(self, coordinator, entry, name, unique_id, unit, device_class, device_info=None):
+    def __init__(self, coordinator, entry, unique_id, unit, device_class, device_info=None, translation_key=None):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = unique_id
@@ -406,17 +407,18 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
         self._attr_state_class = "measurement"
         self._attr_icon = "mdi:thermometer-lines"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
 
     @property
     def native_value(self):
         """Calculate the temperature difference between flow and return."""
         # Vorlauftemperatur (Leaving water temperature PHE)
-        flow_temp_data = self.coordinator.data.get(f"{DOMAIN}_input_39", {})
+        flow_temp_data = self.coordinator.data.get(f"{DOMAIN}_input_40", {})
         flow_temp_raw = flow_temp_data.get("value", 0)
         flow_temp = flow_temp_raw * flow_temp_data.get("scale", 0.01)  # °C
         
         # Rücklauftemperatur (Return water temperature)
-        return_temp_data = self.coordinator.data.get(f"{DOMAIN}_input_41", {})
+        return_temp_data = self.coordinator.data.get(f"{DOMAIN}_input_42", {})
         return_temp_raw = return_temp_data.get("value", 0)
         return_temp = return_temp_raw * return_temp_data.get("scale", 0.01)  # °C
         

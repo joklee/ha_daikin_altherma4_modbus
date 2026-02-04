@@ -113,8 +113,8 @@ INPUT_REGISTERS = [
             0: "Off",
             1: "Heating",
             2: "Cooling",
+        },
         "translation_key": "input_38"
-        }
     },
 
     # Temperaturen
@@ -218,8 +218,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_52",
         "entity_category": None,
-        "enum_map": {0: "Idle/Buffering", 1: "Operation",
-        "translation_key": "input_52"}
+        "translation_key": "input_52",
+        "enum_map": {0: "Idle/Buffering", 1: "Operation"}
     },
     {
         "name": "Space heating/cooling normal operation",
@@ -231,8 +231,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_53",
         "entity_category": None,
-        "enum_map": {0: "Idle/Buffering", 1: "Operation",
-        "translation_key": "input_53"}
+        "translation_key": "input_53",
+        "enum_map": {0: "Idle/Buffering", 1: "Operation"}
     },
 
     # Sollwerte (Setpoints)
@@ -542,8 +542,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_83",
         "entity_category": None,
-        "enum_map": {0: "Stop", 1: "Tank Heat Up", 2: "Space heating", 3: "Space cooling", 4: "Actuator",
-        "translation_key": "input_83"}
+        "translation_key": "input_83",
+        "enum_map": {0: "Stop", 1: "Tank Heat Up", 2: "Space heating", 3: "Space cooling", 4: "Actuator"}
     }
 ]
 
@@ -968,11 +968,11 @@ SELECT_REGISTERS = [
         "icon": "mdi:cog",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_2",
+        "translation_key": "holding_2",
         "enum_map": {
             0: "Auto",
             1: "Heating", 
-            2: "Cooling",
-        "translation_key": "holding_2"
+            2: "Cooling"
         }
     },
     {
@@ -984,10 +984,10 @@ SELECT_REGISTERS = [
         "icon": "mdi:thermostat",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_3",
+        "translation_key": "holding_3",
         "enum_map": {
             0: "OFF",
-            1: "ON",
-        "translation_key": "holding_3"
+            1: "ON"
         }
     },
     {
@@ -999,11 +999,11 @@ SELECT_REGISTERS = [
         "icon": "mdi:cog",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_9",
+        "translation_key": "holding_9",
         "enum_map": {
             0: "Off",
             1: "On (Automatic)", 
-            2: "On (Manual)",
-        "translation_key": "holding_9"
+            2: "On (Manual)"
         }
     },
     {
@@ -1015,10 +1015,10 @@ SELECT_REGISTERS = [
         "icon": "mdi:power",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_13",
+        "translation_key": "holding_13",
         "enum_map": {
             0: "Off",
-            1: "On (Powerful)",
-        "translation_key": "holding_13"
+            1: "On (Powerful)"
         }
     },
     {
@@ -1030,10 +1030,10 @@ SELECT_REGISTERS = [
         "icon": "mdi:power",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_15",
+        "translation_key": "holding_15",
         "enum_map": {
             0: "Off",
-            1: "On",
-        "translation_key": "holding_15"
+            1: "On"
         }
     },
     {
@@ -1045,10 +1045,10 @@ SELECT_REGISTERS = [
         "icon": "mdi:thermostat",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_67",
+        "translation_key": "holding_67",
         "enum_map": {
             0: "Fixed",
-            1: "Weather dependent",
-        "translation_key": "holding_67"
+            1: "Weather dependent"
         }
     },
 # Holding register not readable 
@@ -1098,7 +1098,7 @@ CALCULATED_SENSORS = [
         "device_class": "temperature",
         "entity_category": None,
         "type": "delta_t",
-        "translation_key": "t"
+        "translation_key": "delta_t"
     },
     {
         "name": "Last Compressor Run",
@@ -1246,7 +1246,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Quiet mode operation active",
         "address": 12,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_11",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1255,7 +1255,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Holiday mode active",
         "address": 13,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_12",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1264,7 +1264,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Antifrost status",
         "address": 14,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_13",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1273,7 +1273,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Water pipe freeze prevention status",
         "address": 15,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_14",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1336,7 +1336,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Powerful tank heat up request",
         "address": 22,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_21",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1345,7 +1345,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Manual tank heat up request",
         "address": 23,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_22",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1354,7 +1354,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Emergency active",
         "address": 24,
-        "device_class": "running",
+        "device_class": "problem",
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_23",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1372,7 +1372,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Imposed limit acceptance",
         "address": 26,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_25",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1470,9 +1470,9 @@ BINARY_SENSORS = [
         "translation_key": "input_35"
     },
     {
-        "name": "Holiday mode",
+        "name": "Disinfection state",
         "address": 63,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_63",
         "entity_category": EntityCategory.DIAGNOSTIC,

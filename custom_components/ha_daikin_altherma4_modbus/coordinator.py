@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 class DaikinAlthermaCoordinator(DataUpdateCoordinator):
     """Koordinator für alle Register."""
 
-    def __init__(self, hass, host: str, port: int, scan_interval: int = 10):
+    def __init__(self, hass, host: str, port: int, scan_interval: int = 10, demo_mode: bool = False):
         super().__init__(
             hass,
             _LOGGER,
@@ -30,6 +30,7 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
         )
         self.host = host
         self.port = port
+        self.demo_mode = demo_mode
         self.client: AsyncModbusTcpClient | None = None
         self.data = {}
         self.previous_data = {}
@@ -37,10 +38,14 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Lese alle Register blockweise."""
+        if self.demo_mode:
+            _LOGGER.debug("Demo mode active - generating dummy data")
+            return self._generate_demo_data()
+        
         if self.client is None:
-            _LOGGER.info(f"Creating new Modbus TCP client for {self.host}:{self.port}")
+            _LOGGER.debug(f"Creating new Modbus TCP client for {self.host}:{self.port}")
             self.client = AsyncModbusTcpClient(self.host, port=self.port)
-            _LOGGER.info(f"Connecting to Modbus TCP server at {self.host}:{self.port}")
+            _LOGGER.debug(f"Connecting to Modbus TCP server at {self.host}:{self.port}")
             
             try:
                 await self.client.connect()
@@ -49,7 +54,7 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                     _LOGGER.error(f"Modbus connection failed to {self.host}:{self.port}")
                     raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen")
                 else:
-                    _LOGGER.info(f"Successfully connected to Modbus TCP server at {self.host}:{self.port}")
+                    _LOGGER.debug(f"Successfully connected to Modbus TCP server at {self.host}:{self.port}")
             except Exception as e:
                 _LOGGER.error(f"Exception during Modbus connection to {self.host}:{self.port}: {e}")
                 raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen: {e}")
@@ -64,7 +69,7 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                         _LOGGER.error(f"Modbus reconnection failed to {self.host}:{self.port}")
                         raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen")
                     else:
-                        _LOGGER.info(f"Successfully reconnected to Modbus TCP server at {self.host}:{self.port}")
+                        _LOGGER.debug(f"Successfully reconnected to Modbus TCP server at {self.host}:{self.port}")
                 except Exception as e:
                     _LOGGER.error(f"Exception during Modbus reconnection to {self.host}:{self.port}: {e}")
                     raise UpdateFailed(f"Modbus Verbindung zu {self.host}:{self.port} fehlgeschlagen: {e}")
@@ -222,7 +227,7 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                             if raw_value == 32766:
                                 _LOGGER.debug(f"Holding-Register {address + 1} hat Wert 32766, wird übersprungen (Fallback)")
                                 continue
-                            _LOGGER.info(f"Holding-Register {address + 1} als Input-Register gelesen (Exception): Wert {raw_value} -> {unique_id}")
+                            _LOGGER.debug(f"Holding-Register {address + 1} als Input-Register gelesen (Exception): Wert {raw_value} -> {unique_id}")
                             data[unique_id] = {
                                 "value": raw_value,
                                 "input_type": input_type,
@@ -280,3 +285,126 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Modbus Exception: {err}") from err
         except Exception as err:
             raise UpdateFailed(f"Fehler beim Lesen der Input-Register: {err}") from err
+
+    def _generate_demo_data(self):
+        """Generiere Demo-Daten für alle Sensoren."""
+        import random
+        from datetime import datetime, timedelta
+        
+        data = {}
+        
+        # Demo-Daten für INPUT_REGISTERS
+        for item in INPUT_REGISTERS:
+            address = item["address"]
+            unique_id = item.get("unique_id", f"{DOMAIN}_input_{address}")
+            scale = item.get("scale", 1)
+            dtype = item.get("dtype", "uint16")
+            
+            # Realistische Demo-Werte basierend auf dem Sensortyp
+            if "temperature" in item.get("name", "").lower():
+                # Temperaturen zwischen 15°C und 45°C
+                raw_value = random.randint(1500, 4500) if scale == 0.01 else random.randint(15, 45)
+            elif "pressure" in item.get("name", "").lower():
+                # Druck zwischen 1 und 10 bar
+                raw_value = random.randint(100, 1000) if scale == 0.01 else random.randint(1, 10)
+            elif "flow" in item.get("name", "").lower():
+                # Durchfluss zwischen 5 und 25 L/min
+                raw_value = random.randint(500, 2500) if scale == 0.01 else random.randint(5, 25)
+            elif "power" in item.get("name", "").lower():
+                # Leistung zwischen 100 und 3000 W
+                raw_value = random.randint(100, 3000) if scale == 1 else random.randint(10, 300)
+            elif address == 21:  # Unit abnormality
+                raw_value = 0  # Kein Fehler
+            elif address == 22:  # Unit abnormality code
+                raw_value = 0  # Kein Fehlercode
+            elif address == 40:  # Leaving water temperature PHE (benötigt für berechnete Sensoren)
+                raw_value = 32
+            elif address == 42:  # Return water temperature (benötigt für berechnete Sensoren)
+                raw_value = 29
+            elif address == 49:  # Flow rate (benötigt für berechnete Sensoren)
+                raw_value = random.randint(1000, 2800)  # 10-20 L/min
+            elif address == 51:  # Heat pump power consumption (benötigt für CoP)
+                raw_value = random.randint(200, 800)  # 200-800 W
+            else:
+                # Zufällige Werte für andere Sensoren
+                if dtype == "int16":
+                    raw_value = random.randint(-1000, 1000)
+                else:
+                    raw_value = random.randint(0, 1000)
+            
+            data[unique_id] = {
+                "value": raw_value,
+                "input_type": "input",
+                "address": address
+            }
+        
+        # Demo-Daten für HOLDING_REGISTERS
+        for item in HOLDING_REGISTERS:
+            address = item["address"]
+            unique_id = item.get("unique_id", f"{DOMAIN}_holding_{address}")
+            
+            # Realistische Demo-Werte für Holding-Register
+            if address == 2:  # Operation mode - Select Entity
+                raw_value = random.choice([0, 1, 2])  # Auto, Heating, Cooling
+            elif address == 3:  # Space heating/cooling - Select Entity
+                raw_value = random.choice([0, 1])  # OFF, ON
+            elif address == 9:  # Quiet mode operation - Select Entity
+                raw_value = random.choice([0, 1, 2])  # Off, On (Automatic), On (Manual)
+            elif address == 13:  # DHW booster mode - Select Entity
+                raw_value = random.choice([0, 1])  # Off, On (Powerful)
+            elif address == 15:  # DHW Single heat-up - Select Entity
+                raw_value = random.choice([0, 1])  # Off, On
+            elif address == 67:  # Weather-dependent mode - Select Entity
+                raw_value = random.choice([0, 1])  # Fixed, Weather dependent
+            elif "mode" in item.get("name", "").lower():
+                raw_value = random.choice([0, 1, 2, 3])  # Verschiedene Modi
+            elif "setpoint" in item.get("name", "").lower():
+                raw_value = random.randint(2000, 3500)  # 20-35°C
+            else:
+                raw_value = random.randint(0, 100)
+            
+            data[unique_id] = {
+                "value": raw_value,
+                "input_type": "holding",
+                "address": address
+            }
+        
+        # Demo-Daten für DISCRETE_INPUT_SENSORS
+        for item in DISCRETE_INPUT_SENSORS:
+            address = item["address"]
+            unique_id = item.get("unique_id", f"{DOMAIN}_discrete_{address}")
+            
+            # Zufällige Binärwerte
+            raw_value = random.choice([0, 1])
+            
+            data[unique_id] = {
+                "value": raw_value,
+                "input_type": "discrete_input",
+                "address": address
+            }
+        
+        # Demo-Daten für BINARY_SENSORS mit last_triggered
+        for item in BINARY_SENSORS:
+            address = item["address"]
+            unique_id = item.get("unique_id", f"{DOMAIN}_binary_{address}")
+            device_class = item.get("device_class")
+            
+            # Zufällige Binärwerte
+            raw_value = random.choice([0, 1])
+            
+            data[unique_id] = {
+                "value": raw_value,
+                "input_type": "binary",
+                "address": address
+            }
+            
+            # Simuliere last_triggered für running/problem Sensoren
+            if device_class in ["running", "problem"] and raw_value == 1:
+                # Zufälliger Zeitstempel in den letzten 24 Stunden
+                hours_ago = random.uniform(0, 24)
+                trigger_time = dt_util.now() - timedelta(hours=hours_ago)
+                self.last_triggered[address] = trigger_time
+                data[f"last_triggered_{address}"] = trigger_time
+        
+        self.previous_data = data.copy()
+        return data
