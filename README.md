@@ -45,6 +45,14 @@ This custom integration allows you to monitor and control your Daikin Altherma 4
 
 ## Features
 
+### Device Organization
+The integration organizes entities into logical device groups:
+- **Input Register**: Basic monitoring and status sensors
+- **Holding Register**: Configurable parameters and setpoints  
+- **Enhanced**: Calculated sensors, thermostats, and advanced features
+- **Discrete Input**: Binary status indicators
+- **Coil**: Switchable control functions
+
 ### Sensors (Input Registers)
 - **Error Monitoring**: Unit error, error codes, and sub-codes
 - **Operational Status**: 3-way valve position, operation mode
@@ -65,16 +73,36 @@ This custom integration allows you to monitor and control your Daikin Altherma 4
   - Disinfection and demand response modes
 
 ### Binary Sensors (Diagnostic)
-- Unit error detection
-- Circulation pump running status
-- Compressor run status
-- Booster heater run status
-- Disinfection operation
-- Defrost/Restart cycles
-- Hot start detection
-- Holiday mode status
+- **Input Register Diagnostics**:
+  - Circulation pump running status
+  - Compressor run status
+  - Booster heater run status
+  - Disinfection operation
+  - Defrost/Restart cycles
+  - Hot start detection
+  - Disinfection state
+- **Discrete Input Diagnostics**:
+  - Shut-off valve status
+  - Backup heater relays (1-6)
+  - Auxiliary heating status
+  - Storage tank status
+  - Bivalent operation
+  - Compressor running
+  - Quiet mode operation
+  - Holiday mode active
+  - Antifrost status
+  - Water pipe freeze prevention
+  - DHW running
+  - Main/Additional zone running
+  - Powerful/Manual tank heat up requests
+  - Emergency active
+  - Imposed limit acceptance
 
-### Calculated Sensors
+### Climate Entities (Enhanced)
+- **Heating Thermostat Control**: Main zone temperature control with operation modes
+- **DHW Thermostat Control**: Domestic hot water manual heat-up control
+
+### Calculated Sensors (Enhanced)
 - **Heat Pump Power Calculated**: Real-time calculation of heat pump power consumption based on electrical measurements
 - **Coefficient of Performance (CoP)**: Efficiency ratio showing thermal output vs electrical input
 - **Delta-T**: Temperature difference between supply and return water (system efficiency indicator)
@@ -82,6 +110,35 @@ This custom integration allows you to monitor and control your Daikin Altherma 4
 - **Last Defrost**: Timestamp of the most recent defrost cycle completion
 - **Last Booster Heater**: Timestamp of the most recent auxiliary heater activation
 - **Last DHW Running**: Timestamp of the most recent domestic hot water heating cycle
+- **External Electric Power**: Integration with external power sensors for enhanced monitoring
+
+### Number Entities (Holding Register)
+- **Temperature Setpoints**: Main/additional heating and cooling setpoints
+- **Operation Modes**: System operation mode, space heating/cooling control
+- **Room Thermostat Control**: Temperature setpoints for main and additional zones
+- **Special Modes**: Quiet mode operation, DHW settings
+- **Advanced Settings**: Weather-dependent modes, smart grid operation, power limits
+
+### Switch Entities (Coil Register)
+- **Domestic Hot Water**: DHW ON/OFF control
+- **Main Zone**: Main zone heating control
+- **Additional Zone**: Additional zone heating control
+
+### Select Entities (Holding Register)
+- **Operation Mode**: System operation mode selection with enum options
+
+## Multilingual Support
+
+The integration supports multiple languages with full translation support:
+- **English**: Default language with comprehensive translations
+- **German**: Complete German translations for all entities
+- **Translation Keys**: All entities use translation keys for consistent localization
+
+### Translation Features
+- All sensor names are translatable
+- Binary sensor states are properly localized
+- Device categories and entity names are language-aware
+- Consistent translations across all entity types
 
 ## Installation
 
@@ -96,7 +153,7 @@ This custom integration allows you to monitor and control your Daikin Altherma 4
 8. Configure the integration with your heat pump's IP address and port
 
 ### Manual Installation
-1. Copy the `daikin_altherma_modbus` folder to your `config/custom_components` directory
+1. Copy the `custom_components/ha_daikin_altherma4_modbus` folder to your `config/custom_components` directory
 2. Restart Home Assistant
 3. Follow steps 6-8 from HACS installation above
 
@@ -135,14 +192,24 @@ The **External Electric Power Sensor Entity ID** parameter allows you to integra
 - Better understanding of system performance
 - Integration with Home Assistant Energy dashboard
 
+### Options Flow
+After installation, you can configure the external electric power sensor through:
+1. **Settings** → **Devices & Services**
+2. Find your Daikin Altherma 4 Modbus integration
+3. Click **Configure** to access options
+4. Add or modify the external power sensor entity ID
+
 ## Register Support
 
 This integration supports the following Modbus register types:
 
 - **Input Registers (Read-only)**: Monitoring and status values
-- **Binary Sensors**: Status and error detection
+- **Binary Sensors**: Status and error detection (Input and Discrete Input)
 - **Coil Registers (Writeable)**: ON/OFF control functions
 - **Holding Registers (Writeable)**: Configurable setpoints and parameters
+- **Climate Entities**: Advanced thermostat control
+- **Number Entities**: Precise numerical control
+- **Select Entities**: Enum-based selection controls
 
 ## Troubleshooting
 
@@ -150,6 +217,7 @@ This integration supports the following Modbus register types:
 - **Connection Failed**: Verify IP address and port
 - **No Data**: Check Modbus TCP settings on your heat pump
 - **Update Errors**: Ensure scan interval is appropriate (minimum 10 seconds)
+- **Translation Issues**: Ensure proper language settings in Home Assistant
 
 ### Debug Mode
 Enable debug logging in your `configuration.yaml`:
@@ -158,7 +226,7 @@ Enable debug logging in your `configuration.yaml`:
 logger:
   default: info
   logs:
-    custom_components.daikin_altherma_modbus: debug
+    custom_components.ha_daikin_altherma4_modbus: debug
 ```
 
 ## Supported Devices
@@ -166,6 +234,22 @@ logger:
 - Daikin Altherma 4 (EPSX series)
 - Modbus TCP communication protocol
 - Tested with firmware versions 2.2.0
+
+## Version History
+
+### Version 0.4.0
+- Enhanced multilingual support (English/German)
+- Improved device organization (Enhanced category)
+- Optimized binary sensor device classes
+- Fixed translation key support across all entities
+- Updated thermostat placement under Enhanced category
+- Comprehensive translation corrections
+
+### Version 0.3.0
+- External Electric Power Sensor integration
+- Options Flow for post-installation configuration
+- Signed 16-bit integer handling
+- Enhanced power calculations
 
 ## Contributing
 
@@ -180,3 +264,4 @@ This project is licensed under the GPL-3.0-or-later License. See the [LICENSE](L
 - Based on Daikin Altherma HT Modbus documentation
 - Built with Home Assistant custom integration framework
 - Uses pymodbus library for Modbus TCP communication
+- Multilingual support with comprehensive translations

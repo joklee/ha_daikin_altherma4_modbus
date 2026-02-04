@@ -9,7 +9,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
-from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS, INPUT_REGISTERS
+from .const import DOMAIN, HOLDING_DEVICE_INFO, CALCULATED_DEVICE_INFO, HOLDING_REGISTERS, INPUT_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
             ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
         )
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
-        self._attr_device_info = HOLDING_DEVICE_INFO
+        self._attr_device_info = CALCULATED_DEVICE_INFO
         self._attr_translation_key = "daikin_thermostat_climate"
 
     def _get_offset_register_config(self):
@@ -262,7 +262,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
         self._attr_max_temp = 85
         self._attr_target_temperature_step = 1
         self._attr_icon = "mdi:water-boiler"
-        self._attr_device_info = HOLDING_DEVICE_INFO
+        self._attr_device_info = CALCULATED_DEVICE_INFO
         self._attr_translation_key = "daikin_dhw_manual_thermostat"
 
     @property

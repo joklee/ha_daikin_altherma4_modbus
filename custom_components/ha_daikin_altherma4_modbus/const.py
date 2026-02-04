@@ -1246,7 +1246,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Quiet mode operation active",
         "address": 12,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_11",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1255,7 +1255,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Holiday mode active",
         "address": 13,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_12",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1264,7 +1264,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Antifrost status",
         "address": 14,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_13",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1273,7 +1273,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Water pipe freeze prevention status",
         "address": 15,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_14",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1336,7 +1336,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Powerful tank heat up request",
         "address": 22,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_21",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1345,7 +1345,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Manual tank heat up request",
         "address": 23,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_22",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1354,7 +1354,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Emergency active",
         "address": 24,
-        "device_class": "running",
+        "device_class": "problem",
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_23",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1372,7 +1372,7 @@ DISCRETE_INPUT_SENSORS = [
     {
         "name": "Imposed limit acceptance",
         "address": 26,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "discrete_input",
         "unique_id": f"{DOMAIN}_discrete_25",
         "entity_category": EntityCategory.DIAGNOSTIC,
@@ -1472,7 +1472,7 @@ BINARY_SENSORS = [
     {
         "name": "Disinfection state",
         "address": 63,
-        "device_class": "running",
+        "device_class": None,
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_63",
         "entity_category": EntityCategory.DIAGNOSTIC,
