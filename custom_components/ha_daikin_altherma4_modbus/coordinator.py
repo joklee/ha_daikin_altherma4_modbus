@@ -7,7 +7,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 from .const import (
     DOMAIN,
-    ENTITY_PREFIX,
     INPUT_REGISTERS,
     HOLDING_REGISTERS,
     SELECT_REGISTERS,

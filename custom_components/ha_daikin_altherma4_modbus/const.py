@@ -1,7 +1,6 @@
 from homeassistant.const import EntityCategory
 
 DOMAIN = "ha_daikin_altherma4_modbus"
-ENTITY_PREFIX = "altherma4_";
 DEFAULT_PORT = 502
 DEFAULT_SCAN_INTERVAL = 15
 
@@ -114,8 +113,8 @@ INPUT_REGISTERS = [
             0: "Off",
             1: "Heating",
             2: "Cooling",
+        },
         "translation_key": "input_38"
-        }
     },
 
     # Temperaturen
@@ -219,8 +218,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_52",
         "entity_category": None,
-        "enum_map": {0: "Idle/Buffering", 1: "Operation",
-        "translation_key": "input_52"}
+        "translation_key": "input_52",
+        "enum_map": {0: "Idle/Buffering", 1: "Operation"}
     },
     {
         "name": "Space heating/cooling normal operation",
@@ -232,8 +231,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_53",
         "entity_category": None,
-        "enum_map": {0: "Idle/Buffering", 1: "Operation",
-        "translation_key": "input_53"}
+        "translation_key": "input_53",
+        "enum_map": {0: "Idle/Buffering", 1: "Operation"}
     },
 
     # Sollwerte (Setpoints)
@@ -543,8 +542,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_83",
         "entity_category": None,
-        "enum_map": {0: "Stop", 1: "Tank Heat Up", 2: "Space heating", 3: "Space cooling", 4: "Actuator",
-        "translation_key": "input_83"}
+        "translation_key": "input_83",
+        "enum_map": {0: "Stop", 1: "Tank Heat Up", 2: "Space heating", 3: "Space cooling", 4: "Actuator"}
     }
 ]
 
