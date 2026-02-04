@@ -71,6 +71,27 @@
       }
     },
     "binary_sensor": {
+      "input_29": {
+        "name": "Circulation pump running"
+      },
+      "input_30": {
+        "name": "Compressor run"
+      },
+      "input_31": {
+        "name": "Booster heater run"
+      },
+      "input_32": {
+        "name": "Disinfection operation"
+      },
+      "input_34": {
+        "name": "Defrost/Restart"
+      },
+      "input_35": {
+        "name": "Hot start"
+      },
+      "input_63": {
+        "name": "Disinfection state"
+      },
       "discrete_0": {
         "name": "Shut-off valve"
       },
@@ -160,20 +181,26 @@
       "input_23": {
         "name": "Subcode for abnormality"
       },
-      "input_30": {
+      "input_29": {
         "name": "Circulation pump running"
       },
+      "input_30": {
+        "name": "Compressor run"
+      },
       "input_31": {
-        "name": "Compressor running"
+        "name": "Booster heater run"
       },
       "input_32": {
-        "name": "Auxiliary heating running"
+        "name": "Disinfection operation"
       },
       "input_33": {
         "name": "Disinfection operation"
       },
-      "input_35": {
+      "input_34": {
         "name": "Defrost/Restart"
+      },
+      "input_35": {
+        "name": "Hot start"
       },
       "input_36": {
         "name": "Hot start"

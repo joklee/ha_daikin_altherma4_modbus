@@ -1470,7 +1470,7 @@ BINARY_SENSORS = [
         "translation_key": "input_35"
     },
     {
-        "name": "Holiday mode",
+        "name": "Disinfection state",
         "address": 63,
         "device_class": "running",
         "input_type": "input",
