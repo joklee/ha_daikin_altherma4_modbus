@@ -25,7 +25,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         )
 
     # Discrete Input Sensors
-    _LOGGER.info(f"Processing {len(DISCRETE_INPUT_SENSORS)} discrete input sensors")
+    _LOGGER.debug(f"Processing {len(DISCRETE_INPUT_SENSORS)} discrete input sensors")
     for discrete in DISCRETE_INPUT_SENSORS:
         entities.append(
             DaikinDiscreteInputSensor(

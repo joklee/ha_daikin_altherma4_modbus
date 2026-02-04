@@ -337,7 +337,7 @@
       "cop": {
         "name": "Leistungszahl (CoP)"
       },
-      "t": {
+      "delta_t": {
         "name": "Delta-T"
       },
       "compressor_run": {
@@ -351,6 +351,9 @@
       },
       "dhw_running": {
         "name": "Letzte Brauchwasserbereitung"
+      },
+      "external_electric_power": {
+        "name": "Externe elektrische Leistung"
       }
     },
     "number": {

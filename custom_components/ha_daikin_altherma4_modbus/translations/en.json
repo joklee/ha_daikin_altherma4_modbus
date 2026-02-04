@@ -274,7 +274,7 @@
       "cop": {
         "name": "Coefficient of Performance"
       },
-      "t": {
+      "delta_t": {
         "name": "Delta-T"
       },
       "compressor_run": {
@@ -288,6 +288,9 @@
       },
       "dhw_running": {
         "name": "Last DHW Running"
+      },
+      "external_electric_power": {
+        "name": "External Electric Power"
       }
     },
     "number": {

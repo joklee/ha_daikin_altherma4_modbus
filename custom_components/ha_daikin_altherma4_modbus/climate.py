@@ -165,7 +165,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         try:
             await self.coordinator.client.write_register(REGISTER_OFFSET, offset_raw)
             await self.coordinator.async_request_refresh()
-            _LOGGER.info(f"Set thermostat offset to {offset}°C (raw: {offset_raw})")
+            _LOGGER.debug(f"Set thermostat offset to {offset}°C (raw: {offset_raw})")
         except Exception as e:
             _LOGGER.error(f"Failed to set thermostat offset: {e}")
 
@@ -177,7 +177,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         try:
             await self.coordinator.client.write_register(REGISTER_OPERATION_MODE, mode_raw)
             await self.coordinator.async_request_refresh()
-            _LOGGER.info(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
+            _LOGGER.debug(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
         except Exception as e:
             _LOGGER.error(f"Failed to set HVAC mode: {e}")
 
@@ -189,7 +189,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         try:
             await self.coordinator.client.write_register(REGISTER_QUIET_MODE, mode_raw)
             await self.coordinator.async_request_refresh()
-            _LOGGER.info(f"Set fan mode to {fan_mode} (raw: {mode_raw})")
+            _LOGGER.debug(f"Set fan mode to {fan_mode} (raw: {mode_raw})")
         except Exception as e:
             _LOGGER.error(f"Failed to set fan mode: {e}")
 
@@ -241,7 +241,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     ]
     
     async_add_entities(entities)
-    _LOGGER.info("Setup Daikin Thermostat Climate entities")
+    _LOGGER.debug("Setup Daikin Thermostat Climate entities")
 
 
 class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
@@ -325,7 +325,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
                 if result.isError():
                     _LOGGER.error(f"Failed to turn on DHW manual heat-up: {result}")
                 else:
-                    _LOGGER.info("Successfully turned on DHW manual heat-up")
+                    _LOGGER.debug("Successfully turned on DHW manual heat-up")
                     await self.coordinator.async_request_refresh()
             except Exception as e:
                 _LOGGER.error(f"Error turning on DHW manual heat-up: {e}")
@@ -336,7 +336,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
                 if result.isError():
                     _LOGGER.error(f"Failed to turn off DHW manual heat-up: {result}")
                 else:
-                    _LOGGER.info("Successfully turned off DHW manual heat-up")
+                    _LOGGER.debug("Successfully turned off DHW manual heat-up")
                     await self.coordinator.async_request_refresh()
             except Exception as e:
                 _LOGGER.error(f"Error turning off DHW manual heat-up: {e}")
@@ -359,7 +359,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
             if result.isError():
                 _LOGGER.error(f"Failed to set DHW manual heat-up temperature: {result}")
             else:
-                _LOGGER.info(f"Successfully set DHW manual heat-up temperature to {temperature}°C (raw: {raw_value})")
+                _LOGGER.debug(f"Successfully set DHW manual heat-up temperature to {temperature}°C (raw: {raw_value})")
                 await self.coordinator.async_request_refresh()
         except Exception as e:
             _LOGGER.error(f"Error setting DHW manual heat-up temperature: {e}")

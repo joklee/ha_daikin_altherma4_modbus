@@ -1,6 +1,7 @@
 from homeassistant.const import EntityCategory
 
 DOMAIN = "ha_daikin_altherma4_modbus"
+ENTITY_PREFIX = "altherma4_";
 DEFAULT_PORT = 502
 DEFAULT_SCAN_INTERVAL = 15
 
@@ -968,11 +969,11 @@ SELECT_REGISTERS = [
         "icon": "mdi:cog",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_2",
+        "translation_key": "holding_2",
         "enum_map": {
             0: "Auto",
             1: "Heating", 
-            2: "Cooling",
-        "translation_key": "holding_2"
+            2: "Cooling"
         }
     },
     {
@@ -984,10 +985,10 @@ SELECT_REGISTERS = [
         "icon": "mdi:thermostat",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_3",
+        "translation_key": "holding_3",
         "enum_map": {
             0: "OFF",
-            1: "ON",
-        "translation_key": "holding_3"
+            1: "ON"
         }
     },
     {
@@ -999,11 +1000,11 @@ SELECT_REGISTERS = [
         "icon": "mdi:cog",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_9",
+        "translation_key": "holding_9",
         "enum_map": {
             0: "Off",
             1: "On (Automatic)", 
-            2: "On (Manual)",
-        "translation_key": "holding_9"
+            2: "On (Manual)"
         }
     },
     {
@@ -1015,10 +1016,10 @@ SELECT_REGISTERS = [
         "icon": "mdi:power",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_13",
+        "translation_key": "holding_13",
         "enum_map": {
             0: "Off",
-            1: "On (Powerful)",
-        "translation_key": "holding_13"
+            1: "On (Powerful)"
         }
     },
     {
@@ -1030,10 +1031,10 @@ SELECT_REGISTERS = [
         "icon": "mdi:power",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_15",
+        "translation_key": "holding_15",
         "enum_map": {
             0: "Off",
-            1: "On",
-        "translation_key": "holding_15"
+            1: "On"
         }
     },
     {
@@ -1045,10 +1046,10 @@ SELECT_REGISTERS = [
         "icon": "mdi:thermostat",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_67",
+        "translation_key": "holding_67",
         "enum_map": {
             0: "Fixed",
-            1: "Weather dependent",
-        "translation_key": "holding_67"
+            1: "Weather dependent"
         }
     },
 # Holding register not readable 
@@ -1098,7 +1099,7 @@ CALCULATED_SENSORS = [
         "device_class": "temperature",
         "entity_category": None,
         "type": "delta_t",
-        "translation_key": "t"
+        "translation_key": "delta_t"
     },
     {
         "name": "Last Compressor Run",
