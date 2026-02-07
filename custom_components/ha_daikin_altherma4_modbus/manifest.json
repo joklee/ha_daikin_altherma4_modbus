@@ -1,7 +1,7 @@
 {
     "domain": "ha_daikin_altherma4_modbus",
     "name": "Daikin Altherma 4 Modbus",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "documentation": "https://github.com/joklee/ha_daikin_altherma4_modbus",
     "integration_type": "device",
     "requirements": ["pymodbus>=3.5.2"],
