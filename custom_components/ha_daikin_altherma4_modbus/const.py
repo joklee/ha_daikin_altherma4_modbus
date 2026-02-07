@@ -1107,7 +1107,7 @@ CALCULATED_SENSORS = [
         "device_class": "timestamp",
         "type": "last_triggered",
         "entity_category": None,
-        "trigger_address": 30,
+        "trigger_address": 11,
         "translation_key": "compressor_run"
     },
     {
@@ -1117,7 +1117,7 @@ CALCULATED_SENSORS = [
         "device_class": "timestamp",
         "type": "last_triggered",
         "entity_category": None,
-        "trigger_address": 16,
+        "trigger_address": 17,
         "translation_key": "defrost"
     },
     {
@@ -1127,7 +1127,7 @@ CALCULATED_SENSORS = [
         "device_class": "timestamp",
         "type": "last_triggered",
         "entity_category": None,
-        "trigger_address": 7,
+        "trigger_address": 8,
         "translation_key": "booster_heater"
     },
     {
@@ -1137,7 +1137,7 @@ CALCULATED_SENSORS = [
         "device_class": "timestamp",
         "type": "last_triggered",
         "entity_category": None,
-        "trigger_address": 18,
+        "trigger_address": 19,
         "translation_key": "dhw_running"
     }
 ]
