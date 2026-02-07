@@ -171,6 +171,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._attr_entity_category = entity_category
         self._attr_device_info = device_info
         self._attr_translation_key = translation_key
+        self._attr_icon = icon
 
     @property
     def native_value(self):
