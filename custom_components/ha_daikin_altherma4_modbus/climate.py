@@ -13,7 +13,6 @@ from .const import DOMAIN, HOLDING_DEVICE_INFO, CALCULATED_DEVICE_INFO, HOLDING_
 
 _LOGGER = logging.getLogger(__name__)
 
-
 def get_register_scale(address, register_list):
     """Get scale factor for a register address from const.py."""
     for register in register_list:
@@ -22,16 +21,22 @@ def get_register_scale(address, register_list):
     return 1  # Default scale if not found
 
 # Register constants for Daikin Altherma 4
-REGISTER_CURRENT_TEMP = 41  # Leaving water temperature BUH
-REGISTER_OFFSET = 54        # Weather-dependent mode Main LWT Heating setpoint offset
-REGISTER_OPERATION_MODE = 3  # Operation mode
-REGISTER_QUIET_MODE = 9     # Quiet mode operation
-REGISTER_COMPRESSOR = 31    # Compressor status
+REGISTER_CURRENT_TEMP = "input_41"  # Leaving water temperature BUH
+REGISTER_OFFSET = "holding_54"        # Weather-dependent mode Main LWT Heating setpoint offset
+REGISTER_OPERATION_MODE = "holding_2"  # Operation mode
+REGISTER_QUIET_MODE = "holding_9"     # Quiet mode operation
+REGISTER_COMPRESSOR = "input_31"    # Compressor status
 
 # Fan mode constants (quiet mode)
 FAN_OFF = "OFF"
 FAN_AUTO = "On (Automatic)"
 FAN_MANUAL = "On (Manual)"
+
+# Register constant for DWH controls
+REGISTER_HVAC_MODE = "holding_14"
+REGISTER_DWH_RUNNING = "discrete_18"
+REGISTER_DHW_TEMP = "input_43"
+REGISTER_DHW_SETPOINT = "holding_15"
 
 class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     """Climate Entity for Daikin Altherma 4 Thermostat Control."""
@@ -51,20 +56,13 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         self._attr_translation_key = "daikin_thermostat_climate"
 
     def _get_offset_register_config(self):
-        """Get configuration for holding register 53 (offset)."""
-        for register in HOLDING_REGISTERS:
-            if register.get("address") == REGISTER_OFFSET:
-                return register
-        
-        # Error if register not found
-        _LOGGER.error(f"Holding register {REGISTER_OFFSET} (offset) not found in HOLDING_REGISTERS!")
-        raise ValueError(f"Holding register {REGISTER_OFFSET} configuration missing")
+        return self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OFFSET}", {})
 
     @property
     def current_temperature(self):
         """Return the current temperature."""
         # Istwert aus Input Register 40 (Leaving water temperature BUH)
-        temp_data = self.coordinator.data.get(f"{DOMAIN}_input_{REGISTER_CURRENT_TEMP}", {})
+        temp_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_CURRENT_TEMP}", {})
         temp_raw = temp_data.get("value", 0)
         temp = temp_raw * temp_data.get("scale", 0.01)  # °C
         return round(temp, 2)
@@ -108,7 +106,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     @property
     def fan_mode(self):
         """Return the current fan mode (quiet mode)."""
-        quiet_data = self.coordinator.data.get(f"{DOMAIN}_holding_{REGISTER_QUIET_MODE}", {})
+        quiet_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_QUIET_MODE}", {})
         quiet_raw = quiet_data.get("value", 0)
         
         fan_map = {0: FAN_OFF, 1: FAN_AUTO, 2: FAN_MANUAL}
@@ -123,7 +121,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     def hvac_mode(self):
         """Return current operation mode."""
         # Operation mode aus Holding Register 2
-        op_mode_data = self.coordinator.data.get(f"{DOMAIN}_holding_{REGISTER_OPERATION_MODE}", {})
+        op_mode_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OPERATION_MODE}", {})
         op_mode_raw = op_mode_data.get("value", 0)
         
         mode_map = {0: HVACMode.AUTO, 1: HVACMode.HEAT, 2: HVACMode.COOL}
@@ -133,7 +131,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     def hvac_action(self):
         """Return the current running hvac operation."""
         # Compressor status aus Input Register 30
-        comp_data = self.coordinator.data.get(f"{DOMAIN}_input_{REGISTER_COMPRESSOR}", {})
+        comp_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_COMPRESSOR}", {})
         comp_raw = comp_data.get("value", 0)
         
         if comp_raw:
@@ -269,7 +267,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
     def hvac_mode(self):
         """Return current HVAC mode."""
         # Check DHW Single heat-up ON/OFF (Manual) - address 14
-        data = self.coordinator.data.get(f"{DOMAIN}_holding_14")
+        data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_HVAC_MODE}")
         if data is None:
             return HVACMode.OFF
         
@@ -283,7 +281,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
             return HVACAction.OFF
         
         # Check if DHW is actually running
-        data = self.coordinator.data.get(f"{DOMAIN}_discrete_18")  # DHW running
+        data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_DWH_RUNNING}")
         if data is None:
             return HVACAction.IDLE
         
@@ -294,7 +292,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
     def current_temperature(self):
         """Return current temperature."""
         # Use DHW temperature as current temperature
-        data = self.coordinator.data.get(f"{DOMAIN}_input_42")
+        data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_DHW_TEMP}")
         if data is None:
             return None
         
@@ -307,7 +305,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
     def target_temperature(self):
         """Return target temperature."""
         # Get DHW Single heat-up setpoint (Manual) - address 15
-        data = self.coordinator.data.get(f"{DOMAIN}_holding_15")
+        data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_DHW_SETPOINT}")
         if data is None:
             return None
         
