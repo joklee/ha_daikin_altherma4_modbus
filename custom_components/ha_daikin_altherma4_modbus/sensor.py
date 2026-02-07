@@ -1,16 +1,13 @@
 import logging
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.const import EntityCategory
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     DOMAIN,
     INPUT_DEVICE_INFO,
     CALCULATED_DEVICE_INFO,
     INPUT_REGISTERS,
-    HOLDING_REGISTERS,
-    SELECT_REGISTERS,
     CALCULATED_SENSORS,
-    DEFAULT_SCAN_INTERVAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -309,7 +306,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
             power_data = self.coordinator.data.get(f"{DOMAIN}_input_51", {})
             _LOGGER.debug(f"power_data: {power_data}")
             electric_power_raw = power_data.get("value", 0)  # Heat pump power consumption (roh)
-            electric_power = electric_power_raw * power_data.get("scale", 10);  # in W
+            electric_power = electric_power_raw * power_data.get("scale", 10)  # in W
 
         _LOGGER.debug(f"electric_power: {electric_power}")
         if electric_power and electric_power > 0 and heat_power > 0:
@@ -340,7 +337,6 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        """Gibt den Zeitstempel des letzten Auslösens zurück."""
         return self.coordinator.data.get(f"last_triggered_{self._trigger_address}")
 
 

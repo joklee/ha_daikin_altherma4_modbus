@@ -13,8 +13,17 @@ from .const import (
     DISCRETE_INPUT_SENSORS,
     COIL_SENSORS,
     BINARY_SENSORS,
+    CALCULATED_SENSORS,
     DEFAULT_SCAN_INTERVAL,
 )
+
+def _get_last_run_trigger_addresses():
+    """Extract trigger addresses from CALCULATED_SENSORS for 'last_triggered' type sensors."""
+    trigger_addresses = []
+    for sensor in CALCULATED_SENSORS:
+        if sensor.get("type") == "last_triggered" and "trigger_address" in sensor:
+            trigger_addresses.append(sensor["trigger_address"])
+    return trigger_addresses
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -278,6 +287,27 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                 if binary["address"] in self.last_triggered:
                     data[f"last_triggered_{binary['address']}"] = self.last_triggered[binary["address"]]
 
+            # Track last triggered for discrete input sensors (dynamisch aus CALCULATED_SENSORS)
+            last_run_addresses = _get_last_run_trigger_addresses()
+            for discrete in DISCRETE_INPUT_SENSORS:
+                address = discrete["address"]
+                if address in last_run_addresses:  # Only track addresses configured in CALCULATED_SENSORS
+                    unique_id = discrete.get("unique_id", f"discrete_{address}")
+                    current_data = data.get(unique_id, {})
+                    current_val = current_data.get("value")
+                    previous_data = self.previous_data.get(unique_id, {})
+                    previous_val = previous_data.get("value") if previous_data else None
+
+                    # Track when discrete input turns on (value = 1)
+                    is_on = current_val == 1
+                    was_on = previous_val == 1 if previous_val is not None else False
+                    if is_on and not was_on:
+                        self.last_triggered[address] = dt_util.now()
+
+                    # Add to data
+                    if address in self.last_triggered:
+                        data[f"last_triggered_{address}"] = self.last_triggered[address]
+
             self.previous_data = data.copy()
             return self.data
 
@@ -352,6 +382,8 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                 raw_value = random.choice([0, 1, 2])  # Off, On (Automatic), On (Manual)
             elif address == 13:  # DHW booster mode - Select Entity
                 raw_value = random.choice([0, 1])  # Off, On (Powerful)
+            elif address == 30 or address == 17 or address == 8 or address == 19:
+                raw_value = 1
             elif address == 15:  # DHW Single heat-up - Select Entity
                 raw_value = random.choice([0, 1])  # Off, On
             elif address == 67:  # Weather-dependent mode - Select Entity
@@ -382,6 +414,15 @@ class DaikinAlthermaCoordinator(DataUpdateCoordinator):
                 "input_type": "discrete_input",
                 "address": address
             }
+            
+            # Simuliere last_triggered für bestimmte Adressen (dynamisch aus CALCULATED_SENSORS)
+            last_run_addresses = _get_last_run_trigger_addresses()
+            if address in last_run_addresses and raw_value == 1:
+                # Zufälliger Zeitstempel in den letzten 24 Stunden
+                hours_ago = random.uniform(0, 24)
+                trigger_time = dt_util.now() - timedelta(hours=hours_ago)
+                self.last_triggered[address] = trigger_time
+                data[f"last_triggered_{address}"] = trigger_time
         
         # Demo-Daten für BINARY_SENSORS mit last_triggered
         for item in BINARY_SENSORS:
