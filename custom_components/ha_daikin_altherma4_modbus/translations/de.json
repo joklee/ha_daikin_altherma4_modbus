@@ -453,6 +453,29 @@
       "holding_80": {
         "name": "Brauchwassermodus-Einstellung"
       }
+    },
+    "select": {
+      "holding_3": {
+        "name": "Betriebsart"
+      },
+      "holding_4": {
+        "name": "Raumheizen/-kühlen"
+      },
+      "holding_9": {
+        "name": "Geräuscharmer Betrieb"
+      },
+      "holding_13": {
+        "name": "Brauchwasser Zusatzheizungsmodus(leistungsstark)"
+      },
+      "holding_15": {
+        "name": "Brauchwasser Einzelaufheizung(manuell)"
+      },
+      "holding_56": {
+        "name": "Smart Grid-Betriebsart"
+      },
+      "holding_80": {
+        "name": "Brauchwassermodus-Einstellung"
+      }
     }
   }
 }

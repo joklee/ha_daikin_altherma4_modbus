@@ -108,7 +108,7 @@ INPUT_REGISTERS = [
         "unique_id": f"{DOMAIN}_input_38",
         "entity_category": None,
         "enum_map": {
-            0: "Off",
+            0: "None",
             1: "Heating",
             2: "Cooling",
         },
@@ -562,7 +562,7 @@ INPUT_REGISTERS = [
 
 HOLDING_REGISTERS = [
     {
-        "name": "Main Heating Setpoint",
+        "name": "Leaving water Main Heating setpoint",
         "address": 1,
         "unit": "°C",
         "scale": 1,
@@ -576,7 +576,7 @@ HOLDING_REGISTERS = [
         "translation_key": "input_1"
     },
     {
-        "name": "Main Cooling Setpoint",
+        "name": "Leaving water Main Cooling setpoint",
         "address": 2,
         "unit": "°C",
         "scale": 1,
@@ -588,21 +588,6 @@ HOLDING_REGISTERS = [
         "max_value": 100,
         "step": 1,
         "translation_key": "input_2"
-    },
-    {
-        "name": "Room Heating/Cooling ON/OFF",
-        "address": 4,
-        "unit": None,
-        "scale": 1,
-        "dtype": "int16",
-        "icon": "mdi:power",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_4",
-        "translation_key": "holding_4",
-        "enum_map": {
-            0: "OFF",
-            1: "ON"
-        }
     },
     {
         "name": "Room Thermostat Heating Setpoint Main",
@@ -633,20 +618,6 @@ HOLDING_REGISTERS = [
         "translation_key": "input_7"
     },
     {
-        "name": "DHW reheat setpoint",
-        "address": 9,
-        "unit": "°C",
-        "scale": 1,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_9",
-        "min_value": 30,
-        "max_value": 85,
-        "step": 1,
-        "translation_key": "input_9"
-    },
-    {
         "name": "Weather-dependent mode Heating Main",
         "address": 68,
         "min_v": 0,
@@ -659,8 +630,8 @@ HOLDING_REGISTERS = [
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_68",
         "enum_map": {
-            0: "Constant",
-            1: "Weather-dependent",
+            0: "Fixed",
+            1: "Weather dependent",
         "translation_key": "input_68"
         }
     },
@@ -677,8 +648,8 @@ HOLDING_REGISTERS = [
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_69",
         "enum_map": {
-            0: "Constant",
-            1: "Weather-dependent",
+            0: "Fixed",
+            1: "Weather dependent",
         "translation_key": "input_69"
         }
     },
@@ -720,25 +691,6 @@ HOLDING_REGISTERS = [
         "translation_key": "input_75"
         }
     },
-    # {
-    #     "name": "DHW Mode Setting",
-    #     "address": 80,
-    #     "min_v": 0,
-    #     "max_v": 2,
-    #     "step": 1,
-    #     "unit": None,
-    #     "scale": 1,
-    #     "dtype": "uint16",
-    #     "icon": "mdi:cog",
-    #     "input_type": "holding",
-    #     "unique_id": f"{DOMAIN}_holding_80",
-    #     "enum_map": {
-    #         0: "Keep Warm",
-    #         1: "Program and Keep Warm",
-    #         2: "Scheduled",
-    #     "translation_key": "input_80"
-    #     }
-    # },
     {
         "name": "DHW Keep Warm Setpoint",
         "address": 10,
@@ -752,20 +704,6 @@ HOLDING_REGISTERS = [
         "max_value": 85,
         "step": 1,
         "translation_key": "input_10"
-    },
-    {
-        "name": "DHW boost setpoint (Powerful)",
-        "address": 13,
-        "unit": "°C",
-        "scale": 0.01,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_13",
-        "min_value": 30,
-        "max_value": 85,
-        "step": 1,
-        "translation_key": "input_13"
     },
     {
         "name": "DHW Powerful Additional Setpoint",
@@ -796,20 +734,6 @@ HOLDING_REGISTERS = [
         "translation_key": "input_16"
     },
     {
-        "name": "Smart Grid Operation Mode",
-        "address": 56,
-        "unit": None,
-        "scale": 1,
-        "dtype": "uint16",
-        "icon": "mdi:cog",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_56",
-        "min_value": 0,
-        "max_value": 3,
-        "step": 1,
-        "translation_key": "input_56"
-    },
-    {
         "name": "Weather-dependent mode Main LWT Heating setpoint offset",
         "address": 54,
         "unit": "°C",
@@ -824,7 +748,7 @@ HOLDING_REGISTERS = [
         "translation_key": "input_54"
     },
     {
-        "name": "Weather-dependent mode Add LWT Heating setpoint offset",
+        "name": "Weather-dependent mode Main LWT Cooling setpoint offset",
         "address": 55,
         "unit": "°C",
         "scale": 1,
@@ -852,7 +776,7 @@ HOLDING_REGISTERS = [
         "translation_key": "input_58"
     },
     {
-        "name": "Additional Heating Setpoint",
+        "name": "Leaving water Add Heating setpoint",
         "address": 63,
         "unit": "°C",
         "scale": 1,
@@ -866,7 +790,7 @@ HOLDING_REGISTERS = [
         "translation_key": "input_63"
     },
     {
-        "name": "Additional Cooling Setpoint",
+        "name": "Leaving water Add Cooling setpoint",
         "address": 64,
         "unit": "°C",
         "scale": 1,
@@ -880,7 +804,7 @@ HOLDING_REGISTERS = [
         "translation_key": "input_64"
     },
     {
-        "name": "Weather-dependent mode Add VLT Heating offset",
+        "name": "Weather-dependent mode Add LWT Heating setpoint offset",
         "address": 66,
         "unit": "°C",
         "scale": 1,
@@ -894,7 +818,7 @@ HOLDING_REGISTERS = [
         "translation_key": "input_66"
     },
     {
-        "name": "Weather-dependent mode Add VLT Cooling offset",
+        "name": "Weather-dependent mode Add LWT Cooling setpoint offset",
         "address": 67,
         "unit": "°C",
         "scale": 1,
@@ -936,7 +860,7 @@ HOLDING_REGISTERS = [
         "translation_key": "input_77"
     },
     {
-        "name": "Room Thermostat Heating Setpoint Additional",
+        "name": "Room thermostat control Heating setpoint Add",
         "address": 78,
         "unit": "°C",
         "scale": 1,
@@ -950,7 +874,7 @@ HOLDING_REGISTERS = [
         "translation_key": "input_78"
     },
     {
-        "name": "Room Thermostat Cooling Setpoint Additional",
+        "name": "Room thermostat control Cooling setpoint Add",
         "address": 79,
         "unit": "°C",
         "scale": 1,
@@ -989,14 +913,14 @@ SELECT_REGISTERS = [
     },
     {
         "name": "Space heating/cooling",
-        "address": 3,
+        "address": 4,
         "unit": None,
         "scale": 1,
         "dtype": "uint16",
         "icon": "mdi:thermostat",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_3",
-        "translation_key": "holding_3",
+        "unique_id": f"{DOMAIN}_holding_4",
+        "translation_key": "holding_4",
         "enum_map": {
             0: "OFF",
             1: "ON"
@@ -1019,7 +943,7 @@ SELECT_REGISTERS = [
         }
     },
     {
-        "name": "DHW booster mode ON/OFF (Powerful)",
+        "name": "DHW booster mode (Powerful)",
         "address": 13,
         "unit": None,
         "scale": 1,
@@ -1049,21 +973,22 @@ SELECT_REGISTERS = [
         }
     },
     {
-        "name": "Weather-dependent mode Heating Main",
-        "address": 67,
+        "name": "Smart Grid Operation Mode",
+        "address": 56,
         "unit": None,
         "scale": 1,
         "dtype": "uint16",
-        "icon": "mdi:thermostat",
+        "icon": "mdi:cog",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_67",
-        "translation_key": "holding_67",
+        "unique_id": f"{DOMAIN}_holding_56",
+        "translation_key": "holding_56",
         "enum_map": {
-            0: "Fixed",
-            1: "Weather dependent"
+            0: "Free running",
+            1: "Forced off",
+            2: "Recommended on",
+            3: "Forced on"
         }
     },
-
     {
         "name": "DHW mode setting",
         "address": 80,
@@ -1075,8 +1000,8 @@ SELECT_REGISTERS = [
         "unique_id": f"{DOMAIN}_holding_80",
         "translation_key": "holding_80",
         "enum_map": {
-            0: "Keep Warm",
-            1: "Program and Keep Warm",
+            0: "Reheat",
+            1: "Schedule and reheat",
             2: "Scheduled"
         }
     }

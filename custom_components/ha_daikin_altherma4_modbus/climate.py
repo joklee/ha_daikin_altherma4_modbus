@@ -21,22 +21,32 @@ def get_register_scale(address, register_list):
     return 1  # Default scale if not found
 
 # Register constants for Daikin Altherma 4
-REGISTER_CURRENT_TEMP = "input_41"  # Leaving water temperature BUH
-REGISTER_OFFSET = "holding_54"        # Weather-dependent mode Main LWT Heating setpoint offset
-REGISTER_OPERATION_MODE = "holding_3"  # Operation mode
+REGISTER_OPERATION_MODE = "input_38" # Operation mode
+REGISTER_CURRENT_TEMP = "input_40" # Leaving water temperature PHE (plate heat exchanger)
+REGISTER_OFFSET_HEATING = "holding_54"        # Weather-dependent mode Main LWT Heating setpoint offset
+REGISTER_OFFSET_COOLING = "holding_53"        # Weather-dependent mode Main LWT Cooling setpoint offset
 REGISTER_QUIET_MODE = "holding_9"     # Quiet mode operation
 REGISTER_COMPRESSOR = "input_31"    # Compressor status
+
+# DHW Control constants
+REGISTER_HVAC_MODE = "holding_15"   # DHW Single heat-up ON/OFF (Manual)
+REGISTER_DWH_RUNNING = "discrete_18" # DHW running status
+REGISTER_DHW_TEMP = "input_43"       # DHW temperature
+REGISTER_DHW_SETPOINT = "holding_16" # DHW Single heat-up setpoint (Manual)
 
 # Fan mode constants (quiet mode)
 FAN_OFF = "OFF"
 FAN_AUTO = "On (Automatic)"
 FAN_MANUAL = "On (Manual)"
 
-# Register constant for DWH controls
-REGISTER_HVAC_MODE = "holding_15"
-REGISTER_DWH_RUNNING = "discrete_18"
-REGISTER_DHW_TEMP = "input_43"
-REGISTER_DHW_SETPOINT = "holding_16"
+# HVAC Mode constants
+HVAC_OFF = 0
+HVAC_HEAT = 1
+HVAC_COOL = 2
+
+# DHW Mode constants
+DHW_OFF = 0
+DHW_ON = 1
 
 class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     """Climate Entity for Daikin Altherma 4 Thermostat Control."""
@@ -56,12 +66,19 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         self._attr_translation_key = "daikin_thermostat_climate"
 
     def _get_offset_register_config(self):
-        return self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OFFSET}", {})
+        """Get the appropriate offset register config based on operation mode."""
+        op_mode_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OPERATION_MODE}", {})
+        op_mode_raw = op_mode_data.get("value", 0)
+        
+        # Use cooling offset when operation mode is COOL (2), otherwise heating offset
+        if op_mode_raw == HVAC_COOL:
+            return self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OFFSET_COOLING}", {})
+        else:
+            return self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OFFSET_HEATING}", {})
 
     @property
     def current_temperature(self):
         """Return the current temperature."""
-        # Istwert aus Input Register 40 (Leaving water temperature BUH)
         temp_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_CURRENT_TEMP}", {})
         temp_raw = temp_data.get("value", 0)
         temp = temp_raw * temp_data.get("scale", 0.01)  # °C
@@ -70,8 +87,15 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     @property
     def target_temperature(self):
         """Return the current offset value as temperature."""
-        # Offset aus Holding Register 53
-        offset_data = self.coordinator.data.get(f"{DOMAIN}_holding_{REGISTER_OFFSET}", {})
+        # Get operation mode from input_38
+        op_mode_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OPERATION_MODE}", {})
+        op_mode_raw = op_mode_data.get("value", 0)
+        
+        # Use cooling offset when operation mode is COOL (2), otherwise heating offset
+        if op_mode_raw == HVAC_COOL:
+            offset_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OFFSET_COOLING}", {})
+        else:
+            offset_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OFFSET_HEATING}", {})
         offset_raw = offset_data.get("value", 0)
         
         # Handle signed 16-bit integers
@@ -109,7 +133,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         quiet_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_QUIET_MODE}", {})
         quiet_raw = quiet_data.get("value", 0)
         
-        fan_map = {0: FAN_OFF, 1: FAN_AUTO, 2: FAN_MANUAL}
+        fan_map = {HVAC_OFF: FAN_OFF, HVAC_HEAT: FAN_AUTO, HVAC_COOL: FAN_MANUAL}
         return fan_map.get(quiet_raw, FAN_OFF)
 
     @property
@@ -120,17 +144,15 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     @property
     def hvac_mode(self):
         """Return current operation mode."""
-        # Operation mode aus Holding Register 2
         op_mode_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OPERATION_MODE}", {})
         op_mode_raw = op_mode_data.get("value", 0)
         
-        mode_map = {0: HVACMode.AUTO, 1: HVACMode.HEAT, 2: HVACMode.COOL}
+        mode_map = {HVAC_OFF: HVACMode.AUTO, HVAC_HEAT: HVACMode.HEAT, HVAC_COOL: HVACMode.COOL}
         return mode_map.get(op_mode_raw, HVACMode.AUTO)
 
     @property
     def hvac_action(self):
         """Return the current running hvac operation."""
-        # Compressor status aus Input Register 30
         comp_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_COMPRESSOR}", {})
         comp_raw = comp_data.get("value", 0)
         
@@ -148,8 +170,6 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         config = self._get_offset_register_config()
         min_temp = float(config.get("min_value", -5))
         max_temp = float(config.get("max_value", 5))
-        
-        # Begrenze den Offset auf die Werte aus Holding Register 53
         offset = max(min_temp, min(max_temp, round(temperature, 0)))
         
         # Konvertiere zu Rohwert für Holding Register
@@ -158,10 +178,17 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         # Handle signed 16-bit integers
         if offset_raw < 0:
             offset_raw = 65536 + offset_raw
-        
-        # Schreibe neuen Offset in Holding Register 53
+
+        # Get operation mode from input_38 before try block
+        op_mode_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OPERATION_MODE}", {})
+        op_mode_raw = op_mode_data.get("value", 0)
+
         try:
-            await self.coordinator.client.write_register(REGISTER_OFFSET, offset_raw)
+            # Write to the appropriate offset register based on operation mode from input_38
+            if op_mode_raw == HVAC_COOL:
+                await self.coordinator.client.write_register(REGISTER_OFFSET_COOLING, offset_raw)
+            else:
+                await self.coordinator.client.write_register(REGISTER_OFFSET_HEATING, offset_raw)
             await self.coordinator.async_request_refresh()
             _LOGGER.debug(f"Set thermostat offset to {offset}°C (raw: {offset_raw})")
         except Exception as e:
@@ -169,7 +196,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
-        mode_map = {HVACMode.AUTO: 0, HVACMode.HEAT: 1, HVACMode.COOL: 2}
+        mode_map = {HVACMode.AUTO: HVAC_OFF, HVACMode.HEAT: HVAC_HEAT, HVACMode.COOL: HVAC_COOL}
         mode_raw = mode_map.get(hvac_mode, 0)
         
         try:
@@ -181,7 +208,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode (quiet mode)."""
-        fan_map = {FAN_OFF: 0, FAN_AUTO: 1, FAN_MANUAL: 2}
+        fan_map = {FAN_OFF: HVAC_OFF, FAN_AUTO: HVAC_HEAT, FAN_MANUAL: HVAC_COOL}
         mode_raw = fan_map.get(fan_mode, 0)
         
         try:
@@ -194,8 +221,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     @property
     def extra_state_attributes(self):
         """Return additional state attributes."""
-        # Quiet mode aus Holding Register 8
-        quiet_data = self.coordinator.data.get(f"{DOMAIN}_holding_{REGISTER_QUIET_MODE}", {})
+        quiet_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_QUIET_MODE}", {})
         quiet_raw = quiet_data.get("value", 0)
         quiet_map = {0: "Off", 1: "On (Automatic)", 2: "On (Manual)"}
         quiet_mode = quiet_map.get(quiet_raw, "Unknown")
@@ -204,7 +230,14 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         config = self._get_offset_register_config()
         scale = config.get("scale", 1)
         
-        offset_data = self.coordinator.data.get(f"{DOMAIN}_holding_{REGISTER_OFFSET}", {})
+        # Get the appropriate offset register based on operation mode from input_38
+        op_mode_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OPERATION_MODE}", {})
+        op_mode_raw = op_mode_data.get("value", 0)
+        
+        if op_mode_raw == HVAC_COOL:
+            offset_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OFFSET_COOLING}", {})
+        else:
+            offset_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OFFSET_HEATING}", {})
         offset_raw = offset_data.get("value", 0)
         if offset_raw > 32767:
             offset_raw = offset_raw - 65536
@@ -214,13 +247,17 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         current_temp = self.current_temperature
         calculated_setpoint = current_temp + offset
         
+        # Get operation mode from input_38 for address display
+        op_mode_data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_OPERATION_MODE}", {})
+        op_mode_raw = op_mode_data.get("value", 0)
+        
         return {
             "quiet_mode": quiet_mode,
             "offset": round(offset, 2),
             "calculated_setpoint": round(calculated_setpoint, 2),
             "current_temperature": current_temp,
             "register_config": {
-                "address": REGISTER_OFFSET,
+                "address": REGISTER_OFFSET_HEATING if op_mode_raw != HVAC_COOL else REGISTER_OFFSET_COOLING,
                 "min_value": config.get("min_value"),
                 "max_value": config.get("max_value"),
                 "step": config.get("step"),
@@ -270,7 +307,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
             return HVACMode.OFF
         
         val = data.get("value")
-        return HVACMode.HEAT if val == 1 else HVACMode.OFF
+        return HVACMode.HEAT if val == DHW_ON else HVACMode.OFF
 
     @property
     def hvac_action(self):
@@ -284,7 +321,7 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
             return HVACAction.IDLE
         
         val = data.get("value")
-        return HVACAction.HEATING if val == 1 else HVACAction.IDLE
+        return HVACAction.HEATING if val == DHW_ON else HVACAction.IDLE
 
     @property
     def current_temperature(self):
@@ -315,9 +352,8 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode):
         """Set HVAC mode."""
         if hvac_mode == HVACMode.HEAT:
-            # Turn ON DHW Single heat-up (Manual) - address 14
             try:
-                result = await self.coordinator.client.write_register(14, 1)
+                result = await self.coordinator.client.write_register(15, DHW_ON)
                 if result.isError():
                     _LOGGER.error(f"Failed to turn on DHW manual heat-up: {result}")
                 else:
@@ -326,9 +362,8 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
             except Exception as e:
                 _LOGGER.error(f"Error turning on DHW manual heat-up: {e}")
         elif hvac_mode == HVACMode.OFF:
-            # Turn OFF DHW Single heat-up (Manual) - address 14
             try:
-                result = await self.coordinator.client.write_register(14, 0)
+                result = await self.coordinator.client.write_register(15, DHW_OFF)
                 if result.isError():
                     _LOGGER.error(f"Failed to turn off DHW manual heat-up: {result}")
                 else:
@@ -348,10 +383,8 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
         
         # Convert temperature to raw register value
         raw_value = int(temperature / scale_factor) if scale_factor != 0 else int(temperature)
-        
-        # Set DHW Single heat-up setpoint (Manual) - address 15
         try:
-            result = await self.coordinator.client.write_register(15, raw_value)
+            result = await self.coordinator.client.write_register(16, raw_value)
             if result.isError():
                 _LOGGER.error(f"Failed to set DHW manual heat-up temperature: {result}")
             else:

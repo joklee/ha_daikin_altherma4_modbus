@@ -408,6 +408,29 @@
       "holding_80": {
         "name": "DHW mode setting"
       }
+    },
+    "select": {
+      "holding_3": {
+        "name": "Operation mode"
+      },
+      "holding_4": {
+        "name": "Space heating/cooling"
+      },
+      "holding_9": {
+        "name": "Quiet mode operation"
+      },
+      "holding_13": {
+        "name": "DHW auxiliary heating mode(powerful)"
+      },
+      "holding_15": {
+        "name": "DHW single heat-up(manual)"
+      },
+      "holding_56": {
+        "name": "Smart grid operation mode"
+      },
+      "holding_80": {
+        "name": "DHW mode setting"
+      }
     }
   }
 }
