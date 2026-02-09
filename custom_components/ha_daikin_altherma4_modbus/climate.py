@@ -23,7 +23,7 @@ def get_register_scale(address, register_list):
 # Register constants for Daikin Altherma 4
 REGISTER_CURRENT_TEMP = "input_41"  # Leaving water temperature BUH
 REGISTER_OFFSET = "holding_54"        # Weather-dependent mode Main LWT Heating setpoint offset
-REGISTER_OPERATION_MODE = "holding_2"  # Operation mode
+REGISTER_OPERATION_MODE = "holding_3"  # Operation mode
 REGISTER_QUIET_MODE = "holding_9"     # Quiet mode operation
 REGISTER_COMPRESSOR = "input_31"    # Compressor status
 
@@ -33,10 +33,10 @@ FAN_AUTO = "On (Automatic)"
 FAN_MANUAL = "On (Manual)"
 
 # Register constant for DWH controls
-REGISTER_HVAC_MODE = "holding_14"
+REGISTER_HVAC_MODE = "holding_15"
 REGISTER_DWH_RUNNING = "discrete_18"
 REGISTER_DHW_TEMP = "input_43"
-REGISTER_DHW_SETPOINT = "holding_15"
+REGISTER_DHW_SETPOINT = "holding_16"
 
 class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     """Climate Entity for Daikin Altherma 4 Thermostat Control."""
@@ -265,8 +265,6 @@ class DaikinDHWManualThermostat(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_mode(self):
-        """Return current HVAC mode."""
-        # Check DHW Single heat-up ON/OFF (Manual) - address 14
         data = self.coordinator.data.get(f"{DOMAIN}_{REGISTER_HVAC_MODE}")
         if data is None:
             return HVACMode.OFF

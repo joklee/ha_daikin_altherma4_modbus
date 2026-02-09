@@ -82,8 +82,6 @@ INPUT_REGISTERS = [
         "enum_map": {32766: "No error"},
         "translation_key": "input_23"
     },
-
-    # Status / Betriebsflags
     {
         "name": "3-way valve",
         "address": 37,
@@ -191,6 +189,19 @@ INPUT_REGISTERS = [
         "unique_id": f"{DOMAIN}_input_49",
         "entity_category": None,
         "translation_key": "input_49"
+    },
+
+    {
+        "name": "Remote control room temperature (Main)",
+        "address": 50,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_50",
+        "entity_category": None,
+        "translation_key": "input_50"
     },
 
     # Leistungswerte
@@ -579,6 +590,21 @@ HOLDING_REGISTERS = [
         "translation_key": "input_2"
     },
     {
+        "name": "Room Heating/Cooling ON/OFF",
+        "address": 4,
+        "unit": None,
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:power",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_4",
+        "translation_key": "holding_4",
+        "enum_map": {
+            0: "OFF",
+            1: "ON"
+        }
+    },
+    {
         "name": "Room Thermostat Heating Setpoint Main",
         "address": 6,
         "unit": "°C",
@@ -756,20 +782,6 @@ HOLDING_REGISTERS = [
         "translation_key": "input_14"
     },
     {
-        "name": "DHW Single heat-up setpoint (Manual)",
-        "address": 15,
-        "unit": "°C",
-        "scale": 0.01,
-        "dtype": "int16",
-        "icon": "mdi:thermometer",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_15",
-        "min_value": 30,
-        "max_value": 85,
-        "step": 1,
-        "translation_key": "input_15"
-    },
-    {
         "name": "DHW Single Heat-up Setpoint (Manual)",
         "address": 16,
         "unit": "°C",
@@ -806,8 +818,8 @@ HOLDING_REGISTERS = [
         "icon": "mdi:thermometer",
         "input_type": "holding",
         "unique_id": f"{DOMAIN}_holding_54",
-        "min_value": -5,
-        "max_value": 5,
+        "min_value": -10,
+        "max_value": 10,
         "step": 1,
         "translation_key": "input_54"
     },
@@ -958,7 +970,7 @@ HOLDING_REGISTERS = [
 SELECT_REGISTERS = [
     {
         "name": "Operation mode",
-        "address": 2,
+        "address": 3,
         "min_v": 0,
         "max_v": 2,
         "step": 1,
@@ -967,8 +979,8 @@ SELECT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:cog",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_2",
-        "translation_key": "holding_2",
+        "unique_id": f"{DOMAIN}_holding_3",
+        "translation_key": "holding_3",
         "enum_map": {
             0: "Auto",
             1: "Heating", 
@@ -1051,23 +1063,23 @@ SELECT_REGISTERS = [
             1: "Weather dependent"
         }
     },
-# Holding register not readable 
-    # {
-    #     "name": "DHW mode setting",
-    #     "address": 79,
-    #     "unit": None,
-    #     "scale": 1,
-    #     "dtype": "int16",
-    #     "icon": "mdi:water-boiler",
-    #     "input_type": "holding",
-    #     "unique_id": f"{DOMAIN}_holding_79",
-    #     "enum_map": {
-    #         0: "Reheat",
-    #         1: "Schedule and reheat",
-    #         2: "Scheduled",
-    #         32766: "Unknown"
-    #     }
-    # },
+
+    {
+        "name": "DHW mode setting",
+        "address": 80,
+        "unit": None,
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:water-boiler",
+        "input_type": "holding",
+        "unique_id": f"{DOMAIN}_holding_80",
+        "translation_key": "holding_80",
+        "enum_map": {
+            0: "Keep Warm",
+            1: "Program and Keep Warm",
+            2: "Scheduled"
+        }
+    }
 ]
 
 # Berechnete Sensoren
@@ -1417,15 +1429,6 @@ COIL_SENSORS = [
 BINARY_SENSORS = [
     {
         "name": "Circulation pump running",
-        "address": 29,
-        "device_class": "running",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_29",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_29"
-    },
-    {
-        "name": "Compressor run",
         "address": 30,
         "device_class": "running",
         "input_type": "input",
@@ -1434,7 +1437,7 @@ BINARY_SENSORS = [
         "translation_key": "input_30"
     },
     {
-        "name": "Booster heater run",
+        "name": "Compressor run",
         "address": 31,
         "device_class": "running",
         "input_type": "input",
@@ -1443,7 +1446,7 @@ BINARY_SENSORS = [
         "translation_key": "input_31"
     },
     {
-        "name": "Disinfection operation",
+        "name": "Booster heater run",
         "address": 32,
         "device_class": "running",
         "input_type": "input",
@@ -1452,22 +1455,31 @@ BINARY_SENSORS = [
         "translation_key": "input_32"
     },
     {
-        "name": "Defrost/Restart",
-        "address": 34,
+        "name": "Disinfection operation",
+        "address": 33,
         "device_class": "running",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_34",
+        "unique_id": f"{DOMAIN}_input_33",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_34"
+        "translation_key": "input_33"
     },
     {
-        "name": "Hot start",
+        "name": "Defrost/Restart",
         "address": 35,
         "device_class": "running",
         "input_type": "input",
         "unique_id": f"{DOMAIN}_input_35",
         "entity_category": EntityCategory.DIAGNOSTIC,
         "translation_key": "input_35"
+    },
+    {
+        "name": "Hot start",
+        "address": 36,
+        "device_class": "running",
+        "input_type": "input",
+        "unique_id": f"{DOMAIN}_input_36",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "translation_key": "input_36"
     },
     {
         "name": "Disinfection state",
