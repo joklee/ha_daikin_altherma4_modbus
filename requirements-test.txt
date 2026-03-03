@@ -1,0 +1,15 @@
+# Test requirements for Daikin Altherma 4 Modbus integration
+# Install with: pip install -r requirements-test.txt
+
+# Core testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# Coverage reporting
+coverage>=7.0.0
+
+# Development and debugging
+pytest-xdist>=3.0.0  # Parallel test execution
+pytest-benchmark>=4.0.0  # Performance benchmarking

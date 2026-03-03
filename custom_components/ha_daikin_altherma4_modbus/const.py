@@ -2,7 +2,9 @@ from homeassistant.const import EntityCategory
 
 DOMAIN = "ha_daikin_altherma4_modbus"
 DEFAULT_PORT = 502
-DEFAULT_SCAN_INTERVAL = 15
+
+SLOW_SCAN_INTERVAL = 30
+NORMAL_SCAN_INTERVAL = 5
 
 INPUT_DEVICE_INFO = {
     "identifiers": {("daikin_altherma_modbus", "input_registers")},
@@ -51,7 +53,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:alert-circle",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_21",
+        "register_name": "input_21",
         "entity_category": EntityCategory.DIAGNOSTIC,
         "enum_map": {0: "Kein Fehler", 1: "Störung", 2: "Warnung"},
         "translation_key": "input_21"
@@ -65,7 +67,7 @@ INPUT_REGISTERS = [
         "count": 1,
         "icon": "mdi:alert-circle",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_22",
+        "register_name": "input_22",
         "entity_category": EntityCategory.DIAGNOSTIC,
         "translation_key": "input_22"
     },
@@ -77,9 +79,9 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:alert-circle",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_23",
+        "register_name": "input_23",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "enum_map": {32766: "No error"},
+        "enum_map": {**{i: f"Fehler {i}" for i in range(100)}, 32766: "No error"},
         "translation_key": "input_23"
     },
     {
@@ -90,7 +92,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:pipe-valve",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_37",
+        "register_name": "input_37",
         "entity_category": None,
         "enum_map": {0: "Space heating", 1: "DHW"},
         "translation_key": "input_37"
@@ -105,7 +107,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:thermostat",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_38",
+        "register_name": "input_38",
         "entity_category": None,
         "enum_map": {
             0: "None",
@@ -124,7 +126,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_40",
+        "register_name": "input_40",
         "entity_category": None,
         "translation_key": "input_40"
     },
@@ -136,7 +138,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_41",
+        "register_name": "input_41",
         "entity_category": None,
         "translation_key": "input_41"
     },
@@ -148,7 +150,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_42",
+        "register_name": "input_42",
         "entity_category": None,
         "translation_key": "input_42"
     },
@@ -160,7 +162,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_43",
+        "register_name": "input_43",
         "entity_category": None,
         "translation_key": "input_43"
     },
@@ -172,7 +174,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_44",
+        "register_name": "input_44",
         "entity_category": None,
         "translation_key": "input_44"
     },
@@ -186,7 +188,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:water-pump",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_49",
+        "register_name": "input_49",
         "entity_category": None,
         "translation_key": "input_49"
     },
@@ -199,7 +201,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_50",
+        "register_name": "input_50",
         "entity_category": None,
         "translation_key": "input_50"
     },
@@ -213,7 +215,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:lightning-bolt",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_51",
+        "register_name": "input_51",
         "entity_category": None,
         "translation_key": "input_51"
     },
@@ -227,7 +229,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:information",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_52",
+        "register_name": "input_52",
         "entity_category": None,
         "translation_key": "input_52",
         "enum_map": {0: "Idle/Buffering", 1: "Operation"}
@@ -240,10 +242,90 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:information",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_53",
+        "register_name": "input_53",
         "entity_category": None,
         "translation_key": "input_53",
         "enum_map": {0: "Idle/Buffering", 1: "Operation"}
+    },
+
+    # Binary Status Register (30-36)
+    {
+        "name": "Circulation pump running",
+        "address": 30,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:pump",
+        "input_type": "input",
+        "device_class": "running",
+        "register_name": "input_30",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "translation_key": "input_30"
+    },
+    {
+        "name": "Compressor run",
+        "address": 31,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:compressor",
+        "input_type": "input",
+        "device_class": "running",
+        "register_name": "input_31",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "translation_key": "input_31"
+    },
+    {
+        "name": "Booster heater run",
+        "address": 32,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:heater",
+        "input_type": "input",
+        "device_class": "running",
+        "register_name": "input_32",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "translation_key": "input_32"
+    },
+    {
+        "name": "Disinfection operation",
+        "address": 33,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:water-boiler",
+        "input_type": "input",
+        "device_class": "running",
+        "register_name": "input_33",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "translation_key": "input_33"
+    },
+    {
+        "name": "Defrost/Restart",
+        "address": 35,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:snowflake-melt",
+        "input_type": "input",
+        "device_class": "running",
+        "register_name": "input_35",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "translation_key": "input_35"
+    },
+    {
+        "name": "Hot start",
+        "address": 36,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:fire",
+        "input_type": "input",
+        "device_class": "running",
+        "register_name": "input_36",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "translation_key": "input_36"
     },
 
     # Sollwerte (Setpoints)
@@ -255,7 +337,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_54",
+        "register_name": "input_54",
         "entity_category": None,
         "translation_key": "input_54"
     },
@@ -267,7 +349,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_55",
+        "register_name": "input_55",
         "entity_category": None,
         "translation_key": "input_55"
     },
@@ -279,7 +361,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_56",
+        "register_name": "input_56",
         "entity_category": None,
         "translation_key": "input_56"
     },
@@ -291,7 +373,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_57",
+        "register_name": "input_57",
         "entity_category": None,
         "translation_key": "input_57"
     },
@@ -305,7 +387,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_58",
+        "register_name": "input_58",
         "entity_category": None,
         "translation_key": "input_58"
     },
@@ -317,7 +399,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_59",
+        "register_name": "input_59",
         "entity_category": None,
         "translation_key": "input_59"
     },
@@ -329,7 +411,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_60",
+        "register_name": "input_60",
         "entity_category": None,
         "translation_key": "input_60"
     },
@@ -341,7 +423,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_61",
+        "register_name": "input_61",
         "entity_category": None,
         "translation_key": "input_61"
     },
@@ -355,7 +437,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:water-pump",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_63",
+        "register_name": "input_63",
         "entity_category": None,
         "enum_map": {0: "Unsuccessful", 1: "Successful", 2: "Maintain", 3: "Heat Up"},
         "translation_key": "input_63"
@@ -368,9 +450,9 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:beach",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_64",
-        "entity_category": None,
-        "enum_map": {0: "OFF", 1: "ON"},
+        "register_name": "input_64",
+        "device_class": "running",
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "translation_key": "input_64"
     },
     {
@@ -381,7 +463,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:lightning-bolt",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_65",
+        "register_name": "input_65",
         "entity_category": None,
         "enum_map": {0: "Free", 1: "Forced Off", 2: "Forced On", 3: "Recommended On", 4: "Reduced"},
         "translation_key": "input_65"
@@ -395,7 +477,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:valve",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_66",
+        "register_name": "input_66",
         "entity_category": None,
         "translation_key": "input_66"
     },
@@ -407,7 +489,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:valve",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_67",
+        "register_name": "input_67",
         "entity_category": None,
         "translation_key": "input_67"
     },
@@ -419,7 +501,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:water-pump",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_68",
+        "register_name": "input_68",
         "entity_category": None,
         "translation_key": "input_68"
     },
@@ -431,7 +513,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:fan",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_69",
+        "register_name": "input_69",
         "entity_category": None,
         "translation_key": "input_69"
     },
@@ -443,7 +525,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:fan",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_70",
+        "register_name": "input_70",
         "entity_category": None,
         "translation_key": "input_70"
     },
@@ -455,7 +537,7 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:valve",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_71",
+        "register_name": "input_71",
         "entity_category": None,
         "translation_key": "input_71"
     },
@@ -467,7 +549,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_72",
+        "register_name": "input_72",
         "entity_category": None,
         "translation_key": "input_72"
     },
@@ -479,7 +561,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_73",
+        "register_name": "input_73",
         "entity_category": None,
         "translation_key": "input_73"
     },
@@ -491,7 +573,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_74",
+        "register_name": "input_74",
         "entity_category": None,
         "translation_key": "input_74"
     },
@@ -503,7 +585,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_75",
+        "register_name": "input_75",
         "entity_category": None,
         "translation_key": "input_75"
     },
@@ -515,7 +597,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_76",
+        "register_name": "input_76",
         "entity_category": None,
         "translation_key": "input_76"
     },
@@ -527,7 +609,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_77",
+        "register_name": "input_77",
         "entity_category": None,
         "translation_key": "input_77"
     },
@@ -539,7 +621,7 @@ INPUT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:gauge",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_79",
+        "register_name": "input_79",
         "entity_category": None,
         "translation_key": "input_79"
     },
@@ -551,10 +633,106 @@ INPUT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:cog",
         "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_83",
+        "register_name": "input_83",
         "entity_category": None,
         "translation_key": "input_83",
         "enum_map": {0: "Stop", 1: "Tank Heat Up", 2: "Space heating", 3: "Space cooling", 4: "Actuator"}
+    },
+    {
+        "name": "Remote controller room temperature (Add)",
+        "address": 78,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "register_name": "input_78",
+        "entity_category": None,
+        "translation_key": "input_78"
+    },
+    {
+        "name": "Space heating/cooling target for Main zone Temp16",
+        "address": 80,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "register_name": "input_80",
+        "entity_category": None,
+        "translation_key": "input_80"
+    },
+    {
+        "name": "Space heating/cooling target for Add zone",
+        "address": 81,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer",
+        "input_type": "input",
+        "register_name": "input_81",
+        "entity_category": None,
+        "translation_key": "input_81"
+    },
+    {
+        "name": "Abnormality counter (user)",
+        "address": 82,
+        "unit": None,
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:counter",
+        "input_type": "input",
+        "register_name": "input_82",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "translation_key": "input_82"
+    },
+    {
+        "name": "Room Heating setpoint Lower limit Temp16",
+        "address": 84,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer-low",
+        "input_type": "input",
+        "register_name": "input_84",
+        "entity_category": None,
+        "translation_key": "input_84"
+    },
+    {
+        "name": "Room Heating setpoint Upper limit",
+        "address": 85,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer-high",
+        "input_type": "input",
+        "register_name": "input_85",
+        "entity_category": None,
+        "translation_key": "input_85"
+    },
+    {
+        "name": "Room Cooling setpoint Lower limit",
+        "address": 86,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer-low",
+        "input_type": "input",
+        "register_name": "input_86",
+        "entity_category": None,
+        "translation_key": "input_86"
+    },
+    {
+        "name": "Room Cooling setpoint Upper limit",
+        "address": 87,
+        "unit": "°C",
+        "scale": 0.01,
+        "dtype": "int16",
+        "icon": "mdi:thermometer-high",
+        "input_type": "input",
+        "register_name": "input_87",
+        "entity_category": None,
+        "translation_key": "input_87"
     }
 ]
 
@@ -569,11 +747,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_1",
+        "register_name": "holding_1",
         "min_value": 0,
         "max_value": 100,
         "step": 1,
-        "translation_key": "input_1"
+        "translation_key": "holding_1"
     },
     {
         "name": "Leaving water Main Cooling setpoint",
@@ -583,11 +761,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_2",
+        "register_name": "holding_2",
         "min_value": 0,
         "max_value": 100,
         "step": 1,
-        "translation_key": "input_2"
+        "translation_key": "holding_2"
     },
     {
         "name": "Room Thermostat Heating Setpoint Main",
@@ -597,11 +775,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_6",
+        "register_name": "holding_6",
         "min_value": 12,
         "max_value": 30,
         "step": 1,
-        "translation_key": "input_6"
+        "translation_key": "holding_6"
     },
     {
         "name": "Room Thermostat Cooling Setpoint Main",
@@ -611,11 +789,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_7",
+        "register_name": "holding_7",
         "min_value": 12,
         "max_value": 35,
         "step": 1,
-        "translation_key": "input_7"
+        "translation_key": "holding_7"
     },
     {
         "name": "Weather-dependent mode Heating Main",
@@ -628,11 +806,11 @@ HOLDING_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:cog",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_68",
+        "register_name": "holding_68",
         "enum_map": {
             0: "Fixed",
             1: "Weather dependent",
-        "translation_key": "input_68"
+        "translation_key": "holding_68"
         }
     },
     {
@@ -646,11 +824,11 @@ HOLDING_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:cog",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_69",
+        "register_name": "holding_69",
         "enum_map": {
             0: "Fixed",
             1: "Weather dependent",
-        "translation_key": "input_69"
+        "translation_key": "holding_69"
         }
     },
     {
@@ -664,12 +842,12 @@ HOLDING_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:thermostat",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_74",
+        "register_name": "holding_74",
         "enum_map": {
             0: "None",
             1: "Heating",
             2: "Cooling",
-        "translation_key": "input_74"
+        "translation_key": "holding_74"
         }
     },
     {
@@ -683,12 +861,12 @@ HOLDING_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:thermostat",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_75",
+        "register_name": "holding_75",
         "enum_map": {
             0: "None",
             1: "Heating",
             2: "Cooling",
-        "translation_key": "input_75"
+        "translation_key": "holding_75"
         }
     },
     {
@@ -699,11 +877,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_10",
+        "register_name": "holding_10",
         "min_value": 30,
         "max_value": 85,
-        "step": 1,
-        "translation_key": "input_10"
+        "step": 0.5,
+        "translation_key": "holding_10"
     },
     {
         "name": "DHW Powerful Additional Setpoint",
@@ -713,11 +891,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_14",
+        "register_name": "holding_14",
         "min_value": 30,
         "max_value": 85,
         "step": 1,
-        "translation_key": "input_14"
+        "translation_key": "holding_14"
     },
     {
         "name": "DHW Single Heat-up Setpoint (Manual)",
@@ -727,11 +905,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_16",
+        "register_name": "holding_16",
         "min_value": 30,
         "max_value": 85,
         "step": 1,
-        "translation_key": "input_16"
+        "translation_key": "holding_16"
     },
     {
         "name": "Weather-dependent mode Main LWT Heating setpoint offset",
@@ -741,11 +919,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_54",
+        "register_name": "holding_54",
         "min_value": -10,
         "max_value": 10,
         "step": 1,
-        "translation_key": "input_54"
+        "translation_key": "holding_54"
     },
     {
         "name": "Weather-dependent mode Main LWT Cooling setpoint offset",
@@ -755,11 +933,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_55",
+        "register_name": "holding_55",
         "min_value": -10,
         "max_value": 10,
         "step": 1,
-        "translation_key": "input_55"
+        "translation_key": "holding_55"
     },
     {
         "name": "Imposed power limit",
@@ -769,11 +947,11 @@ HOLDING_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:lightning-bolt",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_58",
+        "register_name": "holding_58",
         "min_value": 0,
         "max_value": 20,
         "step": 0.5,
-        "translation_key": "input_58"
+        "translation_key": "holding_58"
     },
     {
         "name": "Leaving water Add Heating setpoint",
@@ -783,11 +961,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_63",
+        "register_name": "holding_63",
         "min_value": 3,
         "max_value": 85,
         "step": 1,
-        "translation_key": "input_63"
+        "translation_key": "holding_63"
     },
     {
         "name": "Leaving water Add Cooling setpoint",
@@ -797,11 +975,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_64",
+        "register_name": "holding_64",
         "min_value": 3,
         "max_value": 85,
         "step": 1,
-        "translation_key": "input_64"
+        "translation_key": "holding_64"
     },
     {
         "name": "Weather-dependent mode Add LWT Heating setpoint offset",
@@ -811,11 +989,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_66",
+        "register_name": "holding_66",
         "min_value": -10,
         "max_value": 10,
         "step": 1,
-        "translation_key": "input_66"
+        "translation_key": "holding_66"
     },
     {
         "name": "Weather-dependent mode Add LWT Cooling setpoint offset",
@@ -825,11 +1003,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_67",
+        "register_name": "holding_67",
         "min_value": -10,
         "max_value": 10,
         "step": 1,
-        "translation_key": "input_67"
+        "translation_key": "holding_67"
     },
     {
         "name": "Room Thermostat Heating Setpoint Main",
@@ -839,11 +1017,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_76",
+        "register_name": "holding_76",
         "min_value": 12,
         "max_value": 30,
         "step": 1,
-        "translation_key": "input_76"
+        "translation_key": "holding_76"
     },
     {
         "name": "Room Thermostat Cooling Setpoint Main",
@@ -853,11 +1031,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_77",
+        "register_name": "holding_77",
         "min_value": 12,
         "max_value": 35,
         "step": 1,
-        "translation_key": "input_77"
+        "translation_key": "holding_77"
     },
     {
         "name": "Room thermostat control Heating setpoint Add",
@@ -867,11 +1045,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_78",
+        "register_name": "holding_78",
         "min_value": 12,
         "max_value": 30,
         "step": 1,
-        "translation_key": "input_78"
+        "translation_key": "holding_78"
     },
     {
         "name": "Room thermostat control Cooling setpoint Add",
@@ -881,11 +1059,11 @@ HOLDING_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:thermometer",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_79",
+        "register_name": "holding_79",
         "min_value": 12,
         "max_value": 35,
         "step": 1,
-        "translation_key": "input_79"
+        "translation_key": "holding_79"
     },
 ]
 
@@ -903,27 +1081,12 @@ SELECT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:cog",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_3",
+        "register_name": "holding_3",
         "translation_key": "holding_3",
         "enum_map": {
             0: "Auto",
             1: "Heating", 
             2: "Cooling"
-        }
-    },
-    {
-        "name": "Space heating/cooling",
-        "address": 4,
-        "unit": None,
-        "scale": 1,
-        "dtype": "uint16",
-        "icon": "mdi:thermostat",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_4",
-        "translation_key": "holding_4",
-        "enum_map": {
-            0: "OFF",
-            1: "ON"
         }
     },
     {
@@ -934,42 +1097,12 @@ SELECT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:cog",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_9",
+        "register_name": "holding_9",
         "translation_key": "holding_9",
         "enum_map": {
             0: "Off",
             1: "On (Automatic)", 
             2: "On (Manual)"
-        }
-    },
-    {
-        "name": "DHW booster mode (Powerful)",
-        "address": 13,
-        "unit": None,
-        "scale": 1,
-        "dtype": "uint16",
-        "icon": "mdi:power",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_13",
-        "translation_key": "holding_13",
-        "enum_map": {
-            0: "Off",
-            1: "On (Powerful)"
-        }
-    },
-    {
-        "name": "DHW Single heat-up ON/OFF (Manual)",
-        "address": 15,
-        "unit": None,
-        "scale": 1,
-        "dtype": "int16",
-        "icon": "mdi:power",
-        "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_15",
-        "translation_key": "holding_15",
-        "enum_map": {
-            0: "Off",
-            1: "On"
         }
     },
     {
@@ -980,7 +1113,7 @@ SELECT_REGISTERS = [
         "dtype": "uint16",
         "icon": "mdi:cog",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_56",
+        "register_name": "holding_56",
         "translation_key": "holding_56",
         "enum_map": {
             0: "Free running",
@@ -997,12 +1130,13 @@ SELECT_REGISTERS = [
         "dtype": "int16",
         "icon": "mdi:water-boiler",
         "input_type": "holding",
-        "unique_id": f"{DOMAIN}_holding_80",
+        "register_name": "holding_80",
         "translation_key": "holding_80",
         "enum_map": {
             0: "Reheat",
             1: "Schedule and reheat",
-            2: "Scheduled"
+            2: "Scheduled",
+            32766: "Off"
         }
     }
 ]
@@ -1011,17 +1145,17 @@ SELECT_REGISTERS = [
 
 CALCULATED_SENSORS = [
     {
-        "name": "Heat Pump Power Calculated",
-        "unique_id": f"{DOMAIN}_heat_pump_power_calc",
+        "name": "Thermal Heat Output",
+        "register_name": "thermal_heat_output",
         "unit": "W",
         "device_class": "power",
         "entity_category": None,
         "type": "heat_power",
-        "translation_key": "pump_power_calc"
+        "translation_key": "thermal_heat_output"
     },
     {
         "name": "Coefficient of Performance",
-        "unique_id": f"{DOMAIN}_cop",
+        "register_name": "cop",
         "unit": "CoP",
         "device_class": None,
         "entity_category": None,
@@ -1030,7 +1164,7 @@ CALCULATED_SENSORS = [
     },
     {
         "name": "Delta-T",
-        "unique_id": f"{DOMAIN}_delta_t",
+        "register_name": "delta_t",
         "unit": "°C",
         "device_class": "temperature",
         "entity_category": None,
@@ -1039,43 +1173,43 @@ CALCULATED_SENSORS = [
     },
     {
         "name": "Last Compressor Run",
-        "unique_id": f"{DOMAIN}_last_compressor_run",
+        "register_name": "last_compressor_run",
         "unit": None,
         "device_class": "timestamp",
         "type": "last_triggered",
         "entity_category": None,
-        "trigger_address": 11,
-        "translation_key": "compressor_run"
+        "trigger_register_name": "discrete_11",
+        "translation_key": "last_compressor_run"
     },
     {
         "name": "Last Defrost",
-        "unique_id": f"{DOMAIN}_last_defrost",
+        "register_name": "last_defrost",
         "unit": None,
         "device_class": "timestamp",
         "type": "last_triggered",
         "entity_category": None,
-        "trigger_address": 17,
-        "translation_key": "defrost"
+        "trigger_register_name": "discrete_17",
+        "translation_key": "last_defrost"
     },
     {
         "name": "Last Booster Heater",
-        "unique_id": f"{DOMAIN}_last_booster_heater",
+        "register_name": "last_booster_heater",
         "unit": None,
         "device_class": "timestamp",
         "type": "last_triggered",
         "entity_category": None,
-        "trigger_address": 8,
-        "translation_key": "booster_heater"
+        "trigger_register_name": "discrete_8",
+        "translation_key": "last_booster_heater"
     },
     {
         "name": "Last DHW running",
-        "unique_id": f"{DOMAIN}_last_dhw_running",
+        "register_name": "last_dhw_running",
         "unit": None,
         "device_class": "timestamp",
         "type": "last_triggered",
         "entity_category": None,
-        "trigger_address": 19,
-        "translation_key": "dhw_running"
+        "trigger_register_name": "discrete_19",
+        "translation_key": "last_dhw_running"
     }
 ]
 
@@ -1086,234 +1220,287 @@ DISCRETE_INPUT_SENSORS = [
         "address": 1,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_0",
+        "register_name": "discrete_1",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_0"
+        "translation_key": "discrete_1"
     },
     {
         "name": "Backup heater relay 1",
         "address": 2,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_1",
+        "register_name": "discrete_2",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_1"
+        "translation_key": "discrete_2"
     },
     {
         "name": "Backup heater relay 2",
         "address": 3,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_2",
+        "register_name": "discrete_3",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_2"
+        "translation_key": "discrete_3"
     },
     {
         "name": "Backup heater relay 3",
         "address": 4,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_3",
+        "register_name": "discrete_4",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_3"
+        "translation_key": "discrete_4"
     },
     {
         "name": "Backup heater relay 4",
         "address": 5,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_4",
+        "register_name": "discrete_5",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_4"
+        "translation_key": "discrete_5"
     },
     {
         "name": "Backup heater relay 5",
         "address": 6,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_5",
+        "register_name": "discrete_6",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_5"
+        "translation_key": "discrete_6"
     },
     {
         "name": "Backup heater relay 6",
         "address": 7,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_6",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_6"
-    },
-    {
-        "name": "Auxiliary heating",
-        "address": 8,
-        "device_class": "running",
-        "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_7",
+        "register_name": "discrete_7",
         "entity_category": EntityCategory.DIAGNOSTIC,
         "translation_key": "discrete_7"
     },
     {
-        "name": "Storage tank",
+        "name": "Booster heater",
+        "address": 8,
+        "device_class": "running",
+        "input_type": "discrete_input",
+        "register_name": "discrete_8",
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "translation_key": "discrete_8"
+    },
+    {
+        "name": "Tank boiler",
         "address": 9,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_8",
+        "register_name": "discrete_9",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_8"
+        "translation_key": "discrete_9"
     },
     {
         "name": "Bivalent",
         "address": 10,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_9",
+        "register_name": "discrete_10",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_9"
+        "translation_key": "discrete_10"
     },
     {
         "name": "Compressor running",
         "address": 11,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_10",
+        "register_name": "discrete_11",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_10"
+        "translation_key": "discrete_11"
     },
     {
         "name": "Quiet mode operation active",
         "address": 12,
         "device_class": None,
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_11",
+        "register_name": "discrete_12",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_11"
+        "translation_key": "discrete_12"
     },
     {
         "name": "Holiday mode active",
         "address": 13,
         "device_class": None,
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_12",
+        "register_name": "discrete_13",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_12"
+        "translation_key": "discrete_13"
     },
     {
         "name": "Antifrost status",
         "address": 14,
         "device_class": None,
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_13",
+        "register_name": "discrete_14",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_13"
+        "translation_key": "discrete_14"
     },
     {
         "name": "Water pipe freeze prevention status",
         "address": 15,
         "device_class": None,
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_14",
+        "register_name": "discrete_15",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_14"
+        "translation_key": "discrete_15"
     },
     {
         "name": "Disinfection operation",
         "address": 16,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_15",
+        "register_name": "discrete_16",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_15"
+        "translation_key": "discrete_16"
     },
     {
         "name": "Defrost",
         "address": 17,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_16",
+        "register_name": "discrete_17",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_16"
+        "translation_key": "discrete_17"
     },
     {
         "name": "Hot start",
         "address": 18,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_17",
+        "register_name": "discrete_18",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_17"
+        "translation_key": "discrete_18"
     },
     {
         "name": "DHW running",
         "address": 19,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_18",
+        "register_name": "discrete_19",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_18"
+        "translation_key": "discrete_19"
     },
     {
         "name": "Main zone running",
         "address": 20,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_19",
+        "register_name": "discrete_20",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_19"
+        "translation_key": "discrete_20"
     },
     {
         "name": "Additional zone running",
         "address": 21,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_20",
+        "register_name": "discrete_21",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_20"
+        "translation_key": "discrete_21"
     },
     {
         "name": "Powerful tank heat up request",
         "address": 22,
         "device_class": None,
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_21",
+        "register_name": "discrete_22",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_21"
+        "translation_key": "discrete_22"
     },
     {
         "name": "Manual tank heat up request",
         "address": 23,
         "device_class": None,
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_22",
+        "register_name": "discrete_23",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_22"
+        "translation_key": "discrete_23"
     },
     {
         "name": "Emergency active",
         "address": 24,
         "device_class": "problem",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_23",
+        "register_name": "discrete_24",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_23"
+        "translation_key": "discrete_24"
     },
     {
         "name": "Circulation pump running",
         "address": 25,
         "device_class": "running",
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_24",
+        "register_name": "discrete_25",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_24"
+        "translation_key": "discrete_25"
     },
     {
         "name": "Imposed limit acceptance",
         "address": 26,
         "device_class": None,
         "input_type": "discrete_input",
-        "unique_id": f"{DOMAIN}_discrete_25",
+        "register_name": "discrete_26",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_25"
+        "translation_key": "discrete_26"
+    }
+]
+
+# Holding Register Switches (beschreibbare Register mit On/Off Funktionalität)
+
+HOLDING_SWITCHES = [
+    {
+        "name": "Space heating/cooling - Select Entity",
+        "address": 4,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:thermostat",
+        "input_type": "holding",
+        "register_name": "holding_4",
+        "entity_category": None,
+        "translation_key": "holding_4",
+        "enum_map": {
+            0: "OFF",
+            1: "ON"
+        }
+    },
+    {
+        "name": "DHW booster mode (Powerful)",
+        "address": 13,
+        "unit": None,
+        "scale": 1,
+        "dtype": "uint16",
+        "icon": "mdi:power",
+        "input_type": "holding",
+        "register_name": "holding_13",
+        "entity_category": None,
+        "translation_key": "holding_13",
+        "enum_map": {
+            0: "Off",
+            1: "On (Powerful)"
+        }
+    },
+    {
+        "name": "DHW Single heat-up ON/OFF (Manual)",
+        "address": 15,
+        "unit": None,
+        "scale": 1,
+        "dtype": "int16",
+        "icon": "mdi:power",
+        "input_type": "holding",
+        "register_name": "holding_15",
+        "entity_category": None,
+        "translation_key": "holding_15",
+        "enum_map": {
+            0: "Off",
+            1: "On"
+        }
     }
 ]
 
@@ -1325,7 +1512,7 @@ COIL_SENSORS = [
         "address": 1,
         "device_class": "switch",
         "input_type": "coil",
-        "unique_id": f"{DOMAIN}_coil_1",
+        "register_name": "coil_1",
         "entity_category": None,
         "translation_key": "coil_1"
     },
@@ -1334,7 +1521,7 @@ COIL_SENSORS = [
         "address": 2,
         "device_class": "switch",
         "input_type": "coil",
-        "unique_id": f"{DOMAIN}_coil_2",
+        "register_name": "coil_2",
         "entity_category": None,
         "translation_key": "coil_2"
     },
@@ -1343,76 +1530,43 @@ COIL_SENSORS = [
         "address": 3,
         "device_class": "switch",
         "input_type": "coil",
-        "unique_id": f"{DOMAIN}_coil_3",
+        "register_name": "coil_3",
         "entity_category": None,
         "translation_key": "coil_3"
     }
 ]
 
-# Diagnose Sensoren
+# Register constants for Daikin Altherma 4
+REGISTER_OPERATION_MODE = "holding_3" # Operation mode
+REGISTER_CURRENT_TEMP = "input_40" # Leaving water temperature PHE (plate heat exchanger)
+REGISTER_OFFSET_HEATING = "holding_54" # Weather-dependent mode Main LWT Heating setpoint offset
+REGISTER_OFFSET_COOLING = "holding_53" # Weather-dependent mode Main LWT Cooling setpoint offset
+REGISTER_QUIET_MODE = "holding_9" # Quiet mode operation
+REGISTER_COMPRESSOR = "input_31" # Compressor status
 
-BINARY_SENSORS = [
-    {
-        "name": "Circulation pump running",
-        "address": 30,
-        "device_class": "running",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_30",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_30"
-    },
-    {
-        "name": "Compressor run",
-        "address": 31,
-        "device_class": "running",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_31",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_31"
-    },
-    {
-        "name": "Booster heater run",
-        "address": 32,
-        "device_class": "running",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_32",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_32"
-    },
-    {
-        "name": "Disinfection operation",
-        "address": 33,
-        "device_class": "running",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_33",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_33"
-    },
-    {
-        "name": "Defrost/Restart",
-        "address": 35,
-        "device_class": "running",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_35",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_35"
-    },
-    {
-        "name": "Hot start",
-        "address": 36,
-        "device_class": "running",
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_36",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_36"
-    },
-    {
-        "name": "Disinfection state",
-        "address": 63,
-        "device_class": None,
-        "input_type": "input",
-        "unique_id": f"{DOMAIN}_input_63",
-        "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_63"
-    }
-]
+# DHW Control constants
+REGISTER_DWH_HVAC_MODE = "coil_1"   # Domestic Hot Water
+REGISTER_DHW_SETPOINT = "holding_10" # DHW Single heat-up setpoint (Manual)
+REGISTER_DWH_RUNNING = "discrete_19" # DHW running status
+REGISTER_DWH_TEMP = "input_43"       # DHW temperature
+
+# DWH Booster Control constants
+REGISTER_DWH_BOOSTER_HVAC_MODE = "holding_13"   # Domestic Hot Water
+REGISTER_DHW_BOOSTER_SETPOINT = "holding_14" # DHW Single heat-up setpoint (Manual)
+REGISTER_DWH_BOOSTER_RUNNING = "discrete_19" # DHW running status
+REGISTER_DWH_BOOSTER_TEMP = "input_43"       # DHW temperature
+
+# Fan mode constants (quiet mode)
+FAN_OFF = "OFF"
+FAN_AUTO = "Auto"
+FAN_MANUAL = "Manual"
+FAN_FAN_OFF = "Off"
+
+# HVAC mode constants
+HVAC_OFF = 0
+HVAC_HEAT = 1
+HVAC_COOL = 2
+
+# DHW constants
+DHW_OFF = False
+DHW_ON = True

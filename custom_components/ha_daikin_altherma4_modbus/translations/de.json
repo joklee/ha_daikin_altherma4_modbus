@@ -56,7 +56,10 @@
         "name": "Heizungs-Thermostatsteuerung"
       },
       "daikin_dhw_manual_thermostat": {
-        "name": "Warmwasser-Thermostatsteuerung"
+        "name": "Warmwasser-Einzelaufheizungs-Thermostatsteuerung"
+      },
+      "daikin_dhw_booster_thermostat": {
+        "name": "Warmwasser-Booster-Thermostatsteuerung"
       }
     },
     "switch": {
@@ -68,136 +71,274 @@
       },
       "coil_3": {
         "name": "Zusatzzone"
+      },
+      "holding_4": {
+        "name": "Raumheizen/-kühlen"
+      },
+      "holding_13": {
+        "name": "Brauchwasser Zusatzheizungsmodus (leistungsstark)"
+      },
+      "holding_15": {
+        "name": "Brauchwasser Einzelaufheizung (manuell)"
       }
     },
     "binary_sensor": {
-      "input_29": {
+      "input_30": {
         "name": "Umwälzpumpe läuft"
       },
-      "input_30": {
+      "input_31": {
         "name": "Verdichter läuft"
       },
-      "input_31": {
+      "input_32": {
         "name": "Zusatzheizung läuft"
       },
-      "input_32": {
+      "input_33": {
         "name": "Desinfektionsbetrieb"
       },
-      "input_34": {
+      "input_35": {
         "name": "Abtauen/Neustart"
       },
-      "input_35": {
+      "input_36": {
         "name": "Warmstart"
       },
       "input_63": {
         "name": "Desinfektionsstatus"
       },
-      "discrete_0": {
-        "name": "Absperrventil"
+      "input_64": {
+        "name": "Urlaubsmodus"
       },
       "discrete_1": {
-        "name": "Reserveheizung-Relais 1"
+        "name": "Absperrventil"
       },
       "discrete_2": {
-        "name": "Reserveheizung-Relais 2"
+        "name": "Reserveheizung-Relais 1"
       },
       "discrete_3": {
-        "name": "Reserveheizung-Relais 3"
+        "name": "Reserveheizung-Relais 2"
       },
       "discrete_4": {
-        "name": "Reserveheizung-Relais 4"
+        "name": "Reserveheizung-Relais 3"
       },
       "discrete_5": {
-        "name": "Reserveheizung-Relais 5"
+        "name": "Reserveheizung-Relais 4"
       },
       "discrete_6": {
-        "name": "Reserveheizung-Relais 6"
+        "name": "Reserveheizung-Relais 5"
       },
       "discrete_7": {
-        "name": "Zusatzheizung"
+        "name": "Reserveheizung-Relais 6"
       },
       "discrete_8": {
-        "name": "Speicherkessel"
+        "name": "Zusatzheizung"
       },
       "discrete_9": {
-        "name": "Bivalent"
+        "name": "Speicherkessel"
       },
       "discrete_10": {
-        "name": "Verdichter läuft"
+        "name": "Bivalent"
       },
       "discrete_11": {
-        "name": "Geräuscharmer Betrieb aktiv"
+        "name": "Verdichter läuft"
       },
       "discrete_12": {
-        "name": "Urlaub aktiv"
+        "name": "Geräuscharmer Betrieb aktiv"
       },
       "discrete_13": {
-        "name": "Frostschutz-Status"
+        "name": "Urlaub aktiv"
       },
       "discrete_14": {
-        "name": "Wasserleitung-Frostschutz Status"
+        "name": "Frostschutz-Status"
       },
       "discrete_15": {
-        "name": "Desinfektionsbetrieb"
+        "name": "Wasserleitung-Frostschutz Status"
       },
       "discrete_16": {
-        "name": "Enteisen"
+        "name": "Desinfektionsbetrieb"
       },
       "discrete_17": {
-        "name": "Warmstart"
+        "name": "Enteisen"
       },
       "discrete_18": {
-        "name": "Brauchwasser läuft"
+        "name": "Warmstart"
       },
       "discrete_19": {
-        "name": "Hauptzone läuft"
+        "name": "Brauchwasser läuft"
       },
       "discrete_20": {
-        "name": "Zusatzzone läuft"
+        "name": "Hauptzone läuft"
       },
       "discrete_21": {
-        "name": "Anforderung zum leistungsstarken Aufheizen des Speichers"
+        "name": "Zusatzzone läuft"
       },
       "discrete_22": {
-        "name": "Manuelle Anforderung zum Aufheizen des Speichers"
+        "name": "Anforderung zum leistungsstarken Aufheizen des Speichers"
       },
       "discrete_23": {
-        "name": "Notfall aktiv"
+        "name": "Manuelle Anforderung zum Aufheizen des Speichers"
       },
       "discrete_24": {
-        "name": "Umwälzpumpe läuft"
+        "name": "Notfall aktiv"
       },
       "discrete_25": {
+        "name": "Umwälzpumpe läuft"
+      },
+      "discrete_26": {
         "name": "Akzeptanz auferlegte Grenze(a)"
       }
     },
     "sensor": {
       "input_21": {
-        "name": "Unregelmäßigkeit bei der Einheit"
-      },
-      "input_22": {
-        "name": "Code für die Unregelmäßigkeit"
+        "name": "Unregelmäßigkeit bei der Einheit",
+        "state": {
+          "Kein Fehler": "Kein Fehler",
+          "Störung": "Störung",
+          "Warnung": "Warnung"
+        }
       },
       "input_23": {
-        "name": "Untercode für die Unregelmäßigkeit"
+        "name": "Untercode für die Unregelmäßigkeit bei der Einheit",
+        "state": {
+          "32766": "Kein Fehler",
+          "0": "Fehler 0",
+          "1": "Fehler 1",
+          "2": "Fehler 2",
+          "3": "Fehler 3",
+          "4": "Fehler 4",
+          "5": "Fehler 5",
+          "6": "Fehler 6",
+          "7": "Fehler 7",
+          "8": "Fehler 8",
+          "9": "Fehler 9",
+          "10": "Fehler 10",
+          "11": "Fehler 11",
+          "12": "Fehler 12",
+          "13": "Fehler 13",
+          "14": "Fehler 14",
+          "15": "Fehler 15",
+          "16": "Fehler 16",
+          "17": "Fehler 17",
+          "18": "Fehler 18",
+          "19": "Fehler 19",
+          "20": "Fehler 20",
+          "21": "Fehler 21",
+          "22": "Fehler 22",
+          "23": "Fehler 23",
+          "24": "Fehler 24",
+          "25": "Fehler 25",
+          "26": "Fehler 26",
+          "27": "Fehler 27",
+          "28": "Fehler 28",
+          "29": "Fehler 29",
+          "30": "Fehler 30",
+          "31": "Fehler 31",
+          "32": "Fehler 32",
+          "33": "Fehler 33",
+          "34": "Fehler 34",
+          "35": "Fehler 35",
+          "36": "Fehler 36",
+          "37": "Fehler 37",
+          "38": "Fehler 38",
+          "39": "Fehler 39",
+          "40": "Fehler 40",
+          "41": "Fehler 41",
+          "42": "Fehler 42",
+          "43": "Fehler 43",
+          "44": "Fehler 44",
+          "45": "Fehler 45",
+          "46": "Fehler 46",
+          "47": "Fehler 47",
+          "48": "Fehler 48",
+          "49": "Fehler 49",
+          "50": "Fehler 50",
+          "51": "Fehler 51",
+          "52": "Fehler 52",
+          "53": "Fehler 53",
+          "54": "Fehler 54",
+          "55": "Fehler 55",
+          "56": "Fehler 56",
+          "57": "Fehler 57",
+          "58": "Fehler 58",
+          "59": "Fehler 59",
+          "60": "Fehler 60",
+          "61": "Fehler 61",
+          "62": "Fehler 62",
+          "63": "Fehler 63",
+          "64": "Fehler 64",
+          "65": "Fehler 65",
+          "66": "Fehler 66",
+          "67": "Fehler 67",
+          "68": "Fehler 68",
+          "69": "Fehler 69",
+          "70": "Fehler 70",
+          "71": "Fehler 71",
+          "72": "Fehler 72",
+          "73": "Fehler 73",
+          "74": "Fehler 74",
+          "75": "Fehler 75",
+          "76": "Fehler 76",
+          "77": "Fehler 77",
+          "78": "Fehler 78",
+          "79": "Fehler 79",
+          "80": "Fehler 80",
+          "81": "Fehler 81",
+          "82": "Fehler 82",
+          "83": "Fehler 83",
+          "84": "Fehler 84",
+          "85": "Fehler 85",
+          "86": "Fehler 86",
+          "87": "Fehler 87",
+          "88": "Fehler 88",
+          "89": "Fehler 89",
+          "90": "Fehler 90",
+          "91": "Fehler 91",
+          "92": "Fehler 92",
+          "93": "Fehler 93",
+          "94": "Fehler 94",
+          "95": "Fehler 95",
+          "96": "Fehler 96",
+          "97": "Fehler 97",
+          "98": "Fehler 98",
+          "99": "Fehler 99"
+        }
+      },
+      "input_30": {
+        "name": "Umwälzpumpe läuft"
+      },
+      "input_31": {
+        "name": "Verdichter läuft"
+      },
+      "input_32": {
+        "name": "Zusatzheizung läuft"
       },
       "input_33": {
         "name": "Desinfektionsbetrieb"
+      },
+      "input_35": {
+        "name": "Abtauen/Neustart"
       },
       "input_36": {
         "name": "Warmstart"
       },
       "input_37": {
-        "name": "3-Wege-Ventil"
+        "name": "3-Wege-Ventil",
+        "state": {
+          "Space heating": "Raumheizung",
+          "DHW": "Warmwasser"
+        }
       },
       "input_38": {
-        "name": "Betriebsart"
+        "name": "Betriebsart",
+        "state": {
+          "None": "Keine",
+          "Heating": "Heizen",
+          "Cooling": "Kühlen"
+        }
       },
       "input_40": {
-        "name": "Vorlauftemperatur PHE"
+        "name": "Vorlauftemperatur PHE (Plattenwärmetauscher)"
       },
       "input_41": {
-        "name": "Vorlauftemperatur BUH"
+        "name": "Vorlauftemperatur BUH (Reserveheizung)"
       },
       "input_42": {
         "name": "Rücklauftemperatur des Wassers"
@@ -221,10 +362,18 @@
         "name": "Stromverbrauch Wärmepumpe"
       },
       "input_52": {
-        "name": "Brauchwasser-Normalbetrieb"
+        "name": "Brauchwasser-Normalbetrieb",
+        "state": {
+          "Idle/Buffering": "Leerlauf/Pufferung",
+          "Operation": "Betrieb"
+        }
       },
       "input_53": {
-        "name": "Raumheizen/-kühlen Normalbetrieb"
+        "name": "Raumheizen/-kühlen Normalbetrieb",
+        "state": {
+          "Idle/Buffering": "Leerlauf/Pufferung",
+          "Operation": "Betrieb"
+        }
       },
       "input_54": {
         "name": "Vorlauf Haupt Heizen-Sollwert unterer Grenzwert"
@@ -251,13 +400,23 @@
         "name": "Vorlauf Zusatz Kühlen-Sollwert oberer Grenzwert"
       },
       "input_63": {
-        "name": "Desinfektionsstatus"
-      },
-      "input_64": {
-        "name": "Urlaubsmodus"
+        "name": "Desinfektionsstatus",
+        "state": {
+          "Unsuccessful": "Erfolglos",
+          "Successful": "Erfolgreich",
+          "Maintain": "Wartung",
+          "Heat Up": "Aufheizen"
+        }
       },
       "input_65": {
-        "name": "Modus der Bedarfsanforderung"
+        "name": "Modus der Bedarfsanforderung",
+        "state": {
+          "Free": "Frei",
+          "Forced Off": "Erzwungen Aus",
+          "Forced On": "Erzwungen Ein",
+          "Recommended On": "Empfohlen Ein",
+          "Reduced": "Reduziert"
+        }
       },
       "input_66": {
         "name": "Bypass-Ventil Stellung"
@@ -308,40 +467,32 @@
         "name": "Raumheiz-/-kühlziel für die Zusatzzone"
       },
       "input_82": {
-        "name": "Gerätebetriebsart"
-      },
-      "input_83": {
-        "name": "Heizen-Sollwert Raum unterer Grenzwert"
-      },
-      "input_84": {
-        "name": "Heizen-Sollwert Raum oberer Grenzwert"
-      },
-      "input_85": {
-        "name": "Kühlen-Sollwert Raum unterer Grenzwert"
-      },
-      "input_86": {
-        "name": "Kühlen-Sollwert Raum oberer Grenzwert"
-      },
-      "input_87": {
         "name": "Zähler Unregelmäßigkeit (Benutzer)"
       },
-      "input_88": {
-        "name": "Gerätebetriebsart"
+      "input_83": {
+        "name": "Gerätebetriebsart",
+        "state": {
+          "Stop": "Stopp",
+          "Tank Heat Up": "Aufheizen des Speichers",
+          "Space heating": "Raumheizung",
+          "Space cooling": "Raumkühlung",
+          "Actuator": "Aktor"
+        }
       },
-      "input_89": {
+      "input_84": {
         "name": "Heizen-Sollwert Raum unterer Grenzwert"
       },
-      "input_90": {
+      "input_85": {
         "name": "Heizen-Sollwert Raum oberer Grenzwert"
       },
-      "input_91": {
+      "input_86": {
         "name": "Kühlen-Sollwert Raum unterer Grenzwert"
       },
-      "input_92": {
+      "input_87": {
         "name": "Kühlen-Sollwert Raum oberer Grenzwert"
       },
-      "pump_power_calc": {
-        "name": "Wärmepumpenleistung berechnet"
+      "thermal_heat_output": {
+        "name": "Thermische Leistung"
       },
       "cop": {
         "name": "Leistungszahl (CoP)"
@@ -349,16 +500,16 @@
       "delta_t": {
         "name": "Delta-T"
       },
-      "compressor_run": {
+      "last_compressor_run": {
         "name": "Letzter Verdichterlauf"
       },
-      "defrost": {
-        "name": "Letzte Abtauung"
+      "last_defrost": {
+        "name": "Letztes Enteisen"
       },
-      "booster_heater": {
+      "last_booster_heater": {
         "name": "Letzter Zusatzheizer"
       },
-      "dhw_running": {
+      "last_dhw_running": {
         "name": "Letzte Brauchwasserbereitung"
       },
       "external_electric_power": {
@@ -376,7 +527,7 @@
         "name": "Betriebsart"
       },
       "holding_4": {
-        "name": "Raumheizen/-kühlen EIN/AUS"
+        "name": "Raumheizen/-kühlen"
       },
       "holding_6": {
         "name": "Raumthermostat-Steuerung Heizen-Sollwert Haupt"
@@ -384,20 +535,11 @@
       "holding_7": {
         "name": "Raumthermostat-Steuerung Kühlen-Sollwert Haupt"
       },
-      "holding_9": {
-        "name": "Geräuscharmer Betrieb"
-      },
       "holding_10": {
         "name": "Brauchwasser Warmhalten-Sollwert"
       },
-      "holding_13": {
-        "name": "Brauchwasser Zusatzheizungsmodus EIN/AUS (leistungsstark)"
-      },
       "holding_14": {
         "name": "Brauchwasser Zusatz-Sollwert (leistungsstark)"
-      },
-      "holding_15": {
-        "name": "Brauchwasser Einzelaufheizung EIN/AUS (manuell)"
       },
       "holding_16": {
         "name": "Brauchwasser Einzelaufheizung Sollwert (manuell)"
@@ -407,9 +549,6 @@
       },
       "holding_55": {
         "name": "Witterungsgeführter Modus Haupt VLT-KühlenSollwertverschiebung"
-      },
-      "holding_56": {
-        "name": "Smart Grid-Betriebsart"
       },
       "holding_58": {
         "name": "Auferlegte Leistungsgrenze"
@@ -427,16 +566,34 @@
         "name": "Witterungsgeführter Modus Zusatz VLT-KühlenSollwertverschiebung"
       },
       "holding_68": {
-        "name": "Witterungsgeführter Modus Heizen Haupt"
+        "name": "Witterungsgeführter Modus Heizen Haupt",
+        "state": {
+          "Fixed": "Fest",
+          "Weather dependent": "Wetterabhängig"
+        }
       },
       "holding_69": {
-        "name": "Witterungsgeführter Modus Kühlen Haupt"
+        "name": "Witterungsgeführter Modus Kühlen Haupt",
+        "state": {
+          "Fixed": "Fest",
+          "Weather dependent": "Wetterabhängig"
+        }
       },
       "holding_74": {
-        "name": "Thermostat Anforderung Haupt"
+        "name": "Thermostat Anforderung Haupt",
+        "state": {
+          "None": "Keine",
+          "Heating": "Heizen",
+          "Cooling": "Kühlen"
+        }
       },
       "holding_75": {
-        "name": "Thermostat Anforderung Zusatz"
+        "name": "Thermostat Anforderung Zusatz",
+        "state": {
+          "None": "Keine",
+          "Heating": "Heizen",
+          "Cooling": "Kühlen"
+        }
       },
       "holding_76": {
         "name": "Raumthermostat-Steuerung Heizen-Sollwert Haupt"
@@ -449,32 +606,63 @@
       },
       "holding_79": {
         "name": "Raumthermostat-Steuerung Kühlen-Sollwert Zusatz"
-      },
-      "holding_80": {
-        "name": "Brauchwassermodus-Einstellung"
       }
     },
     "select": {
       "holding_3": {
-        "name": "Betriebsart"
+        "name": "Betriebsart",
+        "state": {
+          "Auto": "Auto",
+          "Heating": "Heizen",
+          "Cooling": "Kühlen"
+        }
       },
       "holding_4": {
-        "name": "Raumheizen/-kühlen"
+        "name": "Raumheizen/-kühlen",
+        "state": {
+          "OFF": "AUS",
+          "ON": "EIN"
+        }
       },
       "holding_9": {
-        "name": "Geräuscharmer Betrieb"
+        "name": "Geräuscharmer Betrieb",
+        "state": {
+          "Off": "Aus",
+          "On (Automatic)": "Ein (Automatisch)",
+          "On (Manual)": "Ein (Manuell)"
+        }
       },
       "holding_13": {
-        "name": "Brauchwasser Zusatzheizungsmodus(leistungsstark)"
+        "name": "Brauchwasser Zusatzheizungsmodus(leistungsstark)",
+        "state": {
+          "Off": "Aus",
+          "On (Powerful)": "Ein (Leistungsstark)"
+        }
       },
       "holding_15": {
-        "name": "Brauchwasser Einzelaufheizung(manuell)"
+        "name": "Brauchwasser Einzelaufheizung(manuell)",
+        "state": {
+          "Off": "Aus",
+          "On": "Ein"
+        }
       },
       "holding_56": {
-        "name": "Smart Grid-Betriebsart"
+        "name": "Smart Grid-Betriebsart",
+        "state": {
+          "Free running": "Freier Betrieb",
+          "Forced off": " Zwangsabschaltung",
+          "Recommended on": "Empfehlung ein",
+          "Forced on": "Erzwungen ein"
+        }
       },
       "holding_80": {
-        "name": "Brauchwassermodus-Einstellung"
+        "name": "Brauchwassermodus-Einstellung",
+        "state": {
+          "Reheat": "Warmhalten",
+          "Schedule and reheat": "Programm und Warmhalten",
+          "Scheduled": "Geplant",
+          "Off": "Aus"
+        }
       }
     }
   }
