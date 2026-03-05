@@ -2,10 +2,10 @@
 
 import asyncio
 import logging
-from homeassistant.helpers.update_coordinator import UpdateFailed
 from .mock_client import MockModbusTcpClient
 from .modbus_client import RealModbusTcpClient
 from .client_interface import ModbusClientInterface
+from .exceptions import ModbusConnectionException, ModbusTimeoutException
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,16 +32,40 @@ async def connect_modbus_client(
         await asyncio.sleep(0.1)
         if not client.connected:
             _LOGGER.error(f"Modbus {connection_type} failed to {host}:{port}")
-            raise UpdateFailed(f"Modbus Verbindung zu {host}:{port} fehlgeschlagen")
+            raise ModbusConnectionException(
+                f"Modbus Verbindung zu {host}:{port} fehlgeschlagen"
+            )
         else:
             _LOGGER.debug(
                 f"Successfully {'re' if connection_type == 'reconnection' else ''}connected to Modbus TCP server at {host}:{port}"
             )
+    except ModbusConnectionException:
+        # Re-raise our own exceptions
+        raise
+    except asyncio.TimeoutError as e:
+        _LOGGER.error(f"Timeout during Modbus {connection_type} to {host}:{port}: {e}")
+        raise ModbusTimeoutException(f"Modbus Verbindung zu {host}:{port} timeout", e)
+    except ConnectionRefusedError as e:
+        _LOGGER.error(
+            f"Connection refused during Modbus {connection_type} to {host}:{port}: {e}"
+        )
+        raise ModbusConnectionException(
+            f"Modbus Verbindung zu {host}:{port} wurde abgelehnt", e
+        )
+    except OSError as e:
+        _LOGGER.error(
+            f"Network error during Modbus {connection_type} to {host}:{port}: {e}"
+        )
+        raise ModbusConnectionException(
+            f"Netzwerkfehler bei Verbindung zu {host}:{port}", e
+        )
     except Exception as e:
         _LOGGER.error(
-            f"Exception during Modbus {connection_type} to {host}:{port}: {e}"
+            f"Unexpected exception during Modbus {connection_type} to {host}:{port}: {e}"
         )
-        raise UpdateFailed(f"Modbus Verbindung zu {host}:{port} fehlgeschlagen: {e}")
+        raise ModbusConnectionException(
+            f"Modbus Verbindung zu {host}:{port} fehlgeschlagen: {e}", e
+        )
 
 
 async def ensure_modbus_connection(
