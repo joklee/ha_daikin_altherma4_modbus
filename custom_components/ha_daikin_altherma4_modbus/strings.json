@@ -27,12 +27,6 @@
       }
     }
   },
-  "error": {
-    "invalid_host": "Invalid host",
-    "invalid_port": "Invalid port",
-    "cannot_connect": "Failed to connect",
-    "invalid_auth": "Invalid authentication"
-  },
   "device": {
     "daikin_altherma_modbus_input_registers": {
       "name": "Daikin Altherma 4 - Input Register"
@@ -475,58 +469,25 @@
     },
     "select": {
       "holding_3": {
-        "name": "Operation mode",
-        "options": {
-          "0": "Auto",
-          "1": "Heating",
-          "2": "Cooling"
-        }
+        "name": "Operation mode"
       },
       "holding_4": {
-        "name": "Space heating/cooling",
-        "options": {
-          "0": "OFF",
-          "1": "ON"
-        }
+        "name": "Space heating/cooling"
       },
       "holding_9": {
-        "name": "Quiet mode operation",
-        "options": {
-          "0": "Off",
-          "1": "On (Automatic)",
-          "2": "On (Manual)"
-        }
+        "name": "Quiet mode operation"
       },
       "holding_13": {
-        "name": "DHW auxiliary heating mode(powerful)",
-        "options": {
-          "0": "Off",
-          "1": "On (Powerful)"
-        }
+        "name": "DHW auxiliary heating mode(powerful)"
       },
       "holding_15": {
-        "name": "DHW single heat-up(manual)",
-        "options": {
-          "0": "Off",
-          "1": "On"
-        }
+        "name": "DHW single heat-up(manual)"
       },
       "holding_56": {
-        "name": "Smart grid operation mode",
-        "options": {
-          "0": "Free running",
-          "1": "Forced off",
-          "2": "Recommended on",
-          "3": "Forced on"
-        }
+        "name": "Smart grid operation mode"
       },
       "holding_80": {
-        "name": "DHW mode setting",
-        "options": {
-          "0": "Reheat",
-          "1": "Schedule and reheat",
-          "2": "Scheduled"
-        }
+        "name": "DHW mode setting"
       }
     }
   }

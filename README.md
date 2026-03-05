@@ -1,8 +1,11 @@
+![CI](https://github.com/joklee/ha_daikin_altherma4_modbus/actions/workflows/ci.yml/badge.svg)
+
 # Daikin Altherma 4 Modbus Integration for Home Assistant
 
 **⚠️ WARNING: Use at your own risk! This integration modifies heat pump settings. Incorrect configuration may damage your equipment or void warranty. Always consult the official Daikin documentation before making changes.**
 
 **Note: Not all registers may provide valid values depending on your heat pump model and configuration. Some registers might return zero, error codes, or unexpected values. Always verify values against your heat pump's display or official documentation.**
+
 
 ## Daikin Altherma 4 Modbus Activation
 
@@ -18,7 +21,7 @@ The following Modbus protocol can be used:
 
 **Modbus TCP/IP Parameters:**
 - **Network**: Ethernet (Wifi not supported)
-- **Port**: 
+- **Port**:
   - No encryption: 502
   - TLS encryption: 802 (not tested)
 - **IP Address**: IP address of Daikin Altherma 4
@@ -30,7 +33,7 @@ The Modbus algorithm is change based. This means the unit is only updated if a c
 **INFORMATION**: A total of 3 concurrent connections is possible.
 Examples:
 - 3x using the 502 port
-- 3x using the 802 port  
+- 3x using the 802 port
 - Combination of both, e.g. 1x 502 and 2x 802
 
 ### Prerequisites
@@ -48,7 +51,7 @@ This custom integration allows you to monitor and control your Daikin Altherma 4
 ### Device Organization
 The integration organizes entities into logical device groups:
 - **Input Register**: Basic monitoring and status sensors (112 registers)
-- **Holding Register**: Configurable parameters and setpoints  
+- **Holding Register**: Configurable parameters and setpoints
 - **Enhanced**: Calculated sensors, thermostats, and advanced features
 - **Discrete Input**: Binary status indicators
 - **Coil**: Switchable control functions
@@ -56,7 +59,7 @@ The integration organizes entities into logical device groups:
 ### Sensors (Input Registers)
 - **Error Monitoring**: Unit error, error codes, and sub-codes
 - **Operational Status**: 3-way valve position, operation mode
-- **Temperature Sensors**: 
+- **Temperature Sensors**:
   - Leaving water temperature (PHE, BUH)
   - Return water temperature
   - DHW temperature

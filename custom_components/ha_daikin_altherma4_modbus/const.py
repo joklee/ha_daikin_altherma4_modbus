@@ -10,35 +10,35 @@ INPUT_DEVICE_INFO = {
     "identifiers": {("daikin_altherma_modbus", "input_registers")},
     "translation_key": "daikin_altherma_modbus_input_registers",
     "manufacturer": "Daikin",
-    "model": "Altherma 4"
+    "model": "Altherma 4",
 }
 
 HOLDING_DEVICE_INFO = {
     "identifiers": {("daikin_altherma_modbus", "holding_registers")},
     "translation_key": "daikin_altherma_modbus_holding_registers",
     "manufacturer": "Daikin",
-    "model": "Altherma 4"
+    "model": "Altherma 4",
 }
 
 CALCULATED_DEVICE_INFO = {
     "identifiers": {("daikin_altherma_modbus", "calculated_sensors")},
     "translation_key": "daikin_altherma_modbus_calculated_sensors",
     "manufacturer": "Daikin",
-    "model": "Altherma 4"
+    "model": "Altherma 4",
 }
 
 DISCRETE_INPUT_DEVICE_INFO = {
     "identifiers": {("daikin_altherma_modbus", "discrete_input_registers")},
     "translation_key": "daikin_altherma_modbus_discrete_input_registers",
     "manufacturer": "Daikin",
-    "model": "Altherma 4"
+    "model": "Altherma 4",
 }
 
 COIL_DEVICE_INFO = {
     "identifiers": {("daikin_altherma_modbus", "coil_registers")},
     "translation_key": "daikin_altherma_modbus_coil_registers",
     "manufacturer": "Daikin",
-    "model": "Altherma 4"
+    "model": "Altherma 4",
 }
 
 # Alle Input-Register aus 7.2.2 Daikin Configuration reference guide MMI user interface
@@ -56,7 +56,7 @@ INPUT_REGISTERS = [
         "register_name": "input_21",
         "entity_category": EntityCategory.DIAGNOSTIC,
         "enum_map": {0: "Kein Fehler", 1: "Störung", 2: "Warnung"},
-        "translation_key": "input_21"
+        "translation_key": "input_21",
     },
     {
         "name": "Unit abnormality code",
@@ -69,7 +69,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_22",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_22"
+        "translation_key": "input_22",
     },
     {
         "name": "Unit abnormality sub code",
@@ -82,7 +82,7 @@ INPUT_REGISTERS = [
         "register_name": "input_23",
         "entity_category": EntityCategory.DIAGNOSTIC,
         "enum_map": {**{i: f"Fehler {i}" for i in range(100)}, 32766: "No error"},
-        "translation_key": "input_23"
+        "translation_key": "input_23",
     },
     {
         "name": "3-way valve",
@@ -95,9 +95,8 @@ INPUT_REGISTERS = [
         "register_name": "input_37",
         "entity_category": None,
         "enum_map": {0: "Space heating", 1: "DHW"},
-        "translation_key": "input_37"
+        "translation_key": "input_37",
     },
-
     # Betriebsarten
     {
         "name": "Operation mode",
@@ -114,9 +113,8 @@ INPUT_REGISTERS = [
             1: "Heating",
             2: "Cooling",
         },
-        "translation_key": "input_38"
+        "translation_key": "input_38",
     },
-
     # Temperaturen
     {
         "name": "Leaving water temperature PHE",
@@ -128,7 +126,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_40",
         "entity_category": None,
-        "translation_key": "input_40"
+        "translation_key": "input_40",
     },
     {
         "name": "Leaving water temperature BUH",
@@ -140,7 +138,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_41",
         "entity_category": None,
-        "translation_key": "input_41"
+        "translation_key": "input_41",
     },
     {
         "name": "Return water temperature",
@@ -152,7 +150,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_42",
         "entity_category": None,
-        "translation_key": "input_42"
+        "translation_key": "input_42",
     },
     {
         "name": "DHW temperature",
@@ -164,7 +162,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_43",
         "entity_category": None,
-        "translation_key": "input_43"
+        "translation_key": "input_43",
     },
     {
         "name": "Outside air temperature",
@@ -176,9 +174,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_44",
         "entity_category": None,
-        "translation_key": "input_44"
+        "translation_key": "input_44",
     },
-
     # Durchfluss
     {
         "name": "Flow rate",
@@ -190,9 +187,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_49",
         "entity_category": None,
-        "translation_key": "input_49"
+        "translation_key": "input_49",
     },
-
     {
         "name": "Remote control room temperature (Main)",
         "address": 50,
@@ -203,9 +199,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_50",
         "entity_category": None,
-        "translation_key": "input_50"
+        "translation_key": "input_50",
     },
-
     # Leistungswerte
     {
         "name": "Heat pump power consumption",
@@ -217,9 +212,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_51",
         "entity_category": None,
-        "translation_key": "input_51"
+        "translation_key": "input_51",
     },
-
     # Normalbetrieb flags
     {
         "name": "DHW normal operation",
@@ -232,7 +226,7 @@ INPUT_REGISTERS = [
         "register_name": "input_52",
         "entity_category": None,
         "translation_key": "input_52",
-        "enum_map": {0: "Idle/Buffering", 1: "Operation"}
+        "enum_map": {0: "Idle/Buffering", 1: "Operation"},
     },
     {
         "name": "Space heating/cooling normal operation",
@@ -245,9 +239,8 @@ INPUT_REGISTERS = [
         "register_name": "input_53",
         "entity_category": None,
         "translation_key": "input_53",
-        "enum_map": {0: "Idle/Buffering", 1: "Operation"}
+        "enum_map": {0: "Idle/Buffering", 1: "Operation"},
     },
-
     # Binary Status Register (30-36)
     {
         "name": "Circulation pump running",
@@ -260,7 +253,7 @@ INPUT_REGISTERS = [
         "device_class": "running",
         "register_name": "input_30",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_30"
+        "translation_key": "input_30",
     },
     {
         "name": "Compressor run",
@@ -273,7 +266,7 @@ INPUT_REGISTERS = [
         "device_class": "running",
         "register_name": "input_31",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_31"
+        "translation_key": "input_31",
     },
     {
         "name": "Booster heater run",
@@ -286,7 +279,7 @@ INPUT_REGISTERS = [
         "device_class": "running",
         "register_name": "input_32",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_32"
+        "translation_key": "input_32",
     },
     {
         "name": "Disinfection operation",
@@ -299,7 +292,7 @@ INPUT_REGISTERS = [
         "device_class": "running",
         "register_name": "input_33",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_33"
+        "translation_key": "input_33",
     },
     {
         "name": "Defrost/Restart",
@@ -312,7 +305,7 @@ INPUT_REGISTERS = [
         "device_class": "running",
         "register_name": "input_35",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_35"
+        "translation_key": "input_35",
     },
     {
         "name": "Hot start",
@@ -325,9 +318,8 @@ INPUT_REGISTERS = [
         "device_class": "running",
         "register_name": "input_36",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_36"
+        "translation_key": "input_36",
     },
-
     # Sollwerte (Setpoints)
     {
         "name": "Leaving water Main Heating setpoint lower",
@@ -339,7 +331,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_54",
         "entity_category": None,
-        "translation_key": "input_54"
+        "translation_key": "input_54",
     },
     {
         "name": "Leaving water Main Heating setpoint upper",
@@ -351,7 +343,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_55",
         "entity_category": None,
-        "translation_key": "input_55"
+        "translation_key": "input_55",
     },
     {
         "name": "Leaving water Main Cooling setpoint lower",
@@ -363,7 +355,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_56",
         "entity_category": None,
-        "translation_key": "input_56"
+        "translation_key": "input_56",
     },
     {
         "name": "Leaving water Main Cooling setpoint upper",
@@ -375,9 +367,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_57",
         "entity_category": None,
-        "translation_key": "input_57"
+        "translation_key": "input_57",
     },
-
     # Zusätzliche Sollwert-Grenzen
     {
         "name": "Leaving water Add Heating setpoint lower",
@@ -389,7 +380,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_58",
         "entity_category": None,
-        "translation_key": "input_58"
+        "translation_key": "input_58",
     },
     {
         "name": "Leaving water Add Heating setpoint upper",
@@ -401,7 +392,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_59",
         "entity_category": None,
-        "translation_key": "input_59"
+        "translation_key": "input_59",
     },
     {
         "name": "Leaving water Add Cooling setpoint lower",
@@ -413,7 +404,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_60",
         "entity_category": None,
-        "translation_key": "input_60"
+        "translation_key": "input_60",
     },
     {
         "name": "Leaving water Add Cooling setpoint upper",
@@ -425,9 +416,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_61",
         "entity_category": None,
-        "translation_key": "input_61"
+        "translation_key": "input_61",
     },
-
     # Sonstige Status / Flags
     {
         "name": "Disinfection state",
@@ -440,7 +430,7 @@ INPUT_REGISTERS = [
         "register_name": "input_63",
         "entity_category": None,
         "enum_map": {0: "Unsuccessful", 1: "Successful", 2: "Maintain", 3: "Heat Up"},
-        "translation_key": "input_63"
+        "translation_key": "input_63",
     },
     {
         "name": "Holiday mode",
@@ -453,7 +443,7 @@ INPUT_REGISTERS = [
         "register_name": "input_64",
         "device_class": "running",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_64"
+        "translation_key": "input_64",
     },
     {
         "name": "Demand response mode",
@@ -465,10 +455,15 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_65",
         "entity_category": None,
-        "enum_map": {0: "Free", 1: "Forced Off", 2: "Forced On", 3: "Recommended On", 4: "Reduced"},
-        "translation_key": "input_65"
+        "enum_map": {
+            0: "Free",
+            1: "Forced Off",
+            2: "Forced On",
+            3: "Recommended On",
+            4: "Reduced",
+        },
+        "translation_key": "input_65",
     },
-
     {
         "name": "Bypass valve position",
         "address": 66,
@@ -479,7 +474,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_66",
         "entity_category": None,
-        "translation_key": "input_66"
+        "translation_key": "input_66",
     },
     {
         "name": "Tank valve position",
@@ -491,7 +486,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_67",
         "entity_category": None,
-        "translation_key": "input_67"
+        "translation_key": "input_67",
     },
     {
         "name": "Circulation pump speed",
@@ -503,7 +498,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_68",
         "entity_category": None,
-        "translation_key": "input_68"
+        "translation_key": "input_68",
     },
     {
         "name": "Mixed pump PWM",
@@ -515,11 +510,11 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_69",
         "entity_category": None,
-        "translation_key": "input_69"
+        "translation_key": "input_69",
     },
     {
         "name": "Direct pump PWM",
-        "address":70,
+        "address": 70,
         "unit": "%",
         "scale": 1,
         "dtype": "uint16",
@@ -527,7 +522,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_70",
         "entity_category": None,
-        "translation_key": "input_70"
+        "translation_key": "input_70",
     },
     {
         "name": "Mixing valve position in mixing kit",
@@ -539,7 +534,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_71",
         "entity_category": None,
-        "translation_key": "input_71"
+        "translation_key": "input_71",
     },
     {
         "name": "Mixing Leaving water temperature in mixing kit",
@@ -551,7 +546,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_72",
         "entity_category": None,
-        "translation_key": "input_72"
+        "translation_key": "input_72",
     },
     {
         "name": "Space heating/cooling target for Main zone in mixing kit",
@@ -563,7 +558,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_73",
         "entity_category": None,
-        "translation_key": "input_73"
+        "translation_key": "input_73",
     },
     {
         "name": "Leaving water temperature prePHE outdoor",
@@ -575,7 +570,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_74",
         "entity_category": None,
-        "translation_key": "input_74"
+        "translation_key": "input_74",
     },
     {
         "name": "Leaving water temperature Tank valve",
@@ -587,7 +582,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_75",
         "entity_category": None,
-        "translation_key": "input_75"
+        "translation_key": "input_75",
     },
     {
         "name": "Domestic Hot Water Upper temperature",
@@ -599,7 +594,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_76",
         "entity_category": None,
-        "translation_key": "input_76"
+        "translation_key": "input_76",
     },
     {
         "name": "Domestic Hot Water Lower temperature",
@@ -611,7 +606,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_77",
         "entity_category": None,
-        "translation_key": "input_77"
+        "translation_key": "input_77",
     },
     {
         "name": "Water pressure",
@@ -623,7 +618,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_79",
         "entity_category": None,
-        "translation_key": "input_79"
+        "translation_key": "input_79",
     },
     {
         "name": "Unit operation mode",
@@ -636,7 +631,13 @@ INPUT_REGISTERS = [
         "register_name": "input_83",
         "entity_category": None,
         "translation_key": "input_83",
-        "enum_map": {0: "Stop", 1: "Tank Heat Up", 2: "Space heating", 3: "Space cooling", 4: "Actuator"}
+        "enum_map": {
+            0: "Stop",
+            1: "Tank Heat Up",
+            2: "Space heating",
+            3: "Space cooling",
+            4: "Actuator",
+        },
     },
     {
         "name": "Remote controller room temperature (Add)",
@@ -648,7 +649,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_78",
         "entity_category": None,
-        "translation_key": "input_78"
+        "translation_key": "input_78",
     },
     {
         "name": "Space heating/cooling target for Main zone Temp16",
@@ -660,7 +661,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_80",
         "entity_category": None,
-        "translation_key": "input_80"
+        "translation_key": "input_80",
     },
     {
         "name": "Space heating/cooling target for Add zone",
@@ -672,7 +673,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_81",
         "entity_category": None,
-        "translation_key": "input_81"
+        "translation_key": "input_81",
     },
     {
         "name": "Abnormality counter (user)",
@@ -684,7 +685,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_82",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "input_82"
+        "translation_key": "input_82",
     },
     {
         "name": "Room Heating setpoint Lower limit Temp16",
@@ -696,7 +697,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_84",
         "entity_category": None,
-        "translation_key": "input_84"
+        "translation_key": "input_84",
     },
     {
         "name": "Room Heating setpoint Upper limit",
@@ -708,7 +709,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_85",
         "entity_category": None,
-        "translation_key": "input_85"
+        "translation_key": "input_85",
     },
     {
         "name": "Room Cooling setpoint Lower limit",
@@ -720,7 +721,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_86",
         "entity_category": None,
-        "translation_key": "input_86"
+        "translation_key": "input_86",
     },
     {
         "name": "Room Cooling setpoint Upper limit",
@@ -732,8 +733,8 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_87",
         "entity_category": None,
-        "translation_key": "input_87"
-    }
+        "translation_key": "input_87",
+    },
 ]
 
 # Holding Register (beschreibbare Register)
@@ -751,7 +752,7 @@ HOLDING_REGISTERS = [
         "min_value": 0,
         "max_value": 100,
         "step": 1,
-        "translation_key": "holding_1"
+        "translation_key": "holding_1",
     },
     {
         "name": "Leaving water Main Cooling setpoint",
@@ -765,7 +766,7 @@ HOLDING_REGISTERS = [
         "min_value": 0,
         "max_value": 100,
         "step": 1,
-        "translation_key": "holding_2"
+        "translation_key": "holding_2",
     },
     {
         "name": "Room Thermostat Heating Setpoint Main",
@@ -779,7 +780,7 @@ HOLDING_REGISTERS = [
         "min_value": 12,
         "max_value": 30,
         "step": 1,
-        "translation_key": "holding_6"
+        "translation_key": "holding_6",
     },
     {
         "name": "Room Thermostat Cooling Setpoint Main",
@@ -793,7 +794,7 @@ HOLDING_REGISTERS = [
         "min_value": 12,
         "max_value": 35,
         "step": 1,
-        "translation_key": "holding_7"
+        "translation_key": "holding_7",
     },
     {
         "name": "Weather-dependent mode Heating Main",
@@ -810,8 +811,8 @@ HOLDING_REGISTERS = [
         "enum_map": {
             0: "Fixed",
             1: "Weather dependent",
-        "translation_key": "holding_68"
-        }
+            "translation_key": "holding_68",
+        },
     },
     {
         "name": "Weather-dependent mode Cooling Main",
@@ -828,8 +829,8 @@ HOLDING_REGISTERS = [
         "enum_map": {
             0: "Fixed",
             1: "Weather dependent",
-        "translation_key": "holding_69"
-        }
+            "translation_key": "holding_69",
+        },
     },
     {
         "name": "Thermostat Request Main",
@@ -847,8 +848,8 @@ HOLDING_REGISTERS = [
             0: "None",
             1: "Heating",
             2: "Cooling",
-        "translation_key": "holding_74"
-        }
+            "translation_key": "holding_74",
+        },
     },
     {
         "name": "Thermostat Request Additional",
@@ -866,8 +867,8 @@ HOLDING_REGISTERS = [
             0: "None",
             1: "Heating",
             2: "Cooling",
-        "translation_key": "holding_75"
-        }
+            "translation_key": "holding_75",
+        },
     },
     {
         "name": "DHW Keep Warm Setpoint",
@@ -881,7 +882,7 @@ HOLDING_REGISTERS = [
         "min_value": 30,
         "max_value": 85,
         "step": 0.5,
-        "translation_key": "holding_10"
+        "translation_key": "holding_10",
     },
     {
         "name": "DHW Powerful Additional Setpoint",
@@ -895,7 +896,7 @@ HOLDING_REGISTERS = [
         "min_value": 30,
         "max_value": 85,
         "step": 1,
-        "translation_key": "holding_14"
+        "translation_key": "holding_14",
     },
     {
         "name": "DHW Single Heat-up Setpoint (Manual)",
@@ -909,7 +910,7 @@ HOLDING_REGISTERS = [
         "min_value": 30,
         "max_value": 85,
         "step": 1,
-        "translation_key": "holding_16"
+        "translation_key": "holding_16",
     },
     {
         "name": "Weather-dependent mode Main LWT Heating setpoint offset",
@@ -923,7 +924,7 @@ HOLDING_REGISTERS = [
         "min_value": -10,
         "max_value": 10,
         "step": 1,
-        "translation_key": "holding_54"
+        "translation_key": "holding_54",
     },
     {
         "name": "Weather-dependent mode Main LWT Cooling setpoint offset",
@@ -937,7 +938,7 @@ HOLDING_REGISTERS = [
         "min_value": -10,
         "max_value": 10,
         "step": 1,
-        "translation_key": "holding_55"
+        "translation_key": "holding_55",
     },
     {
         "name": "Imposed power limit",
@@ -951,7 +952,7 @@ HOLDING_REGISTERS = [
         "min_value": 0,
         "max_value": 20,
         "step": 0.5,
-        "translation_key": "holding_58"
+        "translation_key": "holding_58",
     },
     {
         "name": "Leaving water Add Heating setpoint",
@@ -965,7 +966,7 @@ HOLDING_REGISTERS = [
         "min_value": 3,
         "max_value": 85,
         "step": 1,
-        "translation_key": "holding_63"
+        "translation_key": "holding_63",
     },
     {
         "name": "Leaving water Add Cooling setpoint",
@@ -979,7 +980,7 @@ HOLDING_REGISTERS = [
         "min_value": 3,
         "max_value": 85,
         "step": 1,
-        "translation_key": "holding_64"
+        "translation_key": "holding_64",
     },
     {
         "name": "Weather-dependent mode Add LWT Heating setpoint offset",
@@ -993,7 +994,7 @@ HOLDING_REGISTERS = [
         "min_value": -10,
         "max_value": 10,
         "step": 1,
-        "translation_key": "holding_66"
+        "translation_key": "holding_66",
     },
     {
         "name": "Weather-dependent mode Add LWT Cooling setpoint offset",
@@ -1007,7 +1008,7 @@ HOLDING_REGISTERS = [
         "min_value": -10,
         "max_value": 10,
         "step": 1,
-        "translation_key": "holding_67"
+        "translation_key": "holding_67",
     },
     {
         "name": "Room Thermostat Heating Setpoint Main",
@@ -1021,7 +1022,7 @@ HOLDING_REGISTERS = [
         "min_value": 12,
         "max_value": 30,
         "step": 1,
-        "translation_key": "holding_76"
+        "translation_key": "holding_76",
     },
     {
         "name": "Room Thermostat Cooling Setpoint Main",
@@ -1035,7 +1036,7 @@ HOLDING_REGISTERS = [
         "min_value": 12,
         "max_value": 35,
         "step": 1,
-        "translation_key": "holding_77"
+        "translation_key": "holding_77",
     },
     {
         "name": "Room thermostat control Heating setpoint Add",
@@ -1049,7 +1050,7 @@ HOLDING_REGISTERS = [
         "min_value": 12,
         "max_value": 30,
         "step": 1,
-        "translation_key": "holding_78"
+        "translation_key": "holding_78",
     },
     {
         "name": "Room thermostat control Cooling setpoint Add",
@@ -1063,7 +1064,7 @@ HOLDING_REGISTERS = [
         "min_value": 12,
         "max_value": 35,
         "step": 1,
-        "translation_key": "holding_79"
+        "translation_key": "holding_79",
     },
 ]
 
@@ -1083,11 +1084,7 @@ SELECT_REGISTERS = [
         "input_type": "holding",
         "register_name": "holding_3",
         "translation_key": "holding_3",
-        "enum_map": {
-            0: "Auto",
-            1: "Heating", 
-            2: "Cooling"
-        }
+        "enum_map": {0: "Auto", 1: "Heating", 2: "Cooling"},
     },
     {
         "name": "Quiet mode operation",
@@ -1099,11 +1096,7 @@ SELECT_REGISTERS = [
         "input_type": "holding",
         "register_name": "holding_9",
         "translation_key": "holding_9",
-        "enum_map": {
-            0: "Off",
-            1: "On (Automatic)", 
-            2: "On (Manual)"
-        }
+        "enum_map": {0: "Off", 1: "On (Automatic)", 2: "On (Manual)"},
     },
     {
         "name": "Smart Grid Operation Mode",
@@ -1119,8 +1112,8 @@ SELECT_REGISTERS = [
             0: "Free running",
             1: "Forced off",
             2: "Recommended on",
-            3: "Forced on"
-        }
+            3: "Forced on",
+        },
     },
     {
         "name": "DHW mode setting",
@@ -1136,9 +1129,9 @@ SELECT_REGISTERS = [
             0: "Reheat",
             1: "Schedule and reheat",
             2: "Scheduled",
-            32766: "Off"
-        }
-    }
+            32766: "Off",
+        },
+    },
 ]
 
 # Berechnete Sensoren
@@ -1151,7 +1144,7 @@ CALCULATED_SENSORS = [
         "device_class": "power",
         "entity_category": None,
         "type": "heat_power",
-        "translation_key": "thermal_heat_output"
+        "translation_key": "thermal_heat_output",
     },
     {
         "name": "Coefficient of Performance",
@@ -1160,7 +1153,7 @@ CALCULATED_SENSORS = [
         "device_class": None,
         "entity_category": None,
         "type": "cop",
-        "translation_key": "cop"
+        "translation_key": "cop",
     },
     {
         "name": "Delta-T",
@@ -1169,7 +1162,7 @@ CALCULATED_SENSORS = [
         "device_class": "temperature",
         "entity_category": None,
         "type": "delta_t",
-        "translation_key": "delta_t"
+        "translation_key": "delta_t",
     },
     {
         "name": "Last Compressor Run",
@@ -1179,7 +1172,7 @@ CALCULATED_SENSORS = [
         "type": "last_triggered",
         "entity_category": None,
         "trigger_register_name": "discrete_11",
-        "translation_key": "last_compressor_run"
+        "translation_key": "last_compressor_run",
     },
     {
         "name": "Last Defrost",
@@ -1189,7 +1182,7 @@ CALCULATED_SENSORS = [
         "type": "last_triggered",
         "entity_category": None,
         "trigger_register_name": "discrete_17",
-        "translation_key": "last_defrost"
+        "translation_key": "last_defrost",
     },
     {
         "name": "Last Booster Heater",
@@ -1199,7 +1192,7 @@ CALCULATED_SENSORS = [
         "type": "last_triggered",
         "entity_category": None,
         "trigger_register_name": "discrete_8",
-        "translation_key": "last_booster_heater"
+        "translation_key": "last_booster_heater",
     },
     {
         "name": "Last DHW running",
@@ -1209,8 +1202,8 @@ CALCULATED_SENSORS = [
         "type": "last_triggered",
         "entity_category": None,
         "trigger_register_name": "discrete_19",
-        "translation_key": "last_dhw_running"
-    }
+        "translation_key": "last_dhw_running",
+    },
 ]
 
 DISCRETE_INPUT_SENSORS = [
@@ -1222,7 +1215,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_1",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_1"
+        "translation_key": "discrete_1",
     },
     {
         "name": "Backup heater relay 1",
@@ -1231,7 +1224,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_2",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_2"
+        "translation_key": "discrete_2",
     },
     {
         "name": "Backup heater relay 2",
@@ -1240,7 +1233,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_3",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_3"
+        "translation_key": "discrete_3",
     },
     {
         "name": "Backup heater relay 3",
@@ -1249,7 +1242,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_4",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_4"
+        "translation_key": "discrete_4",
     },
     {
         "name": "Backup heater relay 4",
@@ -1258,7 +1251,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_5",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_5"
+        "translation_key": "discrete_5",
     },
     {
         "name": "Backup heater relay 5",
@@ -1267,7 +1260,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_6",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_6"
+        "translation_key": "discrete_6",
     },
     {
         "name": "Backup heater relay 6",
@@ -1276,7 +1269,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_7",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_7"
+        "translation_key": "discrete_7",
     },
     {
         "name": "Booster heater",
@@ -1285,7 +1278,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_8",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_8"
+        "translation_key": "discrete_8",
     },
     {
         "name": "Tank boiler",
@@ -1294,7 +1287,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_9",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_9"
+        "translation_key": "discrete_9",
     },
     {
         "name": "Bivalent",
@@ -1303,7 +1296,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_10",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_10"
+        "translation_key": "discrete_10",
     },
     {
         "name": "Compressor running",
@@ -1312,7 +1305,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_11",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_11"
+        "translation_key": "discrete_11",
     },
     {
         "name": "Quiet mode operation active",
@@ -1321,7 +1314,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_12",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_12"
+        "translation_key": "discrete_12",
     },
     {
         "name": "Holiday mode active",
@@ -1330,7 +1323,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_13",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_13"
+        "translation_key": "discrete_13",
     },
     {
         "name": "Antifrost status",
@@ -1339,7 +1332,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_14",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_14"
+        "translation_key": "discrete_14",
     },
     {
         "name": "Water pipe freeze prevention status",
@@ -1348,7 +1341,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_15",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_15"
+        "translation_key": "discrete_15",
     },
     {
         "name": "Disinfection operation",
@@ -1357,7 +1350,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_16",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_16"
+        "translation_key": "discrete_16",
     },
     {
         "name": "Defrost",
@@ -1366,7 +1359,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_17",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_17"
+        "translation_key": "discrete_17",
     },
     {
         "name": "Hot start",
@@ -1375,7 +1368,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_18",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_18"
+        "translation_key": "discrete_18",
     },
     {
         "name": "DHW running",
@@ -1384,7 +1377,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_19",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_19"
+        "translation_key": "discrete_19",
     },
     {
         "name": "Main zone running",
@@ -1393,7 +1386,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_20",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_20"
+        "translation_key": "discrete_20",
     },
     {
         "name": "Additional zone running",
@@ -1402,7 +1395,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_21",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_21"
+        "translation_key": "discrete_21",
     },
     {
         "name": "Powerful tank heat up request",
@@ -1411,7 +1404,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_22",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_22"
+        "translation_key": "discrete_22",
     },
     {
         "name": "Manual tank heat up request",
@@ -1420,7 +1413,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_23",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_23"
+        "translation_key": "discrete_23",
     },
     {
         "name": "Emergency active",
@@ -1429,7 +1422,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_24",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_24"
+        "translation_key": "discrete_24",
     },
     {
         "name": "Circulation pump running",
@@ -1438,7 +1431,7 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_25",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_25"
+        "translation_key": "discrete_25",
     },
     {
         "name": "Imposed limit acceptance",
@@ -1447,8 +1440,8 @@ DISCRETE_INPUT_SENSORS = [
         "input_type": "discrete_input",
         "register_name": "discrete_26",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "translation_key": "discrete_26"
-    }
+        "translation_key": "discrete_26",
+    },
 ]
 
 # Holding Register Switches (beschreibbare Register mit On/Off Funktionalität)
@@ -1465,10 +1458,7 @@ HOLDING_SWITCHES = [
         "register_name": "holding_4",
         "entity_category": None,
         "translation_key": "holding_4",
-        "enum_map": {
-            0: "OFF",
-            1: "ON"
-        }
+        "enum_map": {0: "OFF", 1: "ON"},
     },
     {
         "name": "DHW booster mode (Powerful)",
@@ -1481,10 +1471,7 @@ HOLDING_SWITCHES = [
         "register_name": "holding_13",
         "entity_category": None,
         "translation_key": "holding_13",
-        "enum_map": {
-            0: "Off",
-            1: "On (Powerful)"
-        }
+        "enum_map": {0: "Off", 1: "On (Powerful)"},
     },
     {
         "name": "DHW Single heat-up ON/OFF (Manual)",
@@ -1497,11 +1484,8 @@ HOLDING_SWITCHES = [
         "register_name": "holding_15",
         "entity_category": None,
         "translation_key": "holding_15",
-        "enum_map": {
-            0: "Off",
-            1: "On"
-        }
-    }
+        "enum_map": {0: "Off", 1: "On"},
+    },
 ]
 
 # Alle Coil-Register aus 7.2.4 Daikin Configuration reference guide
@@ -1514,7 +1498,7 @@ COIL_SENSORS = [
         "input_type": "coil",
         "register_name": "coil_1",
         "entity_category": None,
-        "translation_key": "coil_1"
+        "translation_key": "coil_1",
     },
     {
         "name": "Main zone ON/OFF",
@@ -1523,7 +1507,7 @@ COIL_SENSORS = [
         "input_type": "coil",
         "register_name": "coil_2",
         "entity_category": None,
-        "translation_key": "coil_2"
+        "translation_key": "coil_2",
     },
     {
         "name": "Additional zone ON/OFF",
@@ -1532,29 +1516,35 @@ COIL_SENSORS = [
         "input_type": "coil",
         "register_name": "coil_3",
         "entity_category": None,
-        "translation_key": "coil_3"
-    }
+        "translation_key": "coil_3",
+    },
 ]
 
 # Register constants for Daikin Altherma 4
-REGISTER_OPERATION_MODE = "holding_3" # Operation mode
-REGISTER_CURRENT_TEMP = "input_40" # Leaving water temperature PHE (plate heat exchanger)
-REGISTER_OFFSET_HEATING = "holding_54" # Weather-dependent mode Main LWT Heating setpoint offset
-REGISTER_OFFSET_COOLING = "holding_53" # Weather-dependent mode Main LWT Cooling setpoint offset
-REGISTER_QUIET_MODE = "holding_9" # Quiet mode operation
-REGISTER_COMPRESSOR = "input_31" # Compressor status
+REGISTER_OPERATION_MODE = "holding_3"  # Operation mode
+REGISTER_CURRENT_TEMP = (
+    "input_40"  # Leaving water temperature PHE (plate heat exchanger)
+)
+REGISTER_OFFSET_HEATING = (
+    "holding_54"  # Weather-dependent mode Main LWT Heating setpoint offset
+)
+REGISTER_OFFSET_COOLING = (
+    "holding_53"  # Weather-dependent mode Main LWT Cooling setpoint offset
+)
+REGISTER_QUIET_MODE = "holding_9"  # Quiet mode operation
+REGISTER_COMPRESSOR = "input_31"  # Compressor status
 
 # DHW Control constants
-REGISTER_DWH_HVAC_MODE = "coil_1"   # Domestic Hot Water
-REGISTER_DHW_SETPOINT = "holding_10" # DHW Single heat-up setpoint (Manual)
-REGISTER_DWH_RUNNING = "discrete_19" # DHW running status
-REGISTER_DWH_TEMP = "input_43"       # DHW temperature
+REGISTER_DWH_HVAC_MODE = "coil_1"  # Domestic Hot Water
+REGISTER_DHW_SETPOINT = "holding_10"  # DHW Single heat-up setpoint (Manual)
+REGISTER_DWH_RUNNING = "discrete_19"  # DHW running status
+REGISTER_DWH_TEMP = "input_43"  # DHW temperature
 
 # DWH Booster Control constants
-REGISTER_DWH_BOOSTER_HVAC_MODE = "holding_13"   # Domestic Hot Water
-REGISTER_DHW_BOOSTER_SETPOINT = "holding_14" # DHW Single heat-up setpoint (Manual)
-REGISTER_DWH_BOOSTER_RUNNING = "discrete_19" # DHW running status
-REGISTER_DWH_BOOSTER_TEMP = "input_43"       # DHW temperature
+REGISTER_DWH_BOOSTER_HVAC_MODE = "holding_13"  # Domestic Hot Water
+REGISTER_DHW_BOOSTER_SETPOINT = "holding_14"  # DHW Single heat-up setpoint (Manual)
+REGISTER_DWH_BOOSTER_RUNNING = "discrete_19"  # DHW running status
+REGISTER_DWH_BOOSTER_TEMP = "input_43"  # DHW temperature
 
 # Fan mode constants (quiet mode)
 FAN_OFF = "OFF"

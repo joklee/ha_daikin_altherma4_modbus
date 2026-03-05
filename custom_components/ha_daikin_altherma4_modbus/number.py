@@ -6,14 +6,15 @@ from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinators = hass.data[DOMAIN][entry.entry_id]
     coordinator = coordinators.get("coordinator")
-    
+
     if coordinator is None:
         _LOGGER.error("Coordinator not found in hass data")
         return
-    
+
     entities = []
 
     for item in HOLDING_REGISTERS:
@@ -27,9 +28,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
         enum_map = item.get("enum_map")
         entity_category = item.get("entity_category")
         translation_key = item.get("translation_key")
-        
+
         entities.append(
-            DaikinNumber(coordinator, entry, address, min_v, max_v, step, unit, scale, register_name, enum_map, entity_category, translation_key=translation_key)
+            DaikinNumber(
+                coordinator,
+                entry,
+                address,
+                min_v,
+                max_v,
+                step,
+                unit,
+                scale,
+                register_name,
+                enum_map,
+                entity_category,
+                translation_key=translation_key,
+            )
         )
 
     async_add_entities(entities)
@@ -37,8 +51,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class DaikinNumber(CoordinatorEntity, NumberEntity):
     _attr_has_entity_name = True
-    
-    def __init__(self, coordinator, entry, address, min_v, max_v, step, unit, scale, register_name, enum_map=None, entity_category=None, translation_key=None):
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        address,
+        min_v,
+        max_v,
+        step,
+        unit,
+        scale,
+        register_name,
+        enum_map=None,
+        entity_category=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
 
         self._entry = entry
@@ -65,21 +93,21 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         data = self.coordinator.data.get(self._register_name)
         if data is None:
             return False
-        
+
         val = data.get("value")
         if val is None:
             return False
-            
+
         # Convert to integer if it's a string
         try:
             val = int(val)
         except (ValueError, TypeError):
             return False
-            
+
         # Sensor is unavailable if value is 32765 or 32766
         if val == 32765 or val == 32766:
             return False
-            
+
         return True
 
     @property
@@ -90,24 +118,24 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         val = data.get("value")
         if val is None:
             return None
-        
+
         # Convert to integer if it's a string
         try:
             val = int(val)
         except (ValueError, TypeError):
             return None
-            
+
         # Return None for unavailable value (32765 or 32766)
         if val == 32765 or val == 32766:
             return None
-        
+
         # Wenn enum_map vorhanden, den enum-Wert zurückgeben
         if self._enum_map and val in self._enum_map:
             return val  # Rohwert für enum
-        
+
         # Check if value is already scaled by checking if scale is stored in data
         data_scale = data.get("scale")
-        
+
         if data_scale is not None:
             # Value is already scaled by data_manager
             scaled_value = val
@@ -117,7 +145,7 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
             if val > 32767:  # If value is negative (2's complement)
                 val = val - 65536
             scaled_value = val * self._scale
-            
+
         return scaled_value
 
     @property
@@ -129,9 +157,11 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
 
     async def async_set_native_value(self, value):
         raw = int(value / self._scale)
-        
+
         # Handle signed 16-bit integers for negative values
         if raw < 0:
             raw = 65536 + raw  # Convert negative to 2's complement
-            
-        await self._coordinator.data_manager.write_holding_register(self._register_name, raw)
+
+        await self._coordinator.data_manager.write_holding_register(
+            self._register_name, raw
+        )

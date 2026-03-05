@@ -1,19 +1,26 @@
 import logging
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN, INPUT_REGISTERS, INPUT_DEVICE_INFO, DISCRETE_INPUT_SENSORS, DISCRETE_INPUT_DEVICE_INFO
+from .const import (
+    DOMAIN,
+    INPUT_REGISTERS,
+    INPUT_DEVICE_INFO,
+    DISCRETE_INPUT_SENSORS,
+    DISCRETE_INPUT_DEVICE_INFO,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup aller Binary Sensors über Config Entry."""
     coordinators = hass.data[DOMAIN][entry.entry_id]
     coordinator = coordinators.get("coordinator")
-    
+
     if coordinator is None:
         _LOGGER.error("Coordinator not found in hass data")
         return
-    
+
     entities = []
 
     # Process binary sensors from INPUT_REGISTERS with device_class
@@ -54,10 +61,20 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Ein Binary Sensor für Modbus-Register."""
-    
+
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, address, device_class, register_name,entity_category=None, unique_id=None, translation_key=None):
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        address,
+        device_class,
+        register_name,
+        entity_category=None,
+        unique_id=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
@@ -74,21 +91,21 @@ class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
         data = self.coordinator.data.get(self._attr_register_name)
         if data is None:
             return False
-        
+
         val = data.get("value")
         if val is None:
             return False
-            
+
         # Convert to integer if it's a string
         try:
             val = int(val)
         except (ValueError, TypeError):
             return False
-            
+
         # Sensor is unavailable if value is 32765 or 32766
         if val == 32765 or val == 32766:
             return False
-            
+
         return True
 
     @property
@@ -102,10 +119,20 @@ class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
 class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
     """A Binary Sensor for Discrete Input Register."""
-    
+
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, address, device_class, register_name, entity_category=None, unique_id=None, translation_key=None):
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        address,
+        device_class,
+        register_name,
+        entity_category=None,
+        unique_id=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
@@ -122,21 +149,21 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
         data = self.coordinator.data.get(self._attr_register_name)
         if data is None:
             return False
-        
+
         val = data.get("value")
         if val is None:
             return False
-            
+
         # Convert to integer if it's a string
         try:
             val = int(val)
         except (ValueError, TypeError):
             return False
-            
+
         # Sensor is unavailable if value is 32765 or 32766
         if val == 32765 or val == 32766:
             return False
-            
+
         return True
 
     @property

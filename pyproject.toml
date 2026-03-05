@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=term-missing --cov-fail-under=75"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

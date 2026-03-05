@@ -1,11 +1,19 @@
 """Switch platform for Daikin Altherma 4 Modbus integration."""
+
 import logging
 from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN, COIL_SENSORS, COIL_DEVICE_INFO, HOLDING_SWITCHES, HOLDING_DEVICE_INFO
+from .const import (
+    DOMAIN,
+    COIL_SENSORS,
+    COIL_DEVICE_INFO,
+    HOLDING_SWITCHES,
+    HOLDING_DEVICE_INFO,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup switch entities over Config Entry."""
@@ -32,7 +40,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     # Holding Register Switches
     _LOGGER.debug(f"Processing {len(HOLDING_SWITCHES)} holding switches")
     for holding_switch in HOLDING_SWITCHES:
-        _LOGGER.debug(f"Creating holding switch: {holding_switch['name']} (address: {holding_switch['address']}, register: {holding_switch.get('register_name')})")
+        _LOGGER.debug(
+            f"Creating holding switch: {holding_switch['name']} (address: {holding_switch['address']}, register: {holding_switch.get('register_name')})"
+        )
         entities.append(
             DaikinHoldingSwitch(
                 coordinator=coordinator,
@@ -43,17 +53,19 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 enum_map=holding_switch.get("enum_map"),
             )
         )
-    
+
     _LOGGER.debug(f"Total entities to add: {len(entities)}")
     async_add_entities(entities)
 
 
 class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
     """A Switch for Coil Register."""
-    
+
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, address, register_name, translation_key=None):
+    def __init__(
+        self, coordinator, entry, address, register_name, translation_key=None
+    ):
         super().__init__(coordinator)
         # Type hint to indicate coordinator has data_manager attribute
         self.coordinator: Any = coordinator  # Coordinator with data_manager attribute
@@ -76,7 +88,9 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):
         """Schaltet das Coil ein."""
         try:
-            result = await self.coordinator.data_manager.write_coil_register(self._register_name, True)
+            result = await self.coordinator.data_manager.write_coil_register(
+                self._register_name, True
+            )
             if result is None:
                 _LOGGER.error(f"Failed to turn on coil {self._address}")
             else:
@@ -87,7 +101,9 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs):
         """Schaltet das Coil aus."""
         try:
-            result = await self.coordinator.data_manager.write_coil_register(self._register_name, False)
+            result = await self.coordinator.data_manager.write_coil_register(
+                self._register_name, False
+            )
             if result is None:
                 _LOGGER.error(f"Failed to turn off coil {self._address}")
             else:
@@ -98,10 +114,18 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
 
 class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
     """A Switch for Holding Register."""
-    
+
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, address, register_name, translation_key=None, enum_map=None):
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        address,
+        register_name,
+        translation_key=None,
+        enum_map=None,
+    ):
         super().__init__(coordinator)
         # Type hint to indicate coordinator has data_manager attribute
         self.coordinator: Any = coordinator  # Coordinator with data_manager attribute
@@ -136,21 +160,29 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):
         """Schaltet das Holding Register ein."""
         try:
-            result = await self.coordinator.data_manager.write_holding_register(self._register_name, 1)
+            result = await self.coordinator.data_manager.write_holding_register(
+                self._register_name, 1
+            )
             if result is None:
                 _LOGGER.error(f"Failed to turn on holding register {self._address}")
             else:
-                _LOGGER.debug(f"Successfully turned on holding register {self._address}")
+                _LOGGER.debug(
+                    f"Successfully turned on holding register {self._address}"
+                )
         except Exception as e:
             _LOGGER.error(f"Error turning on holding register {self._address}: {e}")
 
     async def async_turn_off(self, **kwargs):
         """Schaltet das Holding Register aus."""
         try:
-            result = await self.coordinator.data_manager.write_holding_register(self._register_name, 0)
+            result = await self.coordinator.data_manager.write_holding_register(
+                self._register_name, 0
+            )
             if result is None:
                 _LOGGER.error(f"Failed to turn off holding register {self._address}")
             else:
-                _LOGGER.debug(f"Successfully turned off holding register {self._address}")
+                _LOGGER.debug(
+                    f"Successfully turned off holding register {self._address}"
+                )
         except Exception as e:
             _LOGGER.error(f"Error turning off holding register {self._address}: {e}")
