@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        ha-version: ["2025.12", "2026.1", "2026.2", "2026.3"]
+        ha-version: ["2025.12", "2026.1", "2026.2", "2026.3", "next"]
 
     steps:
       - name: Checkout repository
@@ -53,10 +53,13 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+          action: validate
 
       # ✅ Hassfest validation
       - name: Hassfest validation
         uses: home-assistant/actions/hassfest@master
+        with:
+          path: ./custom_components/ha_daikin_altherma4_modbus
 
       # 🐳 Test against multiple HA versions
       - name: Test integration load in Home Assistant ${{ matrix.ha-version }}
@@ -78,6 +81,8 @@ jobs:
 
       - name: Hassfest validation
         uses: home-assistant/actions/hassfest@master
+        with:
+          path: ./custom_components/ha_daikin_altherma4_modbus
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
