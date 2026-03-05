@@ -1,12 +1,13 @@
 {
     "domain": "ha_daikin_altherma4_modbus",
     "name": "Daikin Altherma 4 Modbus",
-    "version": "0.5.0",
+    "codeowners": ["@joklee"],
+    "config_flow": true,
+    "dependencies": [],
     "documentation": "https://github.com/joklee/ha_daikin_altherma4_modbus",
     "integration_type": "hub",
-    "requirements": ["pymodbus>=3.5.2"],
-    "dependencies": [],
-    "codeowners": ["@joklee"],
     "iot_class": "local_polling",
-    "config_flow": true
+    "issue_tracker": "https://github.com/joklee/ha_daikin_altherma4_modbus/issues",
+    "requirements": ["pymodbus>=3.5,<3.7"],
+    "version": "0.5.1"
   }

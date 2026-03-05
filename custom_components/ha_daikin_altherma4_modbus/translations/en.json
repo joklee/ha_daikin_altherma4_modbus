@@ -27,12 +27,6 @@
       }
     }
   },
-  "error": {
-    "invalid_host": "Invalid host",
-    "invalid_port": "Invalid port",
-    "cannot_connect": "Failed to connect",
-    "invalid_auth": "Invalid authentication"
-  },
   "device": {
     "daikin_altherma_modbus_input_registers": {
       "name": "Daikin Altherma 4 - Input Register"
@@ -343,11 +337,11 @@
       "input_83": {
         "name": "Unit operation mode",
         "state": {
-          "Stop": "Stop",
-          "Tank Heat Up": "Tank Heat Up",
-          "Space heating": "Space heating",
-          "Space cooling": "Space cooling",
-          "Actuator": "Actuator"
+          "stop": "Stop",
+          "tank_heat_up": "Tank Heat Up",
+          "space_heating": "Space heating",
+          "space_cooling": "Space cooling",
+          "actuator": "Actuator"
         }
       },
       "input_84": {
@@ -493,13 +487,7 @@
         "name": "Smart grid operation mode"
       },
       "holding_80": {
-        "name": "DHW mode setting",
-        "options": {
-          "Reheat": "Reheat",
-          "Schedule and reheat": "Schedule and reheat",
-          "Scheduled": "Scheduled",
-          "Off": "Off"
-        }
+        "name": "DHW mode setting"
       }
     }
   }

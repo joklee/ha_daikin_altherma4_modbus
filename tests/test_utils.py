@@ -12,6 +12,7 @@ from datetime import datetime
 
 class MockConst:
     """Mock Home Assistant constants."""
+
     EntityCategory = Mock()
     EntityCategory.DIAGNOSTIC = "diagnostic"
     UnitOfTemperature = "°C"
@@ -19,6 +20,7 @@ class MockConst:
 
 class MockDataUpdateCoordinator:
     """Mock DataUpdateCoordinator for testing."""
+
     def __init__(self, hass, logger, name, update_interval):
         self.hass = hass
         self.logger = logger
@@ -29,11 +31,13 @@ class MockDataUpdateCoordinator:
 
 class UpdateFailed(Exception):
     """Mock UpdateFailed exception."""
+
     pass
 
 
 class MockSensorEntity:
     """Mock SensorEntity for testing."""
+
     def __init__(self):
         self._attr_device_class = None
         self._attr_state_class = None
@@ -46,15 +50,18 @@ class MockSensorEntity:
 def setup_home_assistant_mocks():
     """Set up all Home Assistant module mocks."""
     # Install mocks
-    sys.modules['homeassistant'] = Mock()
-    sys.modules['homeassistant.const'] = MockConst()
-    sys.modules['homeassistant.helpers'] = Mock()
-    sys.modules['homeassistant.helpers.update_coordinator'] = Mock()
-    sys.modules['homeassistant.helpers.update_coordinator'].DataUpdateCoordinator = MockDataUpdateCoordinator
-    sys.modules['homeassistant.helpers.update_coordinator'].UpdateFailed = UpdateFailed
-    sys.modules['homeassistant.components'] = Mock()
-    sys.modules['homeassistant.components.sensor'] = Mock()
-    sys.modules['homeassistant.components.sensor'].SensorEntity = MockSensorEntity
+    sys.modules["homeassistant"] = Mock()
+    sys.modules["homeassistant.const"] = MockConst()
+    sys.modules["homeassistant.core"] = Mock()
+    sys.modules["homeassistant.helpers"] = Mock()
+    sys.modules["homeassistant.helpers.update_coordinator"] = Mock()
+    sys.modules[
+        "homeassistant.helpers.update_coordinator"
+    ].data_update_coordinator = MockDataUpdateCoordinator
+    sys.modules["homeassistant.helpers.update_coordinator"].UpdateFailed = UpdateFailed
+    sys.modules["homeassistant.components"] = Mock()
+    sys.modules["homeassistant.components.sensor"] = Mock()
+    sys.modules["homeassistant.components.sensor"].SensorEntity = MockSensorEntity
 
 
 def setup_project_paths():
@@ -66,14 +73,16 @@ def setup_project_paths():
 
 def load_const_module(project_root):
     """Load the const module for testing."""
-    custom_components_path = project_root / "custom_components" / "ha_daikin_altherma4_modbus"
-    
+    custom_components_path = (
+        project_root / "custom_components" / "ha_daikin_altherma4_modbus"
+    )
+
     # Load const first
-    with open(custom_components_path / "const.py", 'r') as f:
+    with open(custom_components_path / "const.py", "r") as f:
         source = f.read()
-    const_module = types.ModuleType('const_module')
+    const_module = types.ModuleType("const_module")
     exec(source, const_module.__dict__)
-    
+
     return const_module
 
 

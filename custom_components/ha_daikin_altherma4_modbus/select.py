@@ -1,4 +1,5 @@
 """Select platform for Daikin Altherma 4 Modbus integration."""
+
 import logging
 from homeassistant.components.select import SelectEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -7,15 +8,16 @@ from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup select entities over Config Entry."""
     coordinators = hass.data[DOMAIN][entry.entry_id]
     coordinator = coordinators.get("coordinator")
-    
+
     if coordinator is None:
         _LOGGER.error("Coordinator not found in hass data")
         return
-    
+
     entities = []
 
     for item in SELECT_REGISTERS:
@@ -25,9 +27,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
             enum_map = item["enum_map"]
             entity_category = item.get("entity_category")
             translation_key = item.get("translation_key")
-            
+
             entities.append(
-                DaikinSelect(coordinator, entry, address, register_name, enum_map, entity_category, translation_key)
+                DaikinSelect(
+                    coordinator,
+                    entry,
+                    address,
+                    register_name,
+                    enum_map,
+                    entity_category,
+                    translation_key,
+                )
             )
 
     async_add_entities(entities)
@@ -38,7 +48,16 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, address, register_name, enum_map, entity_category=None, translation_key=None):
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        address,
+        register_name,
+        enum_map,
+        entity_category=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
 
         self._entry = entry
@@ -59,44 +78,44 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
         data = self.coordinator.data.get(self._register_name)
         if data is None:
             return False
-        
+
         val = data.get("value")
         if val is None:
             return False
-            
+
         # Convert to integer if it's a string
         try:
             val = int(val)
         except (ValueError, TypeError):
             return False
-            
+
         # Sensor is unavailable if value is 32765 or 32766
         if val == 32765 or val == 32766:
             return False
-            
+
         return True
 
     @property
     def current_option(self):
         data = self.coordinator.data.get(self._register_name)
-        
+
         if data:
             val = data.get("value")
-            
+
             # Convert to integer if it's a string
             try:
                 val = int(val)
             except (ValueError, TypeError):
                 return None
-                
+
             # Return None for unavailable value (32765 or 32766)
             if val == 32765 or val == 32766:
                 return None
-            
+
             if val is not None and val in self._enum_map:
                 option = self._enum_map[val]
                 return option
-        
+
         return None
 
     async def async_select_option(self, option: str):
@@ -104,8 +123,10 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
         # Find the key for the selected option
         for key, value in self._enum_map.items():
             if value == option:
-                if hasattr(self._coordinator, 'data_manager'):
-                    await self._coordinator.data_manager.write_holding_register(self._register_name, key)
+                if hasattr(self._coordinator, "data_manager"):
+                    await self._coordinator.data_manager.write_holding_register(
+                        self._register_name, key
+                    )
                 else:
                     _LOGGER.error("Coordinator does not have data_manager attribute")
                 break

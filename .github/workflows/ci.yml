@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  validate:
+    name: Validate integration
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        ha-version: ["2025.12", "2026.1", "2026.2", "2026.3"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 🔢 Extract version from manifest.json
+      - name: Get manifest version
+        id: manifest
+        run: |
+          VERSION=$(jq -r '.version' custom_components/ha_daikin_altherma4_modbus/manifest.json)
+          echo "manifest_version=$VERSION" >> $GITHUB_OUTPUT
+
+      # 🔢 Compare tag with manifest version
+      - name: Ensure tag matches manifest version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          if [ "$TAG_VERSION" != "${{ steps.manifest.outputs.manifest_version }}" ]; then
+            echo "Tag version ($TAG_VERSION) does not match manifest version (${{ steps.manifest.outputs.manifest_version }})"
+            exit 1
+          fi
+
+      # 🧪 Ruff linting
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff
+        run: ruff check .
+
+      # ✅ HACS validation
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+      # ✅ Hassfest validation
+      - name: Hassfest validation
+        uses: home-assistant/actions/hassfest@master
+
+      # 🐳 Test against multiple HA versions
+      - name: Test integration load in Home Assistant ${{ matrix.ha-version }}
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/custom_components:/config/custom_components \
+            -v ${{ github.workspace }}/configuration.yaml:/config/configuration.yaml \
+            ghcr.io/home-assistant/home-assistant:${{ matrix.ha-version }} \
+            python -m homeassistant --script check_config --config /config
+
+  release:
+    name: Create Release
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true

@@ -12,24 +12,25 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup aller Sensors über Config Entry."""
     coordinators = hass.data[DOMAIN][entry.entry_id]
     unified_coordinator = coordinators.get("coordinator")
-    normal_coordinator = coordinators.get("normal_coordinator")
-    slow_coordinator = coordinators.get("slow_coordinator")
-    
+    coordinators.get("normal_coordinator")
+    coordinators.get("slow_coordinator")
+
     if unified_coordinator is None:
         _LOGGER.error("Unified coordinator not found in hass data")
         return
     entities = []
-    
+
     # Input-Register Sensoren (nur ohne device_class running/problem)
     for item in INPUT_REGISTERS:
         device_class = item.get("device_class")
         if device_class in ["running", "problem"]:
             continue  # Nur als Binärsensoren erstellen
-        
+
         address = item["address"]
         register_name = item.get("register_name")
         unit = item.get("unit", "")
@@ -57,13 +58,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 register_name=register_name,
                 unique_id=unique_id,
                 translation_key=translation_key,
-                device_info=INPUT_DEVICE_INFO
+                device_info=INPUT_DEVICE_INFO,
             )
         )
         _LOGGER.debug(f"unique_id: {unique_id} - translation_key {translation_key}")
 
     # Externer elektrischer Leistungssensor (immer erstellen, Verfügbarkeit wird über available property gesteuert)
-    _LOGGER.debug(f"Creating External Electric Power Sensor")
+    _LOGGER.debug("Creating External Electric Power Sensor")
     entities.append(
         ExternalElectricPowerSensor(
             coordinator=unified_coordinator,
@@ -73,14 +74,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
             device_class="power",
             entity_category=EntityCategory.DIAGNOSTIC,
             translation_key="external_electric_power",
-            device_info=INPUT_DEVICE_INFO
+            device_info=INPUT_DEVICE_INFO,
         )
     )
 
     # Berechnete Sensoren
     _LOGGER.debug(f"Processing {len(CALCULATED_SENSORS)} calculated sensors")
     for calc in CALCULATED_SENSORS:
-        _LOGGER.debug(f"Processing calculated sensor: {calc['name']} (type: {calc['type']})")
+        _LOGGER.debug(
+            f"Processing calculated sensor: {calc['name']} (type: {calc['type']})"
+        )
         if calc["type"] == "heat_power":
             entities.append(
                 ThermalHeatOutput(
@@ -91,7 +94,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     device_class=calc["device_class"],
                     entity_category=calc["entity_category"],
                     device_info=CALCULATED_DEVICE_INFO,
-                    translation_key=calc.get("translation_key")
+                    translation_key=calc.get("translation_key"),
                 )
             )
         elif calc["type"] == "cop":
@@ -104,7 +107,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     device_class=calc["device_class"],
                     entity_category=calc["entity_category"],
                     device_info=CALCULATED_DEVICE_INFO,
-                    translation_key=calc.get("translation_key")
+                    translation_key=calc.get("translation_key"),
                 )
             )
         elif calc["type"] == "last_triggered":
@@ -118,7 +121,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     trigger_register_name=calc["trigger_register_name"],
                     entity_category=calc["entity_category"],
                     device_info=CALCULATED_DEVICE_INFO,
-                    translation_key=calc.get("translation_key")
+                    translation_key=calc.get("translation_key"),
                 )
             )
         elif calc["type"] == "delta_t":
@@ -130,7 +133,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     unit=calc["unit"],
                     device_class=calc["device_class"],
                     device_info=CALCULATED_DEVICE_INFO,
-                    translation_key=calc.get("translation_key")
+                    translation_key=calc.get("translation_key"),
                 )
             )
 
@@ -139,10 +142,26 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class DaikinInputSensor(CoordinatorEntity, SensorEntity):
     """A Sensor for Input-Register."""
-    
+
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, address, unit, dtype, scale, count, icon, enum_map, register_name, entity_category=None, unique_id=None, device_info=None, translation_key=None):
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        address,
+        unit,
+        dtype,
+        scale,
+        count,
+        icon,
+        enum_map,
+        register_name,
+        entity_category=None,
+        unique_id=None,
+        device_info=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
         self._entry = entry
         self._address = address
@@ -158,7 +177,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
         self._attr_icon = icon
-        
+
         # Set device_class to 'enum' for sensors with enum_map
         if enum_map:
             self._attr_device_class = "enum"
@@ -171,21 +190,21 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data.get(self._attr_register_name)
         if data is None:
             return False
-        
+
         val = data.get("value")
         if val is None:
             return False
-            
+
         # Convert to integer if it's a string
         try:
             val = int(val)
         except (ValueError, TypeError):
             return False
-            
+
         # Sensor is unavailable if value is 32765 or 32766
         if val == 32765 or val == 32766:
             return False
-            
+
         return True
 
     @property
@@ -197,14 +216,14 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         val = data.get("value")
         if val is None:
             return None
-        
+
         # Handle string data types directly
         if self._dtype == "string":
             return str(val) if val is not None else None
-        
+
         # Check if value is already scaled by checking if scale is stored in data
         data_scale = data.get("scale")
-        
+
         # Convert to appropriate type based on sensor characteristics
         try:
             # For scaled sensors, keep as float to preserve decimal places
@@ -216,15 +235,15 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
                 val = int(val)
         except (ValueError, TypeError):
             return None
-            
+
         # Return None for unavailable value (32765 or 32766)
         if val == 32765 or val == 32766:
             return None
-        
+
         # Handle signed 16-bit integers
         if val > 32767:  # If value is negative (2's complement)
             val = val - 65536
-            
+
         # ENUM Mapping
         if self._enum_map:
             mapped_value = self._enum_map.get(val)
@@ -232,7 +251,9 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
                 return mapped_value  # Return string value directly, no scaling
             else:
                 # For enum sensors, if value not found in map, return "Unknown"
-                _LOGGER.warning(f"Enum sensor {self._attr_unique_id} - value {val} not in enum_map {self._enum_map}")
+                _LOGGER.warning(
+                    f"Enum sensor {self._attr_unique_id} - value {val} not in enum_map {self._enum_map}"
+                )
                 return "Unknown"
 
         if data_scale is not None:
@@ -266,13 +287,13 @@ def calculate_thermal_heat_output(coordinator):
         flow = flow_raw  # Already scaled by data_manager
     else:
         flow = flow_raw * 0.01  # L/min (korrekte Skalierung)
-    
+
     temp_vl_scale = temp_vl_data.get("scale")
     if temp_vl_scale is not None:
         temp_vl = temp_vl_raw  # Already scaled by data_manager
     else:
         temp_vl = temp_vl_raw * 0.01  # °C (korrekte Skalierung)
-    
+
     temp_rl_scale = temp_rl_data.get("scale")
     if temp_rl_scale is not None:
         temp_rl = temp_rl_raw  # Already scaled by data_manager
@@ -289,10 +310,20 @@ def calculate_thermal_heat_output(coordinator):
 
 class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Wärmepumpenleistung."""
-    
+
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, unique_id, unit, device_class, entity_category=None, device_info=None, translation_key=None):
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        unit,
+        device_class,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = unique_id
@@ -315,10 +346,20 @@ class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
 
 class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Coefficient of Performance (CoP)."""
-    
+
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, unique_id, unit, device_class, entity_category=None, device_info=None, translation_key=None):
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        unit,
+        device_class,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = unique_id
@@ -358,17 +399,21 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         if electric_power is None:
             # Modbus
             power_data = self.coordinator.data.get("input_51", {})
-            electric_power_raw = power_data.get("value", 0)  # Heat pump power consumption (roh)
-            
+            electric_power_raw = power_data.get(
+                "value", 0
+            )  # Heat pump power consumption (roh)
+
             # Check if value is already scaled by checking if scale is stored in data
             data_scale = power_data.get("scale")
-            
+
             if data_scale is not None:
                 # Value is already scaled by data_manager
                 electric_power = electric_power_raw
             else:
                 # Value is not scaled yet, apply scaling
-                electric_power = electric_power_raw * power_data.get("scale", 10)  # in W
+                electric_power = electric_power_raw * power_data.get(
+                    "scale", 10
+                )  # in W
 
         if electric_power and electric_power > 0 and heat_power > 0:
             # Beide Leistungen in W, direkte Berechnung
@@ -380,10 +425,21 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
 
 class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
     """Sensor für das letzte Auslösen eines Binärsensors."""
-    
+
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, unique_id, unit, device_class, trigger_register_name, entity_category=None, device_info=None, translation_key=None):
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        unit,
+        device_class,
+        trigger_register_name,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
         self._entry = entry
         self._trigger_register_name = trigger_register_name
@@ -404,10 +460,20 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
 
 class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
     """Sensor für externen elektrischen Leistungssensor."""
-    
+
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, entry, unique_id, unit, device_class, entity_category=None, device_info=None, translation_key=None):
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        unit,
+        device_class,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = unique_id
@@ -424,16 +490,26 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
         """Return True if entity is available."""
         # Check if electric_power_sensor is configured
         electric_power_sensor = self._entry.data.get("electric_power_sensor")
-        _LOGGER.debug(f"ExternalElectricPowerSensor available check: electric_power_sensor = {electric_power_sensor}")
-        
+        _LOGGER.debug(
+            f"ExternalElectricPowerSensor available check: electric_power_sensor = {electric_power_sensor}"
+        )
+
         if not electric_power_sensor:
-            _LOGGER.debug("ExternalElectricPowerSensor: Not available - no electric_power_sensor configured")
+            _LOGGER.debug(
+                "ExternalElectricPowerSensor: Not available - no electric_power_sensor configured"
+            )
             return False
-        
+
         # Check if the referenced sensor exists and is available
         state = self.coordinator.hass.states.get(electric_power_sensor)
-        is_available = state is not None and state.state not in [None, "unknown", "unavailable"]
-        _LOGGER.debug(f"ExternalElectricPowerSensor: Referenced sensor available = {is_available}")
+        is_available = state is not None and state.state not in [
+            None,
+            "unknown",
+            "unavailable",
+        ]
+        _LOGGER.debug(
+            f"ExternalElectricPowerSensor: Referenced sensor available = {is_available}"
+        )
         return is_available
 
     @property
@@ -446,17 +522,28 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
                 try:
                     return float(state.state)
                 except ValueError:
-                    _LOGGER.error(f"ExternalElectricPowerSensor: Cannot convert {state.state} to float")
+                    _LOGGER.error(
+                        f"ExternalElectricPowerSensor: Cannot convert {state.state} to float"
+                    )
                     return None
         return None
 
 
 class DeltaTSensor(CoordinatorEntity, SensorEntity):
     """Calculated sensor for temperature difference (Delta-T)."""
-    
+
     _attr_has_entity_name = True
-    
-    def __init__(self, coordinator, entry, unique_id, unit, device_class, device_info=None, translation_key=None):
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        unit,
+        device_class,
+        device_info=None,
+        translation_key=None,
+    ):
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = unique_id

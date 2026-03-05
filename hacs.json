@@ -1,6 +1,5 @@
 {
   "name": "Daikin Altherma 4 Modbus",
-  "filename": "daikin_altherma4_modbus",
-  "homeassistant": "2025.1.0",
+  "homeassistant": "2025.12.0",
   "render_readme": true
 }
