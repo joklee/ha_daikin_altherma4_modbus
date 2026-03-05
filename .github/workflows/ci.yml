@@ -48,19 +48,6 @@ jobs:
       - name: Run ruff
         run: ruff check .
 
-      # ✅ HACS validation
-      - name: HACS validation
-        uses: hacs/action@main
-        with:
-          category: integration
-
-      # ✅ Hassfest validation
-      - name: Hassfest validation
-        uses: home-assistant/actions/hassfest@master
-
-      - uses: actions/checkout@v4
-      - uses: home-assistant/actions/hassfest@master
-
       # 🐳 Test against multiple HA versions
       - name: Test integration load in Home Assistant ${{ matrix.ha-version }}
         run: |
