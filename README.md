@@ -300,6 +300,118 @@ sensor.total_home_power
 - **Conditional logic**: Automate based on efficiency thresholds
 - **Integration**: Combine with energy storage or solar monitoring
 
+## Register Reference
+
+### Input Registers (21-87)
+
+| Address | Name | Description | Unit | Scale | Type |
+|---------|------|-------------|------|-------|------|
+| 21 | Unit abnormality | Error status | - | 1 | int16 |
+| 22 | Unit abnormality code | Specific error code | - | 1 | string |
+| 23 | Unit abnormality sub code | Error sub-code | - | 1 | uint16 |
+| 30 | Circulation pump running | Pump status | - | 1 | uint16 |
+| 31 | Compressor run | Compressor status | - | 1 | uint16 |
+| 32 | Booster heater run | Auxiliary heating | - | 1 | uint16 |
+| 33 | Disinfection operation | Disinfection status | - | 1 | uint16 |
+| 35 | Defrost/Restart | Defrost cycle status | - | 1 | uint16 |
+| 36 | Hot start | Hot start status | - | 1 | uint16 |
+| 37 | 3-way valve | Valve position | - | 1 | uint16 |
+| 38 | Operation mode | Current operation mode | - | 1 | uint16 |
+| 40 | Leaving water temperature PHE | Primary heat exchanger | °C | 0.01 | int16 |
+| 41 | Leaving water temperature BUH | Backup heater | °C | 0.01 | int16 |
+| 42 | Return water temperature | Return flow | °C | 0.01 | int16 |
+| 43 | DHW temperature | Domestic hot water | °C | 0.01 | int16 |
+| 44 | Outside air temperature | Ambient temperature | °C | 0.01 | int16 |
+| 45 | Liquid refrigerant temperature | Refrigerant temp | °C | 0.01 | int16 |
+| 46 | Heat pump power consumption | Electrical power | W | 1 | uint16 |
+| 47 | Flow rate | Water flow rate | L/min | 0.01 | uint16 |
+| 48 | Abnormality counter (user) | User error counter | - | 1 | uint16 |
+| 49 | Abnormality counter (factory) | Factory error counter | - | 1 | uint16 |
+| 50 | Remote control room temperature (Main) | Main zone temp | °C | 0.01 | int16 |
+| 51 | Heat pump power consumption | Electrical power | W | 10 | uint16 |
+| 52 | DHW normal operation | DHW operation status | - | 1 | uint16 |
+| 53 | Space heating/cooling normal operation | Space operation | - | 1 | uint16 |
+| 54-61 | Setpoint limits | Heating/Cooling limits | °C | 0.01 | int16 |
+| 63 | Disinfection state | Disinfection status | - | 1 | uint16 |
+| 64 | Holiday mode | Holiday status | - | 1 | uint16 |
+| 65 | Demand response mode | Demand response | - | 1 | uint16 |
+| 66-71 | Valve/Pump positions | Various positions | %/L/min | 1 | uint16 |
+| 72-77 | Mixing kit temperatures | Various temperatures | °C | 0.01 | int16 |
+| 78 | Remote controller room temperature (Add) | Add zone temp | °C | 0.01 | int16 |
+| 79 | Water pressure | System pressure | bar | 0.01 | int16 |
+| 80-81 | Space heating/cooling targets | Target temperatures | °C | 0.01 | int16 |
+| 82 | Abnormality counter (user) | User error counter | - | 1 | int16 |
+| 83 | Unit operation mode | Operation mode select | - | 1 | uint16 |
+| 84-87 | Room setpoint limits | Heating/Cooling limits | °C | 0.01 | int16 |
+
+### Holding Registers (1-60)
+
+| Address | Name | Description | Unit | Scale | Type |
+|---------|------|-------------|------|-------|------|
+| 1 | Leaving water Main Heating setpoint | Main heating setpoint | °C | 1 | int16 |
+| 2 | Leaving water Main Cooling setpoint | Main cooling setpoint | °C | 1 | int16 |
+| 3 | Operation mode | System operation mode | - | 1 | uint16 |
+| 4 | Space heating/cooling | Space heating/cooling control | - | 1 | uint16 |
+| 6 | Room Thermostat Heating Setpoint Main | Room heating setpoint | °C | 1 | int16 |
+| 7 | Room Thermostat Cooling Setpoint Main | Room cooling setpoint | °C | 1 | int16 |
+| 9 | Quiet mode operation | Quiet mode setting | - | 1 | uint16 |
+| 10 | DHW reheat setpoint | DHW reheat temperature | °C | 1 | int16 |
+| 13 | DHW booster mode (Powerful) | DHW powerful mode | - | 1 | uint16 |
+| 14 | DHW boost setpoint (Powerful) | DHW boost temperature | °C | 0.01 | int16 |
+| 15 | DHW Single heat-up ON/OFF (Manual) | Manual DHW heating | - | 1 | int16 |
+| 16 | DHW Single Heat-up Setpoint (Manual) | Manual DHW setpoint | °C | 0.01 | int16 |
+| 54 | Weather-dependent mode Main LWT Heating offset | Heating offset | °C | 1 | int16 |
+| 55 | Weather-dependent mode Main LWT Cooling offset | Cooling offset | °C | 1 | int16 |
+| 56 | Smart Grid Operation Mode | Smart grid mode | - | 1 | uint16 |
+| 58 | Imposed power limit | Power limitation | kW | 0.001 | uint16 |
+| 63 | Leaving water Add Heating setpoint | Add heating setpoint | °C | 1 | int16 |
+| 64 | Leaving water Add Cooling setpoint | Add cooling setpoint | °C | 1 | int16 |
+| 66 | Weather-dependent mode Add LWT Heating offset | Add heating offset | °C | 1 | int16 |
+| 67 | Weather-dependent mode Add LWT Cooling offset | Add cooling offset | °C | 1 | int16 |
+| 68 | Weather-dependent mode Heating Main | Weather heating mode | - | 1 | uint16 |
+| 69 | Weather-dependent mode Cooling Main | Weather cooling mode | - | 1 | uint16 |
+| 74 | Thermostat Request Main | Main thermostat request | - | 1 | uint16 |
+| 75 | Thermostat Request Additional | Add thermostat request | - | 1 | uint16 |
+| 76 | Room Thermostat Heating Setpoint Main | Room heating setpoint | °C | 1 | int16 |
+| 77 | Room Thermostat Cooling Setpoint Main | Room cooling setpoint | °C | 1 | int16 |
+| 78 | Room thermostat control Heating setpoint Add | Add heating setpoint | °C | 1 | int16 |
+| 79 | Room thermostat control Cooling setpoint Add | Add cooling setpoint | °C | 1 | int16 |
+| 80 | DHW mode setting | DHW operation mode | - | 1 | int16 |
+
+### Discrete Inputs (1-26)
+
+| Address | Name | Description | Type |
+|---------|------|-------------|------|
+| 1 | Shut-off valve | Main valve status | Binary |
+| 2-7 | Backup heater relay 1-6 | Backup heater status | Binary |
+| 8 | Booster heater | Auxiliary heating | Binary |
+| 9 | Tank boiler | Boiler status | Binary |
+| 10 | Bivalent | Bivalent operation | Binary |
+| 11 | Compressor running | Compressor status | Binary |
+| 12 | Quiet mode operation active | Quiet mode status | Binary |
+| 13 | Holiday mode active | Holiday status | Binary |
+| 14 | Antifrost status | Antifrost operation | Binary |
+| 15 | Water pipe freeze prevention status | Freeze prevention | Binary |
+| 16 | Disinfection operation | Disinfection status | Binary |
+| 17 | Defrost | Defrost cycle | Binary |
+| 18 | Hot start | Hot start cycle | Binary |
+| 19 | DHW running | Domestic hot water running | Binary |
+| 20 | Main zone running | Main zone operation | Binary |
+| 21 | Additional zone running | Add zone operation | Binary |
+| 22 | Powerful tank heat up request | Tank heat up request | Binary |
+| 23 | Manual tank heat up request | Manual tank request | Binary |
+| 24 | Emergency active | Emergency status | Binary |
+| 25 | Circulation pump running | Circulation pump | Binary |
+| 26 | Imposed limit acceptance | Limit acceptance | Binary |
+
+### Coil Registers (1-3)
+
+| Address | Name | Description | Type |
+|---------|------|-------------|------|
+| 1 | Domestic Hot Water ON/OFF | Manual DHW heating | Coil |
+| 2 | Main zone ON/OFF | Main zone control | Coil |
+| 3 | Additional zone ON/OFF | Add zone control | Coil |
+
 ### Options Flow
 After installation, you can configure the external electric power sensor through:
 1. **Settings** → **Devices & Services**
