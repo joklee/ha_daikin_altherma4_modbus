@@ -871,7 +871,7 @@ HOLDING_REGISTERS = [
         },
     },
     {
-        "name": "DHW Keep Warm Setpoint",
+        "name": "DHW reheat setpoint",
         "address": 10,
         "unit": "°C",
         "scale": 1,
@@ -885,7 +885,7 @@ HOLDING_REGISTERS = [
         "translation_key": "holding_10",
     },
     {
-        "name": "DHW Powerful Additional Setpoint",
+        "name": "DHW boost setpoint (Powerful)",
         "address": 14,
         "unit": "°C",
         "scale": 0.01,

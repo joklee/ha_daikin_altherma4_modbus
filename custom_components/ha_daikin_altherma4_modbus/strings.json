@@ -404,10 +404,10 @@
         "name": "Quiet mode operation"
       },
       "holding_10": {
-        "name": "DHW keep warm setpoint"
+        "name": "DHW reheat setpoint"
       },
       "holding_13": {
-        "name": "DHW auxiliary heating mode (powerful)"
+        "name": "DHW booster mode ON/OFF (Powerful)"
       },
       "holding_14": {
         "name": "DHW additional setpoint (powerful)"
