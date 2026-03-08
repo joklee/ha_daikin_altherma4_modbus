@@ -13,6 +13,12 @@ def _entry_value(entry, key, default=None):
     return options.get(key, data.get(key, default))
 
 
+def _entry_data_value(entry, key, default=None):
+    """Read value from config entry data."""
+    data = getattr(entry, "data", {}) or {}
+    return data.get(key, default)
+
+
 def _has_other_entry_for_endpoint(
     domain_data: dict, current_entry_id: str, host: str, port: int
 ) -> bool:
@@ -28,8 +34,8 @@ def _has_other_entry_for_endpoint(
 
 async def async_setup_entry(hass, entry):
     # Create dynamic device info with connection parameters
-    host = _entry_value(entry, "host", "")
-    port = _entry_value(entry, "port", 502)
+    host = _entry_data_value(entry, "host", "")
+    port = _entry_data_value(entry, "port", 502)
     scan_interval = _entry_value(entry, "scan_interval", NORMAL_SCAN_INTERVAL)
     slow_scan_interval = _entry_value(entry, "slow_scan_interval", SLOW_SCAN_INTERVAL)
     demo_mode = _entry_value(entry, "demo_mode", False)
@@ -92,8 +98,8 @@ async def async_unload_entry(hass, entry):
     if unified_coordinator and hasattr(unified_coordinator, "async_shutdown"):
         await unified_coordinator.async_shutdown()
 
-    host = _entry_value(entry, "host", "")
-    port = _entry_value(entry, "port", 502)
+    host = _entry_data_value(entry, "host", "")
+    port = _entry_data_value(entry, "port", 502)
     shared_endpoint_in_use = _has_other_entry_for_endpoint(
         domain_data, entry.entry_id, host, port
     )

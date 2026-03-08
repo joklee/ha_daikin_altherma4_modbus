@@ -29,11 +29,24 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Scan Interval Default setzen, falls nicht angegeben
-            if "scan_interval" not in user_input:
-                user_input["scan_interval"] = 10
+            data = {
+                CONF_HOST: user_input[CONF_HOST],
+                CONF_PORT: user_input.get(CONF_PORT, DEFAULT_PORT),
+            }
+            options = {
+                "scan_interval": user_input.get("scan_interval", NORMAL_SCAN_INTERVAL),
+                "slow_scan_interval": user_input.get(
+                    "slow_scan_interval", SLOW_SCAN_INTERVAL
+                ),
+                "demo_mode": user_input.get("demo_mode", False),
+            }
+            electric_power_sensor = user_input.get("electric_power_sensor", "").strip()
+            if electric_power_sensor:
+                options["electric_power_sensor"] = electric_power_sensor
             return self.async_create_entry(
-                title=f"Daikin Altherma 4 ({user_input[CONF_HOST]})", data=user_input
+                title=f"Daikin Altherma 4 ({user_input[CONF_HOST]})",
+                data=data,
+                options=options,
             )
 
         data_schema = vol.Schema(
@@ -70,24 +83,12 @@ class OptionsFlow(config_entries.OptionsFlow):
         _LOGGER.debug(f"OptionsFlow step_init. User input: {user_input}")
 
         if user_input is not None:
-            # Validate host
-            host = user_input.get("host", "").strip()
-            if not host:
-                errors["host"] = "invalid_host"
-
-            # Validate port
-            port = user_input.get("port")
-            if port is not None and (port < 1 or port > 65535):
-                errors["port"] = "invalid_port"
-
             # If no errors, proceed with update
             if not errors:
                 electric_power_sensor = user_input.get(
                     "electric_power_sensor", ""
                 ).strip()
                 options_data = {
-                    "host": host,
-                    "port": port if port is not None else DEFAULT_PORT,
                     "scan_interval": user_input.get(
                         "scan_interval", NORMAL_SCAN_INTERVAL
                     ),
@@ -103,8 +104,6 @@ class OptionsFlow(config_entries.OptionsFlow):
                 return self.async_create_entry(title="", data=options_data)
 
         # Get current values
-        current_host = _entry_value(self._config_entry, "host", "")
-        current_port = _entry_value(self._config_entry, "port", DEFAULT_PORT)
         current_scan_interval = _entry_value(
             self._config_entry, "scan_interval", NORMAL_SCAN_INTERVAL
         )
@@ -117,13 +116,16 @@ class OptionsFlow(config_entries.OptionsFlow):
         current_demo_mode = _entry_value(self._config_entry, "demo_mode", False)
 
         _LOGGER.debug(
-            f"OptionsFlow showing form. Current values: host='{current_host}', port={current_port}, scan_interval={current_scan_interval}, slow_scan_interval={current_slow_scan_interval}, electric_power_sensor='{current_electric_power_sensor}'"
+            "OptionsFlow showing form. Current values: scan_interval=%s, "
+            "slow_scan_interval=%s, electric_power_sensor='%s', demo_mode=%s",
+            current_scan_interval,
+            current_slow_scan_interval,
+            current_electric_power_sensor,
+            current_demo_mode,
         )
 
         data_schema = vol.Schema(
             {
-                vol.Required("host", default=current_host): str,
-                vol.Optional("port", default=current_port): int,
                 vol.Optional("scan_interval", default=current_scan_interval): int,
                 vol.Optional(
                     "slow_scan_interval", default=current_slow_scan_interval
