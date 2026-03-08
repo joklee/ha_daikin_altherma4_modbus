@@ -2,21 +2,9 @@ import logging
 from .const import DOMAIN, SLOW_SCAN_INTERVAL, NORMAL_SCAN_INTERVAL
 from .coordinator_manager import CoordinatorManager, UnifiedCoordinator
 from .modbus_client import RealModbusTcpClient
+from .config_entry_utils import entry_value, entry_data_value
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _entry_value(entry, key, default=None):
-    """Read config from options first, then fallback to data."""
-    options = getattr(entry, "options", {}) or {}
-    data = getattr(entry, "data", {}) or {}
-    return options.get(key, data.get(key, default))
-
-
-def _entry_data_value(entry, key, default=None):
-    """Read value from config entry data."""
-    data = getattr(entry, "data", {}) or {}
-    return data.get(key, default)
 
 
 def _has_other_entry_for_endpoint(
@@ -34,11 +22,11 @@ def _has_other_entry_for_endpoint(
 
 async def async_setup_entry(hass, entry):
     # Create dynamic device info with connection parameters
-    host = _entry_data_value(entry, "host", "")
-    port = _entry_data_value(entry, "port", 502)
-    scan_interval = _entry_value(entry, "scan_interval", NORMAL_SCAN_INTERVAL)
-    slow_scan_interval = _entry_value(entry, "slow_scan_interval", SLOW_SCAN_INTERVAL)
-    demo_mode = _entry_value(entry, "demo_mode", False)
+    host = entry_data_value(entry, "host", "")
+    port = entry_data_value(entry, "port", 502)
+    scan_interval = entry_value(entry, "scan_interval", NORMAL_SCAN_INTERVAL)
+    slow_scan_interval = entry_value(entry, "slow_scan_interval", SLOW_SCAN_INTERVAL)
+    demo_mode = entry_value(entry, "demo_mode", False)
 
     # Create device info with connection parameters
 
@@ -98,8 +86,8 @@ async def async_unload_entry(hass, entry):
     if unified_coordinator and hasattr(unified_coordinator, "async_shutdown"):
         await unified_coordinator.async_shutdown()
 
-    host = _entry_data_value(entry, "host", "")
-    port = _entry_data_value(entry, "port", 502)
+    host = entry_data_value(entry, "host", "")
+    port = entry_data_value(entry, "port", 502)
     shared_endpoint_in_use = _has_other_entry_for_endpoint(
         domain_data, entry.entry_id, host, port
     )

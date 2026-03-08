@@ -6,19 +6,13 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 
 from . import NORMAL_SCAN_INTERVAL
+from .config_entry_utils import entry_value
 from .const import DOMAIN, SLOW_SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_PORT = 502
 HOSTNAME_PATTERN = re.compile(r"^[A-Za-z0-9-]{1,63}$")
-
-
-def _entry_value(config_entry, key, default=None):
-    """Read option value with fallback to legacy entry data."""
-    options = getattr(config_entry, "options", {}) or {}
-    data = getattr(config_entry, "data", {}) or {}
-    return options.get(key, data.get(key, default))
 
 
 def _is_valid_host(host: str) -> bool:
@@ -179,16 +173,16 @@ class OptionsFlow(config_entries.OptionsFlow):
                 return self.async_create_entry(title="", data=options_data)
 
         # Get current values
-        current_scan_interval = _entry_value(
+        current_scan_interval = entry_value(
             self._config_entry, "scan_interval", NORMAL_SCAN_INTERVAL
         )
-        current_slow_scan_interval = _entry_value(
+        current_slow_scan_interval = entry_value(
             self._config_entry, "slow_scan_interval", SLOW_SCAN_INTERVAL
         )
-        current_electric_power_sensor = _entry_value(
+        current_electric_power_sensor = entry_value(
             self._config_entry, "electric_power_sensor", ""
         )
-        current_demo_mode = _entry_value(self._config_entry, "demo_mode", False)
+        current_demo_mode = entry_value(self._config_entry, "demo_mode", False)
 
         _LOGGER.debug(
             "OptionsFlow showing form. Current values: scan_interval=%s, "
