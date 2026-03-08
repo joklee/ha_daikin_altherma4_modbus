@@ -12,12 +12,12 @@ permissions:
 
 jobs:
   validate:
-    name: Validate integration
+    name: Validate (ha-${{ matrix.ha-version }})
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        ha-version: ["latest", "beta"]
+        ha-version: ["stable", "beta", "dev"]
 
     steps:
       - name: Checkout repository
@@ -44,7 +44,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install ruff
         run: pip install ruff

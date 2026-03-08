@@ -93,3 +93,42 @@ async def test_unload_keeps_shared_endpoint_client(monkeypatch):
     close_cached_client_mock.assert_not_awaited()
     assert "entry_1" not in hass.data[domain]
     assert "entry_2" in hass.data[domain]
+
+
+@pytest.mark.asyncio
+async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
+    close_cached_client_mock = AsyncMock()
+    integration = _load_integration_module(monkeypatch, close_cached_client_mock)
+
+    domain = "ha_daikin_altherma4_modbus"
+    host = "192.168.1.20"
+    port = 502
+
+    manager = SimpleNamespace(host=host, port=port, async_shutdown=AsyncMock())
+    unified_coordinator = SimpleNamespace(async_shutdown=AsyncMock())
+
+    hass = SimpleNamespace()
+    hass.data = {
+        domain: {
+            "entry_1": {
+                "manager": manager,
+                "coordinator": unified_coordinator,
+            }
+        }
+    }
+    hass.config_entries = SimpleNamespace(
+        async_unload_platforms=AsyncMock(return_value=True)
+    )
+
+    entry = SimpleNamespace(
+        entry_id="entry_1",
+        data={"host": host, "port": port},
+    )
+
+    unload_ok = await integration.async_unload_entry(hass, entry)
+
+    assert unload_ok is True
+    unified_coordinator.async_shutdown.assert_awaited_once()
+    manager.async_shutdown.assert_awaited_once_with(disconnect_clients=True)
+    close_cached_client_mock.assert_awaited_once_with(host, port)
+    assert domain not in hass.data

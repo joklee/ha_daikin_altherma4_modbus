@@ -212,8 +212,8 @@ class UnifiedCoordinator(DataUpdateCoordinator):
     async def _async_refresh_after_write(self) -> None:
         """Refresh both source coordinators after write operation."""
         results = await asyncio.gather(
-            self._slow_coordinator.async_request_refresh(),
-            self._normal_coordinator.async_request_refresh(),
+            self.slow_coordinator.async_request_refresh(),
+            self.normal_coordinator.async_request_refresh(),
             return_exceptions=True,
         )
 
