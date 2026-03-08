@@ -1,20 +1,12 @@
 """Simplified coordinator classes for Daikin Altherma 4 Modbus integration."""
 
 import logging
-from datetime import timedelta
-import random
+from .retry_utils import add_jitter, DEFAULT_JITTER
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from .data_manager import ModbusDataManager
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def add_jitter(base_interval: int) -> timedelta:
-    """Add random jitter to prevent TCP bursts."""
-    jitter_range = int(base_interval * 0.2)  # 20% jitter
-    jitter = random.randint(-jitter_range, jitter_range)
-    return timedelta(seconds=base_interval + jitter)
 
 
 class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
@@ -29,7 +21,7 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         demo_mode: bool = False,
     ):
         # Add jitter to scan interval
-        update_interval = add_jitter(scan_interval)
+        update_interval = add_jitter(scan_interval, DEFAULT_JITTER)
 
         super().__init__(
             hass,
@@ -79,7 +71,7 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         demo_mode: bool = False,
     ):
         # Add jitter to scan interval
-        update_interval = add_jitter(scan_interval)
+        update_interval = add_jitter(scan_interval, DEFAULT_JITTER)
 
         super().__init__(
             hass,

@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from typing import Any
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, Event
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .const import DOMAIN
 from .coordinator import DaikinAlthermaNormalCoordinator, DaikinAlthermaSlowCoordinator
@@ -100,6 +100,19 @@ class UnifiedWriteProxy:
         self._normal_coordinator = normal_coordinator
         self._slow_coordinator = slow_coordinator
 
+    async def _async_fire_write_event(self, register_name: str, value: Any) -> None:
+        """Fire domain event for write operations."""
+        event_data = {
+            "register_name": register_name,
+            "value": value,
+            "source": "write_operation",
+        }
+
+        # Fire domain event for automatic refresh
+        self._normal_coordinator.hass.bus.async_fire(
+            f"{DOMAIN}_register_written", event_data
+        )
+
     async def _async_refresh_after_write(self) -> None:
         """Refresh both source coordinators without aborting on single failures."""
         results = await asyncio.gather(
@@ -113,12 +126,12 @@ class UnifiedWriteProxy:
                 _LOGGER.warning("Post-write refresh failed: %s", result)
 
     async def write_holding_register(self, register_name: str, value: int) -> Any:
-        """Write a holding register and refresh coordinators."""
+        """Write a holding register and fire domain event."""
         result = await self._slow_coordinator.data_manager.write_holding_register(
             register_name, value
         )
         if result is not None:
-            await self._async_refresh_after_write()
+            await self._async_fire_write_event(register_name, value)
         return result
 
     async def write_coil_register(self, register_name: str, value: bool) -> Any:
@@ -127,7 +140,7 @@ class UnifiedWriteProxy:
             register_name, value
         )
         if result is not None:
-            await self._async_refresh_after_write()
+            await self._async_fire_write_event(register_name, value)
         return result
 
 
@@ -154,7 +167,8 @@ class UnifiedCoordinator(DataUpdateCoordinator):
         self._unsubscribers: list = []
 
     async def async_setup(self) -> None:
-        """Attach listeners to source coordinators."""
+        """Attach listeners to source coordinators and domain events."""
+        # Listen to source coordinator updates
         self._unsubscribers.append(
             self.normal_coordinator.async_add_listener(
                 self._handle_source_coordinator_update
@@ -163,6 +177,13 @@ class UnifiedCoordinator(DataUpdateCoordinator):
         self._unsubscribers.append(
             self.slow_coordinator.async_add_listener(
                 self._handle_source_coordinator_update
+            )
+        )
+
+        # Listen to domain write events for automatic refresh
+        self._unsubscribers.append(
+            self.hass.bus.async_listen(
+                f"{DOMAIN}_register_written", self._handle_write_event
             )
         )
 
@@ -178,6 +199,27 @@ class UnifiedCoordinator(DataUpdateCoordinator):
     def _handle_source_coordinator_update(self) -> None:
         """Push merged data whenever one source coordinator updates."""
         self.async_set_updated_data(self.manager.get_all_data())
+
+    def _handle_write_event(self, event: Event) -> None:
+        """Handle write events by triggering refresh."""
+        _LOGGER.debug(
+            f"Write event received for register {event.data.get('register_name')}, "
+            f"triggering automatic refresh"
+        )
+        # Trigger refresh after write operation
+        asyncio.create_task(self._async_refresh_after_write())
+
+    async def _async_refresh_after_write(self) -> None:
+        """Refresh both source coordinators after write operation."""
+        results = await asyncio.gather(
+            self._slow_coordinator.async_request_refresh(),
+            self._normal_coordinator.async_request_refresh(),
+            return_exceptions=True,
+        )
+
+        for result in results:
+            if isinstance(result, Exception):
+                _LOGGER.warning("Post-write refresh failed: %s", result)
 
     async def _async_update_data(self):
         """Manual refresh path for user-triggered refreshes."""

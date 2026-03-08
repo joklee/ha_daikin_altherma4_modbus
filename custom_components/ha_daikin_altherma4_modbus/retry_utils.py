@@ -2,8 +2,10 @@
 
 import asyncio
 import logging
+import random
 from typing import Callable, TypeVar, Optional
 from functools import wraps
+from datetime import timedelta
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,8 +68,6 @@ async def retry_async(
 
                     # Add jitter to prevent thundering herd
                     if config.jitter:
-                        import random
-
                         delay *= 0.5 + random.random() * 0.5
 
                     _LOGGER.warning(
@@ -84,9 +84,47 @@ async def retry_async(
     return decorator
 
 
+def add_jitter(base_interval: int, jitter_percent: float = 0.2) -> timedelta:
+    """Add random jitter to prevent TCP bursts.
+
+    Args:
+        base_interval: Base interval in seconds
+        jitter_percent: Percentage of jitter (default: 0.2 = 20%)
+
+    Returns:
+        timedelta: Interval with jitter applied
+    """
+    jitter_range = int(base_interval * jitter_percent)
+    jitter = random.randint(-jitter_range, jitter_range)
+    return timedelta(seconds=base_interval + jitter)
+
+
+def add_exponential_jitter(
+    base_interval: int, attempt: int, max_jitter: float = 0.5
+) -> timedelta:
+    """Add exponential jitter for retry operations.
+
+    Args:
+        base_interval: Base interval in seconds
+        attempt: Current attempt number (0-based)
+        max_jitter: Maximum jitter percentage (default: 0.5 = 50%)
+
+    Returns:
+        timedelta: Interval with exponential jitter applied
+    """
+    exponential_factor = min(2**attempt, 10)  # Cap at 10x
+    jitter_range = int(base_interval * max_jitter)
+    jitter = random.randint(-jitter_range, jitter_range)
+    return timedelta(seconds=base_interval * exponential_factor + jitter)
+
+
 # Default retry configurations
 CONNECTION_RETRY = RetryConfig(max_attempts=3, base_delay=2.0, max_delay=30.0)
 
 READ_RETRY = RetryConfig(max_attempts=2, base_delay=0.5, max_delay=5.0)
 
 WRITE_RETRY = RetryConfig(max_attempts=2, base_delay=1.0, max_delay=10.0)
+
+# Default jitter configurations
+DEFAULT_JITTER = 0.2  # 20% jitter for normal operations
+RETRY_JITTER = 0.5  # 50% jitter for retry operations

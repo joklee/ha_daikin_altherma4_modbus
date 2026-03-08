@@ -1,18 +1,8 @@
 """Helper functions for Daikin Altherma Modbus integration."""
 
 import logging
-import random
-from datetime import timedelta
-
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def add_jitter(base_interval: int) -> timedelta:
-    """Add random jitter to prevent TCP bursts."""
-    jitter_range = int(base_interval * 0.2)  # 20% jitter
-    jitter = random.randint(-jitter_range, jitter_range)
-    return timedelta(seconds=base_interval + jitter)
 
 
 def update_value_if_changed(
