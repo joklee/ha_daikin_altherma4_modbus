@@ -13,6 +13,13 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def _entry_value(entry, key, default=None):
+    """Read config from options first, then fallback to data."""
+    options = getattr(entry, "options", {}) or {}
+    data = getattr(entry, "data", {}) or {}
+    return options.get(key, data.get(key, default))
+
+
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup aller Sensors über Config Entry."""
     coordinators = hass.data[DOMAIN][entry.entry_id]
@@ -382,7 +389,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         heat_power = self._calculate_thermal_heat_output()  # in W
 
         # Elektrische Leistung
-        electric_power_sensor = self._entry.data.get("electric_power_sensor")
+        electric_power_sensor = _entry_value(self._entry, "electric_power_sensor")
         if electric_power_sensor:
             # Externer Sensor
             state = self.coordinator.hass.states.get(electric_power_sensor)
@@ -489,7 +496,7 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
     def available(self) -> bool:
         """Return True if entity is available."""
         # Check if electric_power_sensor is configured
-        electric_power_sensor = self._entry.data.get("electric_power_sensor")
+        electric_power_sensor = _entry_value(self._entry, "electric_power_sensor")
         _LOGGER.debug(
             f"ExternalElectricPowerSensor available check: electric_power_sensor = {electric_power_sensor}"
         )
@@ -515,7 +522,7 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Gibt den Wert des externen elektrischen Leistungssensors zurück."""
-        electric_power_sensor = self._entry.data.get("electric_power_sensor")
+        electric_power_sensor = _entry_value(self._entry, "electric_power_sensor")
         if electric_power_sensor:
             state = self.coordinator.hass.states.get(electric_power_sensor)
             if state and state.state not in [None, "unknown", "unavailable"]:

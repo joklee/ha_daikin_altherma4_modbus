@@ -6,6 +6,13 @@ from .modbus_client import RealModbusTcpClient
 _LOGGER = logging.getLogger(__name__)
 
 
+def _entry_value(entry, key, default=None):
+    """Read config from options first, then fallback to data."""
+    options = getattr(entry, "options", {}) or {}
+    data = getattr(entry, "data", {}) or {}
+    return options.get(key, data.get(key, default))
+
+
 def _has_other_entry_for_endpoint(
     domain_data: dict, current_entry_id: str, host: str, port: int
 ) -> bool:
@@ -21,11 +28,11 @@ def _has_other_entry_for_endpoint(
 
 async def async_setup_entry(hass, entry):
     # Create dynamic device info with connection parameters
-    host = entry.data.get("host", "")
-    port = entry.data.get("port", 502)
-    scan_interval = entry.data.get("scan_interval", NORMAL_SCAN_INTERVAL)
-    slow_scan_interval = entry.data.get("slow_scan_interval", SLOW_SCAN_INTERVAL)
-    demo_mode = entry.data.get("demo_mode", False)
+    host = _entry_value(entry, "host", "")
+    port = _entry_value(entry, "port", 502)
+    scan_interval = _entry_value(entry, "scan_interval", NORMAL_SCAN_INTERVAL)
+    slow_scan_interval = _entry_value(entry, "slow_scan_interval", SLOW_SCAN_INTERVAL)
+    demo_mode = _entry_value(entry, "demo_mode", False)
 
     # Create device info with connection parameters
 
@@ -33,9 +40,6 @@ async def async_setup_entry(hass, entry):
     manager = CoordinatorManager(
         hass, host, port, scan_interval, slow_scan_interval, demo_mode
     )
-
-    # Setup all coordinators
-    await manager.async_setup()
 
     # Get individual coordinators
     normal_coordinator = manager.get_coordinator("normal")
@@ -48,7 +52,7 @@ async def async_setup_entry(hass, entry):
         slow_coordinator,
     )
     await unified_coordinator.async_setup()
-    unified_coordinator.async_set_updated_data(manager.get_all_data())
+    await manager.async_setup()
 
     _LOGGER.debug(
         "Unified coordinator initialized with %d data points",
@@ -88,8 +92,8 @@ async def async_unload_entry(hass, entry):
     if unified_coordinator and hasattr(unified_coordinator, "async_shutdown"):
         await unified_coordinator.async_shutdown()
 
-    host = entry.data.get("host", "")
-    port = entry.data.get("port", 502)
+    host = _entry_value(entry, "host", "")
+    port = _entry_value(entry, "port", 502)
     shared_endpoint_in_use = _has_other_entry_for_endpoint(
         domain_data, entry.entry_id, host, port
     )
