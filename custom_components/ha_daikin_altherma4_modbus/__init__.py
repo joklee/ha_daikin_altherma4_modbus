@@ -48,7 +48,7 @@ async def async_setup_entry(hass, entry):
         slow_coordinator,
     )
     await unified_coordinator.async_setup()
-    await unified_coordinator.async_config_entry_first_refresh()
+    unified_coordinator.async_set_updated_data(manager.get_all_data())
 
     _LOGGER.debug(
         "Unified coordinator initialized with %d data points",
