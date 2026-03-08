@@ -3,7 +3,7 @@
 import logging
 import asyncio
 from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.exceptions import ModbusException, ModbusIOException
+import pymodbus.exceptions
 from .client_interface import ModbusClientInterface
 from .exceptions import (
     ModbusReadException,
@@ -139,7 +139,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                         f"Device error reading input registers at {address}"
                     )
                 return OneBasedModbusResponse(original_response, address, is_bits=False)
-            except ModbusIOException as e:
+            except pymodbus.exceptions.ModbusIOException as e:
                 raise ModbusReadException(
                     f"I/O error reading input registers at {address}", e
                 )
@@ -147,7 +147,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusTimeoutException(
                     f"Timeout reading input registers at {address}", e
                 )
-            except ModbusException as e:
+            except pymodbus.exceptions.ModbusException as e:
                 raise ModbusReadException(
                     f"Modbus error reading input registers at {address}", e
                 )
@@ -168,7 +168,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                         f"Device error reading holding registers at {address}"
                     )
                 return OneBasedModbusResponse(original_response, address, is_bits=False)
-            except ModbusIOException as e:
+            except pymodbus.exceptions.ModbusIOException as e:
                 raise ModbusReadException(
                     f"I/O error reading holding registers at {address}", e
                 )
@@ -176,7 +176,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusTimeoutException(
                     f"Timeout reading holding registers at {address}", e
                 )
-            except ModbusException as e:
+            except pymodbus.exceptions.ModbusException as e:
                 raise ModbusReadException(
                     f"Modbus error reading holding registers at {address}", e
                 )
@@ -197,7 +197,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                         f"Device error reading discrete inputs at {address}"
                     )
                 return OneBasedModbusResponse(original_response, address, is_bits=True)
-            except ModbusIOException as e:
+            except pymodbus.exceptions.ModbusIOException as e:
                 raise ModbusReadException(
                     f"I/O error reading discrete inputs at {address}", e
                 )
@@ -205,7 +205,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusTimeoutException(
                     f"Timeout reading discrete inputs at {address}", e
                 )
-            except ModbusException as e:
+            except pymodbus.exceptions.ModbusException as e:
                 raise ModbusReadException(
                     f"Modbus error reading discrete inputs at {address}", e
                 )
@@ -224,11 +224,11 @@ class RealModbusTcpClient(ModbusClientInterface):
                         f"Device error reading coils at {address}"
                     )
                 return OneBasedModbusResponse(original_response, address, is_bits=True)
-            except ModbusIOException as e:
+            except pymodbus.exceptions.ModbusIOException as e:
                 raise ModbusReadException(f"I/O error reading coils at {address}", e)
             except asyncio.TimeoutError as e:
                 raise ModbusTimeoutException(f"Timeout reading coils at {address}", e)
-            except ModbusException as e:
+            except pymodbus.exceptions.ModbusException as e:
                 raise ModbusReadException(f"Modbus error reading coils at {address}", e)
 
     async def write_holding_register(self, address: int, value: int):
@@ -242,7 +242,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                         f"Device error writing holding register {address}"
                     )
                 return result
-            except ModbusIOException as e:
+            except pymodbus.exceptions.ModbusIOException as e:
                 raise ModbusWriteException(
                     f"I/O error writing holding register {address}", e
                 )
@@ -250,7 +250,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusTimeoutException(
                     f"Timeout writing holding register {address}", e
                 )
-            except ModbusException as e:
+            except pymodbus.exceptions.ModbusException as e:
                 raise ModbusWriteException(
                     f"Modbus error writing holding register {address}", e
                 )
@@ -264,11 +264,11 @@ class RealModbusTcpClient(ModbusClientInterface):
                 if self._is_modbus_error(result):
                     raise ModbusDeviceException(f"Device error writing coil {address}")
                 return result
-            except ModbusIOException as e:
+            except pymodbus.exceptions.ModbusIOException as e:
                 raise ModbusWriteException(f"I/O error writing coil {address}", e)
             except asyncio.TimeoutError as e:
                 raise ModbusTimeoutException(f"Timeout writing coil {address}", e)
-            except ModbusException as e:
+            except pymodbus.exceptions.ModbusException as e:
                 raise ModbusWriteException(f"Modbus error writing coil {address}", e)
 
     async def _ensure_connection(self) -> None:

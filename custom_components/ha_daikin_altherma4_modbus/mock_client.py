@@ -18,7 +18,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         self._connected = False
         self._data_regenerated = False  # Flag to track data regeneration
         # Force regeneration of demo data to ensure new enum logic is used
-        self._demo_data = self._generate_demo_register_data()
+        self._demo_data = self.generate_demo_register_data()
         _LOGGER.info(
             f"Mock Modbus client initialized with {len(self._demo_data['input_registers'])} input registers"
         )
@@ -43,7 +43,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         self, address: int, count: int
     ) -> "MockModbusResponse":
         """Mock read input registers."""
-        self._demo_data = self._generate_demo_register_data()
+        self._demo_data = self.generate_demo_register_data()
 
         return MockModbusResponse(self._demo_data["input_registers"], address, count)
 
@@ -51,7 +51,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         self, address: int, count: int
     ) -> "MockModbusResponse":
         """Mock read holding registers."""
-        self._demo_data = self._generate_demo_register_data()
+        self._demo_data = self.generate_demo_register_data()
 
         return MockModbusResponse(self._demo_data["holding_registers"], address, count)
 
@@ -59,7 +59,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         self, address: int, count: int
     ) -> "MockModbusResponse":
         """Mock read discrete inputs."""
-        self._demo_data = self._generate_demo_register_data()
+        self._demo_data = self.generate_demo_register_data()
 
         return MockModbusResponse(
             self._demo_data["discrete_inputs"], address, count, is_bits=True
@@ -67,7 +67,7 @@ class MockModbusTcpClient(ModbusClientInterface):
 
     async def read_coils(self, address: int, count: int) -> "MockModbusResponse":
         """Mock read coils."""
-        self._demo_data = self._generate_demo_register_data()
+        self._demo_data = self.generate_demo_register_data()
 
         # Convert 1-based address to 0-based for internal use
         return MockModbusResponse(
@@ -99,7 +99,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         return MockModbusResponse([], 0, 0)  # Success response
 
     @staticmethod
-    def _generate_demo_register_data() -> dict:
+    def generate_demo_register_data() -> dict:
         """Generate realistic demo data for all register types based on const.py."""
         import random
         from .const import (

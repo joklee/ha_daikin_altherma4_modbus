@@ -89,7 +89,7 @@ def mock_client():
 @pytest.fixture
 def demo_data():
     """Demo register data."""
-    return MockModbusTcpClient._generate_demo_register_data()
+    return MockModbusTcpClient.generate_demo_register_data()
 
 
 class TestMockClientWithCoverage:
@@ -183,7 +183,7 @@ class TestIntegrationWithCoverage:
     def test_full_workflow(self, mock_client):
         """Test complete workflow."""
         # Test data generation
-        demo_data = MockModbusTcpClient._generate_demo_register_data()
+        demo_data = MockModbusTcpClient.generate_demo_register_data()
         assert isinstance(demo_data, dict)
 
         # Test response creation
@@ -202,7 +202,7 @@ class TestIntegrationWithCoverage:
         MockModbusTcpClient("192.168.1.100", 502)
 
         # Test that client handles operations gracefully
-        demo_data = MockModbusTcpClient._generate_demo_register_data()
+        demo_data = MockModbusTcpClient.generate_demo_register_data()
         discrete_inputs = demo_data.get("discrete_inputs", [])
 
         # Verify the fix: no UnboundLocalError should occur

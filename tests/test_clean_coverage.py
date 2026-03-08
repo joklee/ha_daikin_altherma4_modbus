@@ -87,7 +87,7 @@ def mock_client():
 @pytest.fixture
 def demo_data():
     """Demo register data."""
-    return MockModbusTcpClient._generate_demo_register_data()
+    return MockModbusTcpClient.generate_demo_register_data()
 
 
 class TestMockClientClean:
@@ -179,7 +179,7 @@ class TestIntegrationClean:
 
     def test_full_workflow(self, mock_client):
         """Test complete workflow."""
-        demo_data = MockModbusTcpClient._generate_demo_register_data()
+        demo_data = MockModbusTcpClient.generate_demo_register_data()
         assert isinstance(demo_data, dict)
 
         response = MockModbusResponse([100, 200], 1, 2)
@@ -195,7 +195,7 @@ class TestIntegrationClean:
     def test_error_handling(self):
         """Test error handling."""
         MockModbusTcpClient("192.168.1.100", 502)
-        demo_data = MockModbusTcpClient._generate_demo_register_data()
+        demo_data = MockModbusTcpClient.generate_demo_register_data()
         discrete_inputs = demo_data.get("discrete_inputs", [])
 
         # Verify the fix works

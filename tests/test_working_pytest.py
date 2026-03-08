@@ -82,7 +82,7 @@ def mock_client():
 @pytest.fixture
 def demo_data():
     """Demo register data."""
-    return mock_client_module.MockModbusTcpClient._generate_demo_register_data()
+    return mock_client_module.MockModbusTcpClient.generate_demo_register_data()
 
 
 class TestMockClient:
@@ -169,9 +169,7 @@ class TestIntegration:
     def test_full_workflow(self, mock_client):
         """Test complete workflow."""
         # Test data generation
-        demo_data = (
-            mock_client_module.MockModbusTcpClient._generate_demo_register_data()
-        )
+        demo_data = mock_client_module.MockModbusTcpClient.generate_demo_register_data()
         assert isinstance(demo_data, dict)
 
         # Test response creation
