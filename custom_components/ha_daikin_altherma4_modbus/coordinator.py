@@ -44,9 +44,8 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         self.port = port
         self.demo_mode = demo_mode
 
-        # Unified data manager for input registers
+        # Data manager for input/discrete registers
         self.data_manager = ModbusDataManager(host, port, demo_mode)
-        self.data_manager.coordinator = self  # Set coordinator reference
 
         self.data = {}
 
@@ -95,9 +94,8 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         self.port = port
         self.demo_mode = demo_mode
 
-        # Unified data manager for coil and holding registers
+        # Data manager for coil/holding registers
         self.data_manager = ModbusDataManager(host, port, demo_mode)
-        self.data_manager.coordinator = self  # Set coordinator reference
 
         self.data = {}
 

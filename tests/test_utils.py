@@ -28,6 +28,10 @@ class MockDataUpdateCoordinator:
         self.update_interval = update_interval
         self.data = {}
 
+    async def async_config_entry_first_refresh(self):
+        """Mock initial refresh used during integration setup."""
+        return None
+
 
 class UpdateFailed(Exception):
     """Mock UpdateFailed exception."""

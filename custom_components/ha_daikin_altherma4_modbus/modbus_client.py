@@ -293,6 +293,27 @@ class RealModbusTcpClient(ModbusClientInterface):
     @classmethod
     def clear_cache(cls):
         """Clear the client cache (useful for testing or reconnection)."""
-        global _client_cache
+        global _client_cache, _client_locks
         _client_cache.clear()
+        _client_locks.clear()
         _LOGGER.debug("AsyncModbusTcpClient cache cleared")
+
+    @classmethod
+    async def async_close_cached_client(cls, host: str, port: int = 502) -> None:
+        """Close and remove a specific cached client."""
+        global _client_cache, _client_locks
+        cache_key = f"{host}:{port}"
+        client = _client_cache.get(cache_key)
+
+        if client is None:
+            return
+
+        try:
+            if getattr(client, "connected", False):
+                client.close()
+        except Exception as err:
+            _LOGGER.debug("Failed closing cached client %s: %s", cache_key, err)
+        finally:
+            _client_cache.pop(cache_key, None)
+            _client_locks.pop(cache_key, None)
+            _LOGGER.debug("Removed cached AsyncModbusTcpClient for %s", cache_key)

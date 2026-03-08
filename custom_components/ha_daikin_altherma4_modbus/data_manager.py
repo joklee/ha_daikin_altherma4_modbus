@@ -612,8 +612,16 @@ class ModbusDataManager:
 
     async def write_holding_register(self, register_name: str, value: int) -> Any:
         """Write to a holding register by name (e.g., 'holding_3' -> address 3)."""
-        if self.client is None:
-            _LOGGER.error("Modbus client is None, cannot write register")
+        try:
+            self.client = await ensure_modbus_connection(
+                self.client, self.host, self.port, self.demo_mode
+            )
+        except Exception as e:
+            _LOGGER.error(
+                "Cannot write holding register %s - Modbus connection unavailable: %s",
+                register_name,
+                e,
+            )
             return None
 
         try:
@@ -644,8 +652,16 @@ class ModbusDataManager:
 
     async def write_coil_register(self, register_name: str, value: bool) -> Any:
         """Write to a coil register by name (e.g., 'coil_1' -> address 1)."""
-        if self.client is None:
-            _LOGGER.error("Modbus client is None, cannot write coil")
+        try:
+            self.client = await ensure_modbus_connection(
+                self.client, self.host, self.port, self.demo_mode
+            )
+        except Exception as e:
+            _LOGGER.error(
+                "Cannot write coil %s - Modbus connection unavailable: %s",
+                register_name,
+                e,
+            )
             return None
 
         # Extract numeric address from string

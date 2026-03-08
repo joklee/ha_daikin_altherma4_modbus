@@ -1,10 +1,22 @@
 import logging
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .const import DOMAIN, SLOW_SCAN_INTERVAL, NORMAL_SCAN_INTERVAL
-from .coordinator_manager import CoordinatorManager
+from .coordinator_manager import CoordinatorManager, UnifiedCoordinator
 from .modbus_client import RealModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _has_other_entry_for_endpoint(
+    domain_data: dict, current_entry_id: str, host: str, port: int
+) -> bool:
+    """Return True if another loaded entry uses the same host/port."""
+    for entry_id, data in domain_data.items():
+        if entry_id == current_entry_id:
+            continue
+        manager = data.get("manager")
+        if manager and manager.host == host and manager.port == port:
+            return True
+    return False
 
 
 async def async_setup_entry(hass, entry):
@@ -29,63 +41,18 @@ async def async_setup_entry(hass, entry):
     normal_coordinator = manager.get_coordinator("normal")
     slow_coordinator = manager.get_coordinator("slow")
 
-    # Create unified coordinator for backward compatibility
-    class UnifiedCoordinator(DataUpdateCoordinator):
-        def __init__(self, hass_instance, coord_manager):
-            # Use a moderate interval since we just combine existing data
-            update_interval = normal_coordinator.update_interval
+    unified_coordinator = UnifiedCoordinator(
+        hass,
+        manager,
+        normal_coordinator,
+        slow_coordinator,
+    )
+    await unified_coordinator.async_setup()
+    await unified_coordinator.async_config_entry_first_refresh()
 
-            super().__init__(
-                hass_instance,
-                _LOGGER,
-                name=f"{DOMAIN}_unified",
-                update_interval=update_interval,
-            )
-            _LOGGER.info(
-                f"UnifiedCoordinator initialized with interval: {update_interval.total_seconds():.1f}s"
-            )
-            self.manager = coord_manager
-            self.normal_coordinator = normal_coordinator
-            self.slow_coordinator = slow_coordinator
-            self.data_manager = (
-                normal_coordinator.data_manager
-            )  # Use normal data_manager for writes
-            self.data_manager.coordinator = self  # Set coordinator reference
-            self.data = {}  # Initialize data attribute
-            self._last_data_hash = None
-
-        async def _async_update_data(self):
-            # Combine data from all coordinators
-            _LOGGER.debug("UnifiedCoordinator update called")
-
-            # Get current data
-            unified_data = self.manager.get_all_data()
-
-            # Only update if data actually changed
-            import hashlib
-            import json
-
-            current_hash = hashlib.md5(
-                json.dumps(unified_data, sort_keys=True, default=str).encode()
-            ).hexdigest()
-
-            if current_hash != self._last_data_hash:
-                self.data = unified_data
-                self._last_data_hash = current_hash
-                _LOGGER.debug(
-                    f"UnifiedCoordinator data updated ({len(unified_data)} items)"
-                )
-            else:
-                _LOGGER.debug("UnifiedCoordinator data unchanged")
-
-            return unified_data
-
-    unified_coordinator = UnifiedCoordinator(hass, manager)
-
-    # Initialize unified coordinator data
-    unified_coordinator.data = manager.get_all_data()
     _LOGGER.debug(
-        f"Unified coordinator initialized with {len(unified_coordinator.data)} data points"
+        "Unified coordinator initialized with %d data points",
+        len(unified_coordinator.data),
     )
 
     hass.data.setdefault(DOMAIN, {})
@@ -102,78 +69,41 @@ async def async_setup_entry(hass, entry):
     return True
 
 
-async def async_update_entry(hass, entry):
-    """Handle config entry updates."""
-    _LOGGER.debug("=== async_update_entry called ===")
-    _LOGGER.debug(f"Updating entry. Current data: {entry.data}")
-    _LOGGER.debug(f"Entry options: {entry.options}")
-
-    # Create new data dict with current data
-    new_data = dict(entry.data)
-
-    # Update connection parameters if they changed
-    if "host" in entry.options:
-        new_data["host"] = entry.options["host"]
-        _LOGGER.debug(f"Updated host to: {entry.options['host']}")
-
-    if "port" in entry.options:
-        new_data["port"] = entry.options["port"]
-        _LOGGER.debug(f"Updated port to: {entry.options['port']}")
-
-    if "scan_interval" in entry.options:
-        new_data["scan_interval"] = entry.options["scan_interval"]
-        _LOGGER.debug(f"Updated scan_interval to: {entry.options['scan_interval']}")
-
-    # Update electric_power_sensor if present
-    if "electric_power_sensor" in entry.options:
-        if entry.options["electric_power_sensor"].strip():
-            new_data["electric_power_sensor"] = entry.options[
-                "electric_power_sensor"
-            ].strip()
-            _LOGGER.debug(
-                f"Updated electric_power_sensor to: {entry.options['electric_power_sensor'].strip()}"
-            )
-        else:
-            if "electric_power_sensor" in new_data:
-                del new_data["electric_power_sensor"]
-                _LOGGER.debug("Removed electric_power_sensor")
-
-    # Update demo_mode if present
-    if "demo_mode" in entry.options:
-        new_data["demo_mode"] = entry.options["demo_mode"]
-        _LOGGER.debug(f"Updated demo_mode to: {entry.options['demo_mode']}")
-
-    _LOGGER.debug(f"New entry data will be: {new_data}")
-    # Update the entry with new data
-    hass.config_entries.async_update_entry(entry, data=new_data)
-
-    _LOGGER.debug("Reloading entry...")
-    await hass.config_entries.async_reload(entry.entry_id)
-    _LOGGER.debug("=== async_update_entry completed ===")
-
-
 async def async_unload_entry(hass, entry):
     """Handle config entry unload and close connections before HA restart."""
-    _LOGGER.info(f"Unloading entry {entry.entry_id} - closing Modbus connections")
+    _LOGGER.info("Unloading entry %s - closing Modbus connections", entry.entry_id)
 
-    # Get manager and shutdown coordinators
-    entry_data = hass.data[DOMAIN].get(entry.entry_id, {})
+    domain_data = hass.data.get(DOMAIN, {})
+    entry_data = domain_data.get(entry.entry_id, {})
+    unified_coordinator = entry_data.get("coordinator")
     manager = entry_data.get("manager")
-
-    if manager:
-        await manager.async_shutdown()
-
-    # Close all Modbus connections
-    RealModbusTcpClient.clear_cache()
 
     unload_ok = await hass.config_entries.async_unload_platforms(
         entry, ["sensor", "binary_sensor", "number", "select", "climate", "switch"]
     )
-    if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
-        # Clean up device info
-        _LOGGER.info(f"Successfully unloaded entry {entry.entry_id}")
-    else:
-        _LOGGER.warning(f"Failed to unload entry {entry.entry_id}")
+    if not unload_ok:
+        _LOGGER.warning("Failed to unload entry %s", entry.entry_id)
+        return False
 
-    return unload_ok
+    if unified_coordinator and hasattr(unified_coordinator, "async_shutdown"):
+        await unified_coordinator.async_shutdown()
+
+    host = entry.data.get("host", "")
+    port = entry.data.get("port", 502)
+    shared_endpoint_in_use = _has_other_entry_for_endpoint(
+        domain_data, entry.entry_id, host, port
+    )
+
+    if manager:
+        await manager.async_shutdown(disconnect_clients=not shared_endpoint_in_use)
+
+    if not shared_endpoint_in_use:
+        await RealModbusTcpClient.async_close_cached_client(host, port)
+
+    domain_data.pop(entry.entry_id, None)
+    _LOGGER.info("Successfully unloaded entry %s", entry.entry_id)
+
+    if not domain_data and DOMAIN in hass.data:
+        hass.data.pop(DOMAIN, None)
+
+    return True
