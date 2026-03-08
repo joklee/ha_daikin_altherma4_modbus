@@ -13,6 +13,7 @@ from .const import (
     DISCRETE_INPUT_SENSORS,
     COIL_SENSORS,
 )
+from .data_types import StateData
 from .mapping_transform import ModbusMappingTransform
 from .register_repository import ModbusRegisterRepository
 from .transport_session import ModbusTransportSession
@@ -52,7 +53,7 @@ class ModbusDataManager:
         """Compatibility shim for legacy call sites."""
         return ModbusTransportSession.is_modbus_error(response)
 
-    async def _ensure_connection_and_prepare_data(self) -> dict:
+    async def _ensure_connection_and_prepare_data(self) -> StateData:
         """Ensure active connection and keep legacy return contract."""
         await self._session.ensure_connection()
         return {}
@@ -72,7 +73,7 @@ class ModbusDataManager:
                         "Failed to notify coordinator of data change: %s", err
                     )
 
-    async def fetch_input_registers_data(self) -> dict:
+    async def fetch_input_registers_data(self) -> StateData:
         """Fetch only input registers."""
         start_time = time.time()
         data = await self._ensure_connection_and_prepare_data()
@@ -88,7 +89,7 @@ class ModbusDataManager:
         _LOGGER.debug("Input Registers processed in %.3fs", time.time() - start_time)
         return data
 
-    async def fetch_discrete_inputs_data(self) -> dict:
+    async def fetch_discrete_inputs_data(self) -> StateData:
         """Fetch only discrete inputs."""
         start_time = time.time()
         data = await self._ensure_connection_and_prepare_data()
@@ -105,7 +106,7 @@ class ModbusDataManager:
         _LOGGER.debug("Discrete Inputs processed in %.3fs", time.time() - start_time)
         return data
 
-    async def fetch_coils_data(self) -> dict:
+    async def fetch_coils_data(self) -> StateData:
         """Fetch only coils."""
         start_time = time.time()
         data = await self._ensure_connection_and_prepare_data()
@@ -119,7 +120,7 @@ class ModbusDataManager:
         _LOGGER.debug("Coils processed in %.3fs", time.time() - start_time)
         return data
 
-    async def fetch_holding_registers_data(self) -> dict:
+    async def fetch_holding_registers_data(self) -> StateData:
         """Fetch only holding registers."""
         start_time = time.time()
         data = await self._ensure_connection_and_prepare_data()
@@ -135,7 +136,7 @@ class ModbusDataManager:
         _LOGGER.debug("Holding Registers processed in %.3fs", time.time() - start_time)
         return data
 
-    async def refresh_holding_registers(self) -> dict:
+    async def refresh_holding_registers(self) -> StateData:
         """Refresh holding registers for interval updates."""
         start_time = time.time()
         data = await self._ensure_connection_and_prepare_data()
@@ -150,7 +151,7 @@ class ModbusDataManager:
 
         return data
 
-    async def refresh_coils(self) -> dict:
+    async def refresh_coils(self) -> StateData:
         """Refresh coils for interval updates."""
         start_time = time.time()
         data = await self._ensure_connection_and_prepare_data()
@@ -163,7 +164,7 @@ class ModbusDataManager:
 
         return data
 
-    async def refresh_all_data(self) -> dict:
+    async def refresh_all_data(self) -> StateData:
         """Refresh all Modbus data for interval updates."""
         start_time = time.time()
         data = await self._ensure_connection_and_prepare_data()
@@ -181,7 +182,7 @@ class ModbusDataManager:
 
         return data
 
-    async def fetch_all_data(self) -> dict:
+    async def fetch_all_data(self) -> StateData:
         """Fetch all Modbus data and return structured data dictionary."""
         start_time = time.time()
         data = await self._ensure_connection_and_prepare_data()
@@ -198,7 +199,7 @@ class ModbusDataManager:
         _LOGGER.debug("All registers read in %.3fs", time.time() - start_time)
         return data
 
-    async def _fetch_all_register_data(self) -> dict:
+    async def _fetch_all_register_data(self) -> StateData:
         """Common method to fetch all register groups."""
         data = {}
         data.update(await self._fetch_input_registers())
@@ -210,7 +211,7 @@ class ModbusDataManager:
         data.update(await self._fetch_holding_data())
         return data
 
-    async def _fetch_input_registers(self) -> dict:
+    async def _fetch_input_registers(self) -> StateData:
         """Fetch all input registers in configured blocks."""
         start_time = time.time()
         data = {}
@@ -230,7 +231,7 @@ class ModbusDataManager:
         _LOGGER.debug("Input Registers fully read in %.3fs", time.time() - start_time)
         return data
 
-    async def _fetch_discrete_inputs(self) -> dict:
+    async def _fetch_discrete_inputs(self) -> StateData:
         """Fetch all discrete inputs."""
         start_time = time.time()
         data = {}
@@ -246,7 +247,7 @@ class ModbusDataManager:
         _LOGGER.debug("Discrete Inputs fully read in %.3fs", time.time() - start_time)
         return data
 
-    async def _fetch_coils(self) -> dict:
+    async def _fetch_coils(self) -> StateData:
         """Fetch all coils."""
         start_time = time.time()
         data = {}
@@ -258,7 +259,7 @@ class ModbusDataManager:
         _LOGGER.debug("Coils fully read in %.3fs", time.time() - start_time)
         return data
 
-    async def _fetch_holding_data(self) -> dict:
+    async def _fetch_holding_data(self) -> StateData:
         """Fetch all holding/select/switch registers in configured blocks."""
         start_time = time.time()
         data = {}
@@ -295,7 +296,7 @@ class ModbusDataManager:
 
     async def _refresh_single_holding_register(
         self, register_id: str, address: int
-    ) -> dict:
+    ) -> StateData:
         """Refresh a single holding register."""
         result = await self._repository.read_single_holding_register(address)
         if result is None:
@@ -311,7 +312,7 @@ class ModbusDataManager:
             }
         }
 
-    async def _refresh_single_coil(self, register_id: str, address: int) -> dict:
+    async def _refresh_single_coil(self, register_id: str, address: int) -> StateData:
         """Refresh a single coil."""
         result = await self._repository.read_single_coil(address)
         if result is None:
@@ -323,6 +324,6 @@ class ModbusDataManager:
             register_id: {"value": raw_value, "input_type": "coil", "address": address}
         }
 
-    def _update_last_triggered(self, data: dict):
+    def _update_last_triggered(self, data: StateData):
         """Update last-triggered calculated sensors."""
         self._mapping.update_last_triggered(data)

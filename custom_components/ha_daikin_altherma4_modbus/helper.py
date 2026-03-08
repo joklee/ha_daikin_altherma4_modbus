@@ -1,17 +1,20 @@
 """Helper functions for Daikin Altherma Modbus integration."""
 
 import logging
+from typing import Any
+
+from .data_types import EntityStatePayload, StateMapping
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def update_value_if_changed(
     unique_id: str,
-    raw_value,
-    previous_data: dict,
+    raw_value: Any,
+    previous_data: StateMapping,
     register_type: str = "register",
     **kwargs,
-) -> dict:
+) -> EntityStatePayload:
     """Update value if changed and return data dictionary.
 
     Args:
@@ -22,7 +25,7 @@ def update_value_if_changed(
         **kwargs: Additional fields for the data dictionary (input_type, address, etc.)
 
     Returns:
-        dict: Complete data dictionary for the register (new or unchanged)
+        EntityStatePayload: Complete data payload for the register (new or unchanged)
     """
     # Get previous value
     prev_data = previous_data.get(unique_id, {})

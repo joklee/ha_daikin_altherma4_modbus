@@ -1,7 +1,15 @@
 """Mapping/transform layer for raw Modbus responses."""
 
 import logging
+from typing import Any, Dict, List
+
 from .const import CALCULATED_SENSORS
+from .data_types import (
+    LastTriggeredData,
+    ProcessedRegisterItem,
+    StateData,
+    StateMapping,
+)
 from .helper import update_value_if_changed
 
 _LOGGER = logging.getLogger(__name__)
@@ -11,21 +19,21 @@ class ModbusMappingTransform:
     """Transforms raw responses to integration entity state dictionaries."""
 
     def __init__(self):
-        self.previous_data: dict = {}
-        self.last_triggered: dict = {}
+        self.previous_data: StateData = {}
+        self.last_triggered: LastTriggeredData = {}
 
     @staticmethod
     def process_register_block(
         register_data,
-        register_list,
-        min_address,
-        max_address,
-        offset,
-        default_input_type,
-        register_description,
-    ) -> dict:
+        register_list: List[Dict[str, Any]],
+        min_address: int,
+        max_address: int,
+        offset: int,
+        default_input_type: str,
+        register_description: str,
+    ) -> Dict[str, ProcessedRegisterItem]:
         """Build raw register map for a configured address range."""
-        data = {}
+        data: Dict[str, ProcessedRegisterItem] = {}
         for item in register_list:
             address = item["address"]
             input_type = item.get("input_type", default_input_type)
@@ -54,7 +62,10 @@ class ModbusMappingTransform:
 
     @staticmethod
     def apply_register_processing(
-        register_name, processed_item, previous_data, include_scale=True
+        register_name: str,
+        processed_item: ProcessedRegisterItem,
+        previous_data: StateMapping,
+        include_scale: bool = True,
     ):
         """Apply scaling and unavailable handling to processed register payload."""
         raw_value = processed_item["raw_value"]
@@ -99,8 +110,13 @@ class ModbusMappingTransform:
         return update_value_if_changed(**kwargs)
 
     def process_input_register_block(
-        self, register_data, register_list, min_address, max_address, offset
-    ) -> dict:
+        self,
+        register_data,
+        register_list: List[Dict[str, Any]],
+        min_address: int,
+        max_address: int,
+        offset: int,
+    ) -> StateData:
         """Process a block of input registers."""
         processed_data = self.process_register_block(
             register_data,
@@ -112,7 +128,7 @@ class ModbusMappingTransform:
             "Input Register",
         )
 
-        data = {}
+        data: StateData = {}
         for register_name, processed_item in processed_data.items():
             raw_value = processed_item["raw_value"]
             item = processed_item["item"]
@@ -142,8 +158,13 @@ class ModbusMappingTransform:
         return data
 
     def process_holding_register_block(
-        self, register_data, register_list, min_address, max_address, offset
-    ) -> dict:
+        self,
+        register_data,
+        register_list: List[Dict[str, Any]],
+        min_address: int,
+        max_address: int,
+        offset: int,
+    ) -> StateData:
         """Process a block of holding registers."""
         processed_data = self.process_register_block(
             register_data,
@@ -155,16 +176,18 @@ class ModbusMappingTransform:
             "Holding Register",
         )
 
-        data = {}
+        data: StateData = {}
         for register_name, processed_item in processed_data.items():
             data[register_name] = self.apply_register_processing(
                 register_name, processed_item, self.previous_data
             )
         return data
 
-    def process_bit_sensors(self, result, sensor_list, sensor_type: str) -> dict:
+    def process_bit_sensors(
+        self, result, sensor_list: List[Dict[str, Any]], sensor_type: str
+    ) -> StateData:
         """Process bit-based sensors from Modbus bit response."""
-        data = {}
+        data: StateData = {}
         for item in sensor_list:
             address = item["address"]
             input_type = item.get("input_type", sensor_type)
@@ -190,7 +213,7 @@ class ModbusMappingTransform:
 
         return data
 
-    def update_last_triggered(self, data: dict) -> None:
+    def update_last_triggered(self, data: StateData) -> None:
         """Update timestamp-style calculated trigger sensors."""
         from homeassistant.util import dt as dt_util
 
