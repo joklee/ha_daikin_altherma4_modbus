@@ -13,7 +13,7 @@ permissions:
 jobs:
   validate:
     name: Validate integration
-    runs-on: actions_linux_slim_2core
+    runs-on: actions_linux_slim
 
     strategy:
       matrix:
