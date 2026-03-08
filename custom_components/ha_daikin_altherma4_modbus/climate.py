@@ -193,9 +193,9 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         quiet_data = self._get_register_data(f"{DOMAIN}_{REGISTER_QUIET_MODE}")
         quiet_raw = quiet_data.get("value", 0)
 
-        # Map quiet mode values to fan modes
-        quiet_modes = {0: FAN_AUTO, 1: FAN_MANUAL, 2: FAN_OFF}
-        return quiet_modes.get(quiet_raw, FAN_AUTO)
+        # Keep read mapping aligned with const.SELECT_REGISTERS enum_map for holding_9.
+        quiet_modes = {0: FAN_OFF, 1: FAN_AUTO, 2: FAN_MANUAL}
+        return quiet_modes.get(quiet_raw, FAN_OFF)
 
     @property
     def fan_modes(self):
@@ -283,7 +283,8 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode (quiet mode)."""
-        fan_map = {FAN_OFF: HVAC_OFF, FAN_AUTO: HVAC_HEAT, FAN_MANUAL: HVAC_COOL}
+        # Keep write mapping aligned with const.SELECT_REGISTERS enum_map for holding_9.
+        fan_map = {FAN_OFF: 0, FAN_AUTO: 1, FAN_MANUAL: 2}
         mode_raw = fan_map.get(fan_mode, 0)
 
         try:
