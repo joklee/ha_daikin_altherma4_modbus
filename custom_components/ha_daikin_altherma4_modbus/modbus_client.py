@@ -31,11 +31,10 @@ class OneBasedModbusResponse:
     def registers(self):
         """Return 1-based register array."""
         if hasattr(self.original_response, "registers"):
-            # Create array large enough for all possible addresses (1-1000 as safe upper bound)
-            max_possible_address = 1000  # Safe upper bound for all possible addresses
-            result = [32766] * (
-                max_possible_address + 1
-            )  # +1 for 1-based indexing (dummy at index 0)
+            # Size dynamically by requested start + returned payload length.
+            payload_len = len(self.original_response.registers)
+            max_possible_address = self.start_address + payload_len - 1
+            result = [32766] * (max_possible_address + 1)
 
             # Place returned registers at the correct positions
             for i, value in enumerate(self.original_response.registers):
@@ -51,11 +50,10 @@ class OneBasedModbusResponse:
     def bits(self):
         """Return 1-based bit array."""
         if hasattr(self.original_response, "bits"):
-            # Create array large enough for all possible addresses (1-1000 as safe upper bound)
-            max_possible_address = 1000  # Safe upper bound for all possible addresses
-            result = [False] * (
-                max_possible_address + 1
-            )  # +1 for 1-based indexing (dummy at index 0)
+            # Size dynamically by requested start + returned payload length.
+            payload_len = len(self.original_response.bits)
+            max_possible_address = self.start_address + payload_len - 1
+            result = [False] * (max_possible_address + 1)
 
             # Place returned bits at the correct positions
             for i, value in enumerate(self.original_response.bits):
