@@ -113,18 +113,6 @@ class UnifiedWriteProxy:
             f"{DOMAIN}_register_written", event_data
         )
 
-    async def _async_refresh_after_write(self) -> None:
-        """Refresh both source coordinators without aborting on single failures."""
-        results = await asyncio.gather(
-            self._slow_coordinator.async_request_refresh(),
-            self._normal_coordinator.async_request_refresh(),
-            return_exceptions=True,
-        )
-
-        for result in results:
-            if isinstance(result, Exception):
-                _LOGGER.warning("Post-write refresh failed: %s", result)
-
     async def write_holding_register(self, register_name: str, value: int) -> Any:
         """Write a holding register and fire domain event."""
         result = await self._slow_coordinator.data_manager.write_holding_register(
