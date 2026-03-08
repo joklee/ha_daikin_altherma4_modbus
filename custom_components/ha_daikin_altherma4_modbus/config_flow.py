@@ -1,5 +1,7 @@
 import voluptuous as vol
 import logging
+import ipaddress
+import re
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 
@@ -9,6 +11,7 @@ from .const import DOMAIN, SLOW_SCAN_INTERVAL
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_PORT = 502
+HOSTNAME_PATTERN = re.compile(r"^[A-Za-z0-9-]{1,63}$")
 
 
 def _entry_value(config_entry, key, default=None):
@@ -16,6 +19,54 @@ def _entry_value(config_entry, key, default=None):
     options = getattr(config_entry, "options", {}) or {}
     data = getattr(config_entry, "data", {}) or {}
     return options.get(key, data.get(key, default))
+
+
+def _is_valid_host(host: str) -> bool:
+    """Validate host as IP address or DNS hostname."""
+    if not host or " " in host:
+        return False
+
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        pass
+
+    if len(host) > 253:
+        return False
+
+    labels = host.split(".")
+    for label in labels:
+        if not label or not HOSTNAME_PATTERN.match(label):
+            return False
+        if label.startswith("-") or label.endswith("-"):
+            return False
+
+    return True
+
+
+def _validate_common_values(
+    host: str | None,
+    port: int | None,
+    scan_interval: int,
+    slow_scan_interval: int,
+) -> dict:
+    """Validate config/options values and return HA form errors."""
+    errors = {}
+
+    if host is not None and not _is_valid_host(host):
+        errors[CONF_HOST] = "invalid_host"
+
+    if port is not None and not (1 <= port <= 65535):
+        errors[CONF_PORT] = "invalid_port"
+
+    if scan_interval <= 0:
+        errors["scan_interval"] = "invalid_scan_interval"
+
+    if slow_scan_interval < scan_interval:
+        errors["slow_scan_interval"] = "slow_must_be_gte_scan"
+
+    return errors
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -27,28 +78,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """Handle the user step."""
         errors = {}
-
-        if user_input is not None:
-            data = {
-                CONF_HOST: user_input[CONF_HOST],
-                CONF_PORT: user_input.get(CONF_PORT, DEFAULT_PORT),
-            }
-            options = {
-                "scan_interval": user_input.get("scan_interval", NORMAL_SCAN_INTERVAL),
-                "slow_scan_interval": user_input.get(
-                    "slow_scan_interval", SLOW_SCAN_INTERVAL
-                ),
-                "demo_mode": user_input.get("demo_mode", False),
-            }
-            electric_power_sensor = user_input.get("electric_power_sensor", "").strip()
-            if electric_power_sensor:
-                options["electric_power_sensor"] = electric_power_sensor
-            return self.async_create_entry(
-                title=f"Daikin Altherma 4 ({user_input[CONF_HOST]})",
-                data=data,
-                options=options,
-            )
-
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_HOST, default=""): str,
@@ -59,6 +88,45 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional("demo_mode", default=False): bool,
             }
         )
+
+        if user_input is not None:
+            host = user_input.get(CONF_HOST, "").strip()
+            port = user_input.get(CONF_PORT, DEFAULT_PORT)
+            scan_interval = user_input.get("scan_interval", NORMAL_SCAN_INTERVAL)
+            slow_scan_interval = user_input.get(
+                "slow_scan_interval", SLOW_SCAN_INTERVAL
+            )
+            errors = _validate_common_values(
+                host=host,
+                port=port,
+                scan_interval=scan_interval,
+                slow_scan_interval=slow_scan_interval,
+            )
+            if errors:
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=data_schema,
+                    errors=errors,
+                    last_step=True,
+                )
+
+            data = {
+                CONF_HOST: host,
+                CONF_PORT: port,
+            }
+            options = {
+                "scan_interval": scan_interval,
+                "slow_scan_interval": slow_scan_interval,
+                "demo_mode": user_input.get("demo_mode", False),
+            }
+            electric_power_sensor = user_input.get("electric_power_sensor", "").strip()
+            if electric_power_sensor:
+                options["electric_power_sensor"] = electric_power_sensor
+            return self.async_create_entry(
+                title=f"Daikin Altherma 4 ({user_input[CONF_HOST]})",
+                data=data,
+                options=options,
+            )
 
         return self.async_show_form(
             step_id="user", data_schema=data_schema, errors=errors, last_step=True
@@ -83,18 +151,25 @@ class OptionsFlow(config_entries.OptionsFlow):
         _LOGGER.debug(f"OptionsFlow step_init. User input: {user_input}")
 
         if user_input is not None:
+            scan_interval = user_input.get("scan_interval", NORMAL_SCAN_INTERVAL)
+            slow_scan_interval = user_input.get(
+                "slow_scan_interval", SLOW_SCAN_INTERVAL
+            )
+            errors = _validate_common_values(
+                host=None,
+                port=None,
+                scan_interval=scan_interval,
+                slow_scan_interval=slow_scan_interval,
+            )
+
             # If no errors, proceed with update
             if not errors:
                 electric_power_sensor = user_input.get(
                     "electric_power_sensor", ""
                 ).strip()
                 options_data = {
-                    "scan_interval": user_input.get(
-                        "scan_interval", NORMAL_SCAN_INTERVAL
-                    ),
-                    "slow_scan_interval": user_input.get(
-                        "slow_scan_interval", SLOW_SCAN_INTERVAL
-                    ),
+                    "scan_interval": scan_interval,
+                    "slow_scan_interval": slow_scan_interval,
                     "demo_mode": user_input.get("demo_mode", False),
                 }
                 if electric_power_sensor:
