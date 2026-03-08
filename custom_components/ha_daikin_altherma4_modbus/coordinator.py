@@ -1,12 +1,28 @@
 """Simplified coordinator classes for Daikin Altherma 4 Modbus integration."""
 
 import logging
+import asyncio
 from .retry_utils import add_jitter, DEFAULT_JITTER
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from .data_manager import ModbusDataManager
 from .const import DOMAIN
+from .exceptions import (
+    ModbusConnectionException,
+    ModbusDeviceException,
+    ModbusReadException,
+    ModbusTimeoutException,
+)
 
 _LOGGER = logging.getLogger(__name__)
+_COORDINATOR_IO_EXCEPTIONS = (
+    ModbusReadException,
+    ModbusTimeoutException,
+    ModbusDeviceException,
+    ModbusConnectionException,
+    asyncio.TimeoutError,
+    OSError,
+    ConnectionError,
+)
 
 
 class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
@@ -54,7 +70,7 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
 
             return self.data
 
-        except Exception as err:
+        except _COORDINATOR_IO_EXCEPTIONS as err:
             _LOGGER.error(f"Error updating normal data: {err}")
             raise UpdateFailed(f"Error communicating with Modbus: {err}") from err
 
@@ -105,6 +121,6 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
 
             return self.data
 
-        except Exception as err:
+        except _COORDINATOR_IO_EXCEPTIONS as err:
             _LOGGER.error(f"Error updating slow data: {err}")
             raise UpdateFailed(f"Error communicating with Modbus: {err}") from err

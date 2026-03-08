@@ -5,9 +5,34 @@ import logging
 import time
 from typing import Any
 
+from .exceptions import (
+    ModbusConnectionException,
+    ModbusDeviceException,
+    ModbusReadException,
+    ModbusTimeoutException,
+    ModbusWriteException,
+)
 from .transport_session import ModbusTransportSession
 
 _LOGGER = logging.getLogger(__name__)
+_READ_EXCEPTIONS = (
+    ModbusReadException,
+    ModbusTimeoutException,
+    ModbusDeviceException,
+    ModbusConnectionException,
+    asyncio.TimeoutError,
+    OSError,
+    ConnectionError,
+)
+_WRITE_EXCEPTIONS = (
+    ModbusWriteException,
+    ModbusTimeoutException,
+    ModbusDeviceException,
+    ModbusConnectionException,
+    asyncio.TimeoutError,
+    OSError,
+    ConnectionError,
+)
 
 
 class ModbusRegisterRepository:
@@ -37,7 +62,7 @@ class ModbusRegisterRepository:
                     blocks.append((result, min_addr, max_addr, offset))
                 else:
                     _LOGGER.error("%s read failed", name)
-            except Exception as err:
+            except _READ_EXCEPTIONS as err:
                 _LOGGER.warning("Could not read %s: %s", name, err)
 
         return blocks
@@ -61,7 +86,7 @@ class ModbusRegisterRepository:
 
             self._log_unsupported_register_type(result, "discrete inputs")
             return None
-        except Exception as err:
+        except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read Discrete Inputs: %s", err)
             return await self._retry_read_discrete_inputs()
 
@@ -82,7 +107,7 @@ class ModbusRegisterRepository:
 
             self._log_unsupported_register_type(result, "coils")
             return None
-        except Exception as err:
+        except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read Coils: %s", err)
             return await self._retry_read_coils()
 
@@ -151,7 +176,7 @@ class ModbusRegisterRepository:
                 value,
             )
             return result
-        except Exception as err:
+        except _WRITE_EXCEPTIONS as err:
             _LOGGER.error(
                 "Exception writing register %s (address %s) with value %s: %s",
                 register_name,
@@ -201,7 +226,7 @@ class ModbusRegisterRepository:
                 value,
             )
             return result
-        except Exception as err:
+        except _WRITE_EXCEPTIONS as err:
             _LOGGER.error(
                 "Exception writing coil %s (address %s) with value %s: %s",
                 register_name,
@@ -223,7 +248,7 @@ class ModbusRegisterRepository:
                 _LOGGER.error("Failed to read holding register %s: %s", address, result)
                 return None
             return result
-        except Exception as err:
+        except _READ_EXCEPTIONS as err:
             _LOGGER.error("Exception reading holding register %s: %s", address, err)
             return None
 
@@ -239,7 +264,7 @@ class ModbusRegisterRepository:
                 _LOGGER.error("Failed to read coil %s: %s", address, result)
                 return None
             return result
-        except Exception as err:
+        except _READ_EXCEPTIONS as err:
             _LOGGER.error("Exception reading coil %s: %s", address, err)
             return None
 
@@ -263,7 +288,7 @@ class ModbusRegisterRepository:
                 result,
             )
             return None
-        except Exception as retry_err:
+        except _READ_EXCEPTIONS as retry_err:
             _LOGGER.warning("Retry attempt for discrete inputs failed: %s", retry_err)
             return None
 
@@ -285,7 +310,7 @@ class ModbusRegisterRepository:
                 result,
             )
             return None
-        except Exception as retry_err:
+        except _READ_EXCEPTIONS as retry_err:
             _LOGGER.warning("Retry attempt for coils failed: %s", retry_err)
             return None
 
@@ -332,7 +357,7 @@ class ModbusRegisterRepository:
             else:
                 _LOGGER.error("Holding Register %s read failed: %s", block_name, result)
             return None
-        except Exception as err:
+        except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read Holding Register %s: %s", block_name, err)
             return await self._retry_holding_block(
                 start_address,
@@ -387,7 +412,7 @@ class ModbusRegisterRepository:
                     retry_result,
                 )
             return None
-        except Exception as retry_err:
+        except _READ_EXCEPTIONS as retry_err:
             _LOGGER.warning(
                 "Retry attempt for Holding Register %s failed: %s",
                 block_name,
