@@ -1,7 +1,9 @@
 import logging
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import EntityCategory
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 from .const import (
     DOMAIN,
     INPUT_DEVICE_INFO,
@@ -340,6 +342,7 @@ class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
+        self._restored_value = None
 
     def _calculate_thermal_heat_output(self):
         """Berechnet die thermische Leistung in W."""
@@ -430,7 +433,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
             return None
 
 
-class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
+class LastTriggeredSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
     """Sensor für das letzte Auslösen eines Binärsensors."""
 
     _attr_has_entity_name = True
@@ -456,13 +459,52 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
+        self._restored_value = None  # Initialize to prevent AttributeError
+
+    async def async_added_to_hass(self):
+        """Restore previous timestamp state on startup."""
+        await super().async_added_to_hass()
+
+        last_state = await self.async_get_last_state()
+        if (
+            last_state is None
+            or last_state.state is None
+            or last_state.state in ("unknown", "unavailable")
+        ):
+            return
+
+        restored_value = dt_util.parse_datetime(last_state.state)
+        if restored_value is None:
+            _LOGGER.debug(
+                "Could not parse restored timestamp for %s: %s",
+                self.entity_id,
+                last_state.state,
+            )
+            return
+
+        normal_coordinator = getattr(self.coordinator, "normal_coordinator", None)
+        data_manager = getattr(normal_coordinator, "data_manager", None)
+        if data_manager is not None:
+            data_manager.last_triggered[self._attr_unique_id] = restored_value
+
+        self._restored_value = restored_value
+        self.coordinator.data[self._attr_unique_id] = {
+            "value": restored_value,
+            "input_type": "calculated",
+            "register_name": self._attr_unique_id,
+        }
+
+        self.async_write_ha_state()
 
     @property
     def native_value(self):
         data = self.coordinator.data.get(self._attr_unique_id)
         if data and isinstance(data, dict):
-            return data.get("value")
-        return None
+            value = data.get("value")
+            if value is not None:
+                self._restored_value = value
+                return value
+        return self._restored_value
 
 
 class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):

@@ -217,9 +217,3 @@ class ModbusMappingTransform:
                     "input_type": "calculated",
                     "register_name": register_name,
                 }
-            else:
-                data[register_name] = {
-                    "value": None,
-                    "input_type": "calculated",
-                    "register_name": register_name,
-                }

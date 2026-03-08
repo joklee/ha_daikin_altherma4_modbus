@@ -1,9 +1,10 @@
 import importlib
 import sys
 import types
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -45,6 +46,17 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
     helpers_module = types.ModuleType("homeassistant.helpers")
     monkeypatch.setitem(sys.modules, "homeassistant.helpers", helpers_module)
 
+    restore_state_module = types.ModuleType("homeassistant.helpers.restore_state")
+
+    class FakeRestoreEntity:
+        async def async_get_last_state(self):
+            return None
+
+    restore_state_module.RestoreEntity = FakeRestoreEntity
+    monkeypatch.setitem(
+        sys.modules, "homeassistant.helpers.restore_state", restore_state_module
+    )
+
     update_coordinator_module = types.ModuleType(
         "homeassistant.helpers.update_coordinator"
     )
@@ -70,6 +82,9 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
         def __init__(self, coordinator):
             self.coordinator = coordinator
 
+        async def async_added_to_hass(self):
+            return None
+
     update_coordinator_module.DataUpdateCoordinator = FakeDataUpdateCoordinator
     update_coordinator_module.CoordinatorEntity = FakeCoordinatorEntity
     update_coordinator_module.UpdateFailed = Exception
@@ -83,10 +98,17 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "homeassistant.components", components_module)
 
     sensor_component_module = types.ModuleType("homeassistant.components.sensor")
-    sensor_component_module.SensorEntity = object
+    sensor_component_module.SensorEntity = type("FakeSensorEntity", (), {})
     monkeypatch.setitem(
         sys.modules, "homeassistant.components.sensor", sensor_component_module
     )
+
+    util_module = types.ModuleType("homeassistant.util")
+    monkeypatch.setitem(sys.modules, "homeassistant.util", util_module)
+
+    dt_module = types.ModuleType("homeassistant.util.dt")
+    dt_module.parse_datetime = lambda value: datetime.fromisoformat(value)
+    monkeypatch.setitem(sys.modules, "homeassistant.util.dt", dt_module)
 
 
 def _load_config_flow_module(monkeypatch):
@@ -372,3 +394,38 @@ def test_external_electric_power_sensor_uses_options_and_fallback(monkeypatch):
     )
     assert unavailable_sensor.available is False
     assert unavailable_sensor.native_value is None
+
+
+@pytest.mark.asyncio
+async def test_last_triggered_sensor_keeps_restored_value_when_coordinator_data_missing(
+    monkeypatch,
+):
+    sensor_module = _load_sensor_module(monkeypatch)
+
+    restored_state_value = "2026-03-08T10:15:00+00:00"
+    restored_dt = datetime.fromisoformat(restored_state_value)
+    coordinator = SimpleNamespace(
+        data={},
+        normal_coordinator=SimpleNamespace(
+            data_manager=SimpleNamespace(last_triggered={})
+        ),
+    )
+
+    sensor = sensor_module.LastTriggeredSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(data={}, options={}),
+        unique_id="last_defrost",
+        unit=None,
+        device_class="timestamp",
+        trigger_register_name="discrete_17",
+    )
+    sensor.entity_id = "sensor.last_defrost"
+    sensor.async_get_last_state = AsyncMock(
+        return_value=SimpleNamespace(state=restored_state_value)
+    )
+    sensor.async_write_ha_state = Mock()
+
+    await sensor.async_added_to_hass()
+    coordinator.data.pop("last_defrost", None)
+
+    assert sensor.native_value == restored_dt
