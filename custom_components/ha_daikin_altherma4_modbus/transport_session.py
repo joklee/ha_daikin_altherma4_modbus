@@ -3,6 +3,7 @@
 import logging
 from .connection_manager import ensure_modbus_connection
 from .client_interface import ModbusClientInterface
+from .exceptions import DaikinModbusException
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class ModbusTransportSession:
                 self.client, self.host, self.port, self.demo_mode
             )
             return self.client
-        except Exception as err:
+        except (DaikinModbusException, OSError, TimeoutError) as err:
             _LOGGER.error(
                 "Failed to establish Modbus connection to %s:%s: %s",
                 self.host,
@@ -54,7 +55,7 @@ class ModbusTransportSession:
                         "Successfully created fallback mock client in demo mode"
                     )
                     return self.client
-                except Exception as mock_err:
+                except (DaikinModbusException, OSError, TimeoutError) as mock_err:
                     _LOGGER.error("Even mock client creation failed: %s", mock_err)
                     self.client = None
                     return None
@@ -68,6 +69,13 @@ class ModbusTransportSession:
             _LOGGER.info("5. Try enabling demo mode for testing")
             self.client = None
             return None
+        except Exception:
+            _LOGGER.exception(
+                "Unexpected error while establishing Modbus connection to %s:%s",
+                self.host,
+                self.port,
+            )
+            raise
 
     async def reconnect_with_new_client(self) -> ModbusClientInterface | None:
         """Force new client creation and reconnect."""

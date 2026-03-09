@@ -1,6 +1,5 @@
 """Modbus client connection management for Daikin Altherma integration."""
 
-import asyncio
 import logging
 from .mock_client import MockModbusTcpClient
 from .modbus_client import RealModbusTcpClient
@@ -29,7 +28,6 @@ async def connect_modbus_client(
     """
     try:
         await client.connect()
-        await asyncio.sleep(0.1)
         if not client.connected:
             _LOGGER.error(f"Modbus {connection_type} failed to {host}:{port}")
             raise ModbusConnectionException(
@@ -42,7 +40,7 @@ async def connect_modbus_client(
     except ModbusConnectionException:
         # Re-raise our own exceptions
         raise
-    except asyncio.TimeoutError as e:
+    except TimeoutError as e:
         _LOGGER.error(f"Timeout during Modbus {connection_type} to {host}:{port}: {e}")
         raise ModbusTimeoutException(f"Modbus Verbindung zu {host}:{port} timeout", e)
     except ConnectionRefusedError as e:

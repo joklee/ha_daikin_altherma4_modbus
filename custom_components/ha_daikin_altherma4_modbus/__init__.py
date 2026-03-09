@@ -21,50 +21,80 @@ def _has_other_entry_for_endpoint(
 
 
 async def async_setup_entry(hass, entry):
-    # Create dynamic device info with connection parameters
+    """Set up config entry and roll back resources on partial failure."""
     host = entry_data_value(entry, "host", "")
     port = entry_data_value(entry, "port", 502)
     scan_interval = entry_value(entry, "scan_interval", NORMAL_SCAN_INTERVAL)
     slow_scan_interval = entry_value(entry, "slow_scan_interval", SLOW_SCAN_INTERVAL)
     demo_mode = entry_value(entry, "demo_mode", False)
-
-    # Create device info with connection parameters
-
-    # Create coordinator manager
     manager = CoordinatorManager(
         hass, host, port, scan_interval, slow_scan_interval, demo_mode
     )
-
-    # Get individual coordinators
     normal_coordinator = manager.get_coordinator("normal")
     slow_coordinator = manager.get_coordinator("slow")
-
     unified_coordinator = UnifiedCoordinator(
         hass,
         manager,
         normal_coordinator,
         slow_coordinator,
     )
-    await unified_coordinator.async_setup()
-    await manager.async_setup()
+    platforms = ["sensor", "binary_sensor", "number", "select", "climate", "switch"]
+    stored_entry = False
 
-    _LOGGER.debug(
-        "Unified coordinator initialized with %d data points",
-        len(unified_coordinator.data),
-    )
+    try:
+        await unified_coordinator.async_setup()
+        await manager.async_setup()
 
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
-        "coordinator": unified_coordinator,
-        "normal_coordinator": normal_coordinator,
-        "slow_coordinator": slow_coordinator,
-        "manager": manager,
-    }
+        _LOGGER.debug(
+            "Unified coordinator initialized with %d data points",
+            len(unified_coordinator.data),
+        )
 
-    await hass.config_entries.async_forward_entry_setups(
-        entry, ["sensor", "binary_sensor", "number", "select", "climate", "switch"]
-    )
-    return True
+        hass.data.setdefault(DOMAIN, {})
+        hass.data[DOMAIN][entry.entry_id] = {
+            "coordinator": unified_coordinator,
+            "normal_coordinator": normal_coordinator,
+            "slow_coordinator": slow_coordinator,
+            "manager": manager,
+        }
+        stored_entry = True
+
+        await hass.config_entries.async_forward_entry_setups(entry, platforms)
+        return True
+    except Exception as err:
+        _LOGGER.error("Failed to set up entry %s: %s", entry.entry_id, err)
+
+        domain_data = hass.data.get(DOMAIN, {})
+        shared_endpoint_in_use = _has_other_entry_for_endpoint(
+            domain_data, entry.entry_id, host, port
+        )
+
+        if stored_entry:
+            domain_data.pop(entry.entry_id, None)
+
+        if hasattr(unified_coordinator, "async_shutdown"):
+            try:
+                await unified_coordinator.async_shutdown()
+            except Exception as shutdown_err:
+                _LOGGER.debug(
+                    "Failed shutting down unified coordinator after setup failure: %s",
+                    shutdown_err,
+                )
+
+        try:
+            await manager.async_shutdown(disconnect_clients=not shared_endpoint_in_use)
+        except Exception as shutdown_err:
+            _LOGGER.debug(
+                "Failed shutting down manager after setup failure: %s", shutdown_err
+            )
+
+        if not shared_endpoint_in_use:
+            await RealModbusTcpClient.async_close_cached_client(host, port)
+
+        if not domain_data and DOMAIN in hass.data:
+            hass.data.pop(DOMAIN, None)
+
+        return False
 
 
 async def async_unload_entry(hass, entry):

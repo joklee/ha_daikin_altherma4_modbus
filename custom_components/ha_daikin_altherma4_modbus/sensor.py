@@ -20,8 +20,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Setup aller Sensors über Config Entry."""
     coordinators = hass.data[DOMAIN][entry.entry_id]
     unified_coordinator = coordinators.get("coordinator")
-    coordinators.get("normal_coordinator")
-    coordinators.get("slow_coordinator")
 
     if unified_coordinator is None:
         _LOGGER.error("Unified coordinator not found in hass data")

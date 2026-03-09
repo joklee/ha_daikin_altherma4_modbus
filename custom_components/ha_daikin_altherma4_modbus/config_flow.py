@@ -117,7 +117,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if electric_power_sensor:
                 options["electric_power_sensor"] = electric_power_sensor
             return self.async_create_entry(
-                title=f"Daikin Altherma 4 ({user_input[CONF_HOST]})",
+                title=f"Daikin Altherma 4 ({host})",
                 data=data,
                 options=options,
             )

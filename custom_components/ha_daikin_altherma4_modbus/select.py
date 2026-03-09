@@ -2,6 +2,7 @@
 
 import logging
 from homeassistant.components.select import SelectEntity
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, SELECT_REGISTERS, HOLDING_DEVICE_INFO
 from typing import Any
@@ -124,9 +125,21 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
         for key, value in self._enum_map.items():
             if value == option:
                 if hasattr(self._coordinator, "data_manager"):
-                    await self._coordinator.data_manager.write_holding_register(
-                        self._register_name, key
+                    result = (
+                        await self._coordinator.data_manager.write_holding_register(
+                            self._register_name, key
+                        )
                     )
+                    if result is None:
+                        raise HomeAssistantError(
+                            f"Failed to write select option for {self._register_name}"
+                        )
                 else:
-                    _LOGGER.error("Coordinator does not have data_manager attribute")
-                break
+                    raise HomeAssistantError(
+                        "Coordinator does not have data_manager attribute"
+                    )
+                return
+
+        raise HomeAssistantError(
+            f"Unsupported option '{option}' for {self._register_name}"
+        )

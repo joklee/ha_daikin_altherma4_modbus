@@ -4,6 +4,7 @@ import logging
 from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from .exceptions import DaikinModbusException
 from .const import (
     DOMAIN,
     COIL_SENSORS,
@@ -95,7 +96,7 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
                 _LOGGER.error(f"Failed to turn on coil {self._address}")
             else:
                 _LOGGER.debug(f"Successfully turned on coil {self._address}")
-        except Exception as e:
+        except DaikinModbusException as e:
             _LOGGER.error(f"Error turning on coil {self._address}: {e}")
 
     async def async_turn_off(self, **kwargs):
@@ -108,7 +109,7 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
                 _LOGGER.error(f"Failed to turn off coil {self._address}")
             else:
                 _LOGGER.debug(f"Successfully turned off coil {self._address}")
-        except Exception as e:
+        except DaikinModbusException as e:
             _LOGGER.error(f"Error turning off coil {self._address}: {e}")
 
 
@@ -137,6 +138,22 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
         self._attr_icon = "mdi:power"
         self._attr_translation_key = translation_key
         self._enum_map = enum_map or {}
+        self._on_value = self._resolve_enum_value(default=1, state_name="on")
+        self._off_value = self._resolve_enum_value(default=0, state_name="off")
+
+    def _resolve_enum_value(self, default: int, state_name: str) -> int:
+        """Resolve enum value for on/off states when available."""
+        if not self._enum_map:
+            return default
+
+        for key, label in self._enum_map.items():
+            if not isinstance(key, int) or not isinstance(label, str):
+                continue
+            normalized = label.strip().lower()
+            if normalized.startswith(state_name):
+                return key
+
+        return default
 
     @property
     def available(self) -> bool:
@@ -154,14 +171,14 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
         _LOGGER.debug(f"Holding switch {self._register_name} value: {val}")
         # For enum switches, check if value corresponds to "On" state
         if self._enum_map:
-            return val == 1  # Assuming 1 is always "On" in enum_map
+            return val == self._on_value
         return val == 1
 
     async def async_turn_on(self, **kwargs):
         """Schaltet das Holding Register ein."""
         try:
             result = await self.coordinator.data_manager.write_holding_register(
-                self._register_name, 1
+                self._register_name, self._on_value
             )
             if result is None:
                 _LOGGER.error(f"Failed to turn on holding register {self._address}")
@@ -169,14 +186,14 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
                 _LOGGER.debug(
                     f"Successfully turned on holding register {self._address}"
                 )
-        except Exception as e:
+        except DaikinModbusException as e:
             _LOGGER.error(f"Error turning on holding register {self._address}: {e}")
 
     async def async_turn_off(self, **kwargs):
         """Schaltet das Holding Register aus."""
         try:
             result = await self.coordinator.data_manager.write_holding_register(
-                self._register_name, 0
+                self._register_name, self._off_value
             )
             if result is None:
                 _LOGGER.error(f"Failed to turn off holding register {self._address}")
@@ -184,5 +201,5 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
                 _LOGGER.debug(
                     f"Successfully turned off holding register {self._address}"
                 )
-        except Exception as e:
+        except DaikinModbusException as e:
             _LOGGER.error(f"Error turning off holding register {self._address}: {e}")

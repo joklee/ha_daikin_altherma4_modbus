@@ -275,7 +275,7 @@ async def test_config_flow_user_step_separates_data_and_options(monkeypatch):
 
     result = await flow.async_step_user(
         {
-            "host": "192.168.1.20",
+            "host": " 192.168.1.20 ",
             "port": 1502,
             "scan_interval": 15,
             "slow_scan_interval": 900,
@@ -286,6 +286,7 @@ async def test_config_flow_user_step_separates_data_and_options(monkeypatch):
 
     assert result["type"] == "create_entry"
     assert result["data"] == {"host": "192.168.1.20", "port": 1502}
+    assert result["title"] == "Daikin Altherma 4 (192.168.1.20)"
     assert result["options"] == {
         "scan_interval": 15,
         "slow_scan_interval": 900,
