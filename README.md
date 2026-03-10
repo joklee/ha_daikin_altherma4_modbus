@@ -454,6 +454,23 @@ This integration supports comprehensive Modbus register coverage:
 - **Translation Issues**: Ensure proper language settings in Home Assistant
 - **3-Way Valve Not Available**: Verify select entity configuration
 
+### Connection & Network Issues
+- **Device Offline**: Integration automatically retries connections and gracefully handles offline devices
+- **Network Interruption**: Automatic reconnection with exponential backoff (max 30 seconds delay)
+- **Timeout Errors**: Retry logic with 2-3 attempts before reporting failure
+- **Multiple Connections**: Daikin supports max 3 concurrent Modbus connections
+
+### Error Recovery Behavior
+- **Connection Loss**: Integration attempts automatic reconnection without user intervention
+- **Temporary Failures**: Short-term network issues are handled transparently
+- **Persistent Failures**: After multiple failed attempts, entities show unavailable state
+- **Log Management**: Errors are logged at appropriate levels without spamming logs
+
+### Performance Issues
+- **High Scan Frequency**: Reduce scan intervals if experiencing performance issues
+- **Network Latency**: Use wired Ethernet connection for best performance
+- **Register Access**: Some registers may be unsupported depending on heat pump model
+
 ### Debug Mode
 Enable debug logging in your `configuration.yaml`:
 
@@ -463,6 +480,12 @@ logger:
   logs:
     custom_components.ha_daikin_altherma4_modbus: debug
 ```
+
+### Advanced Troubleshooting
+- **Modbus Register Validation**: Use demo mode (host: localhost) to test integration logic
+- **Network Testing**: Verify connectivity with `telnet <heat-pump-ip> 502`
+- **Register Coverage**: Check device documentation for supported register ranges
+- **Performance Monitoring**: Monitor Home Assistant logs for connection patterns
 
 ### Testing Without Hardware
 Use the built-in mock client for development and testing:
