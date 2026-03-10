@@ -76,6 +76,14 @@ jobs:
         run: |
           pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-append --cov-report=xml --cov-report=term-missing --junit-xml=test-results-slow.xml || true
 
+      - name: Run tests with coverage
+        run: |
+          # First, try to run pytest in discovery mode to see what tests it finds
+          pytest --collect-only -v
+          
+          # If tests are found, run them with coverage
+          pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=xml --cov-report=term-missing -v
+
       # 📊 Coverage Reporting
       - name: Combine coverage reports
         run: |
