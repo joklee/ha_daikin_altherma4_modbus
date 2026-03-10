@@ -470,6 +470,8 @@ This integration supports comprehensive Modbus register coverage:
 - **High Scan Frequency**: Reduce scan intervals if experiencing performance issues
 - **Network Latency**: Use wired Ethernet connection for best performance
 - **Register Access**: Some registers may be unsupported depending on heat pump model
+- **Connection Pooling**: Integration uses optimized connection pooling for better performance
+- **Batch Operations**: Register reads are batched for optimal Modbus efficiency
 
 ### Debug Mode
 Enable debug logging in your `configuration.yaml`:
@@ -501,41 +503,25 @@ Use the built-in mock client for development and testing:
 - Tested with firmware versions 2.2.0
 - Full register coverage for complete monitoring
 
-## Version History
-
-### Version 0.5.0 (Development)
-- **Major refactoring** with improved architecture
-- **Complete input register coverage** (112 registers)
-- **8 new input registers** added (78, 80-82, 84-87)
-- **Enhanced 3-way valve** as select entity
-- **Comprehensive test suite** (49 tests)
-- **Mock client improvements** with realistic data
-- **Translation system overhaul** with full German/English support
-- **New architecture** with data_manager and coordinator_manager
-- **Simplified discrete input logic** and improved error handling
-
-### Version 0.4.0
-- Enhanced multilingual support (English/German)
-- Improved device organization (Enhanced category)
-- Optimized binary sensor device classes
-- Fixed translation key support across all entities
-- Updated thermostat placement under Enhanced category
-- Comprehensive translation corrections
-
-### Version 0.3.0
-- External Electric Power Sensor integration
-- Options Flow for post-installation configuration
-- Signed 16-bit integer handling
-- Enhanced power calculations
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
 
 ### Development Setup
 - Install test requirements: `pip install -r requirements-test.txt`
-- Run tests: `python -m pytest tests/ --cov=custom_components/ha_daikin_altherma4_modbus`
+- Run tests: `make test-unit` or `python -m pytest tests/ --cov=custom_components/ha_daikin_altherma4_modbus`
 - Use mock client for development without hardware
+- Run full CI pipeline locally: `make ci-local`
+- Code quality checks: `make lint` and `make format-check`
+- Performance benchmarks: `make benchmark`
+
+### Testing
+The project includes a comprehensive test suite with 133 tests:
+- **Unit tests**: Core functionality testing
+- **Integration tests**: End-to-end workflow testing  
+- **Performance tests**: Connection pooling and optimization validation
+- **Mock client testing**: Development without physical hardware
+- **Coverage reporting**: 26% code coverage with detailed reports
 
 ## License
 
@@ -548,3 +534,5 @@ This project is licensed under the GPL-3.0-or-later License. See the [LICENSE](L
 - Uses pymodbus library for Modbus TCP communication
 - Multilingual support with comprehensive translations
 - Comprehensive test coverage with mock client support
+- Performance optimizations with connection pooling
+- Automated CI/CD pipeline with quality gates
