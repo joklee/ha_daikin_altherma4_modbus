@@ -134,12 +134,12 @@ async def test_performance_scan_intervals():
         )
 
     # Verify performance improvements
-    assert (
-        results[15]["cpu_load_estimate"] < results[5]["cpu_load_estimate"]
-    ), "15s interval should have lower CPU load than 5s"
-    assert (
-        results[15]["bytes_per_second"] < results[5]["bytes_per_second"]
-    ), "15s interval should generate less network traffic"
+    assert results[15]["cpu_load_estimate"] < results[5]["cpu_load_estimate"], (
+        "15s interval should have lower CPU load than 5s"
+    )
+    assert results[15]["bytes_per_second"] < results[5]["bytes_per_second"], (
+        "15s interval should generate less network traffic"
+    )
 
 
 @pytest.mark.asyncio
@@ -167,7 +167,7 @@ async def test_performance_batch_optimization():
     print("\n📊 BATCH OPTIMIZATION ANALYSIS:")
     print(f"   Individual reads: {individual_time:.3f}s (67 operations)")
     print(f"   Batch read: {batch_time:.3f}s (1 operation)")
-    print(f"   Performance improvement: {(individual_time/batch_time):.1f}x faster")
+    print(f"   Performance improvement: {(individual_time / batch_time):.1f}x faster")
 
     # Batch should be significantly faster
     assert batch_time < individual_time, "Batch reading should be faster"
@@ -216,13 +216,13 @@ async def test_performance_memory_usage():
     print(f"   Baseline objects: {baseline_objects:,}")
     print(f"   Final objects: {final_objects:,}")
     print(f"   Object growth: {object_growth:,}")
-    print(f"   Growth per cycle: {object_growth/100:.1f}")
+    print(f"   Growth per cycle: {object_growth / 100:.1f}")
 
     # Memory growth should be minimal
     assert object_growth < 1000, f"Memory growth too high: {object_growth} objects"
-    assert (
-        object_growth / 100 < 10
-    ), f"Too many objects per cycle: {object_growth/100:.1f}"
+    assert object_growth / 100 < 10, (
+        f"Too many objects per cycle: {object_growth / 100:.1f}"
+    )
 
 
 if __name__ == "__main__":

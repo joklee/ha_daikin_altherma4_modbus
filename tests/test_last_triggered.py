@@ -46,24 +46,24 @@ class TestLastTriggeredSensors:
 
         # Check all expected sensors are found
         for expected in expected_sensors:
-            assert (
-                expected in found_sensors
-            ), f"{expected} sensor not found in CALCULATED_SENSORS"
+            assert expected in found_sensors, (
+                f"{expected} sensor not found in CALCULATED_SENSORS"
+            )
 
         # Check each sensor has correct properties
         for register_name, sensor_config in found_sensors.items():
-            assert (
-                sensor_config["type"] == "last_triggered"
-            ), f"{register_name} should have type 'last_triggered'"
-            assert (
-                sensor_config["device_class"] == "timestamp"
-            ), f"{register_name} should have device_class 'timestamp'"
-            assert (
-                "trigger_register_name" in sensor_config
-            ), f"{register_name} should have trigger_register_name"
-            assert (
-                "translation_key" in sensor_config
-            ), f"{register_name} should have translation_key"
+            assert sensor_config["type"] == "last_triggered", (
+                f"{register_name} should have type 'last_triggered'"
+            )
+            assert sensor_config["device_class"] == "timestamp", (
+                f"{register_name} should have device_class 'timestamp'"
+            )
+            assert "trigger_register_name" in sensor_config, (
+                f"{register_name} should have trigger_register_name"
+            )
+            assert "translation_key" in sensor_config, (
+                f"{register_name} should have translation_key"
+            )
 
             print(
                 f"✓ {register_name} sensor definition found: {sensor_config['trigger_register_name']}"
@@ -86,9 +86,9 @@ class TestLastTriggeredSensors:
                     break
 
             assert sensor_config is not None, f"{sensor_name} not found"
-            assert (
-                sensor_config["trigger_register_name"] == expected_trigger
-            ), f"{sensor_name} should trigger on {expected_trigger}"
+            assert sensor_config["trigger_register_name"] == expected_trigger, (
+                f"{sensor_name} should trigger on {expected_trigger}"
+            )
 
             print(f"✓ {sensor_name} -> {expected_trigger} mapping correct")
 
@@ -145,9 +145,9 @@ class TestLastTriggeredSensors:
             was_on = previous_val == 1 if previous_val is not None else False
 
             should_trigger = is_on and not was_on
-            assert (
-                not should_trigger
-            ), f"{description} should not trigger when staying off"
+            assert not should_trigger, (
+                f"{description} should not trigger when staying off"
+            )
 
             # Scenario 2: Stays on (1 -> 1)
             previous_data = {trigger_register: {"value": 1}}
@@ -160,9 +160,9 @@ class TestLastTriggeredSensors:
             was_on = previous_val == 1 if previous_val is not None else False
 
             should_trigger = is_on and not was_on
-            assert (
-                not should_trigger
-            ), f"{description} should not trigger when staying on"
+            assert not should_trigger, (
+                f"{description} should not trigger when staying on"
+            )
 
             # Scenario 3: Turns off (1 -> 0)
             previous_data = {trigger_register: {"value": 1}}
@@ -175,9 +175,9 @@ class TestLastTriggeredSensors:
             was_on = previous_val == 1 if previous_val is not None else False
 
             should_trigger = is_on and not was_on
-            assert (
-                not should_trigger
-            ), f"{description} should not trigger when turning off"
+            assert not should_trigger, (
+                f"{description} should not trigger when turning off"
+            )
 
             print(f"✓ {description} no-trigger scenarios verified")
 
@@ -204,9 +204,9 @@ class TestLastTriggeredSensors:
                 was_on = previous_val == 1 if previous_val is not None else False
                 actual_trigger = is_on and not was_on
 
-                assert (
-                    actual_trigger == should_trigger
-                ), f"Trigger mismatch for {sensor_name} when {action}"
+                assert actual_trigger == should_trigger, (
+                    f"Trigger mismatch for {sensor_name} when {action}"
+                )
 
                 if should_trigger:
                     print(
@@ -312,9 +312,9 @@ class TestLastTriggeredSensors:
                     last_trigger_time = trigger_times[trigger_count - 1]
 
             assert trigger_count == 3, f"{sensor_name} should have 3 triggers"
-            assert (
-                last_trigger_time == create_test_trigger_time()
-            ), f"{sensor_name} last trigger should be test time"
+            assert last_trigger_time == create_test_trigger_time(), (
+                f"{sensor_name} last trigger should be test time"
+            )
 
             print(f"✓ {sensor_name}: {trigger_count} triggers recorded")
 
@@ -354,9 +354,9 @@ class TestLastTriggeredSensors:
                         break
 
         # Verify expected triggers occurred
-        assert (
-            len(actual_triggers) == 2
-        ), f"Should have 2 triggers, got {len(actual_triggers)}"
+        assert len(actual_triggers) == 2, (
+            f"Should have 2 triggers, got {len(actual_triggers)}"
+        )
         assert "last_compressor_run" in actual_triggers, "Compressor should trigger"
         assert "last_booster_heater" in actual_triggers, "Booster heater should trigger"
 

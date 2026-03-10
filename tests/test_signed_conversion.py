@@ -132,6 +132,6 @@ class TestRealWorldScenarios:
 
             # Test reverse conversion
             reverse_result = to_unsigned_16bit(expected_signed)
-            assert (
-                reverse_result == unsigned_val
-            ), f"Reverse failed for {expected_signed}"
+            assert reverse_result == unsigned_val, (
+                f"Reverse failed for {expected_signed}"
+            )

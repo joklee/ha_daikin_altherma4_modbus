@@ -115,13 +115,13 @@ async def test_batching_optimization_comparison():
     print("\n📈 Performance Improvements:")
     print(f"   Speed Improvement: {time_improvement:.1f}x faster")
     print(f"   Operation Reduction: {operation_reduction:.1f}% fewer reads")
-    print(f"   Time Saved: {(old_time - new_time)*1000:.1f}ms")
+    print(f"   Time Saved: {(old_time - new_time) * 1000:.1f}ms")
 
     # Verify improvements
     assert new_time < old_time, "New implementation should be faster"
-    assert (
-        new_operations < old_operations
-    ), "New implementation should use fewer operations"
+    assert new_operations < old_operations, (
+        "New implementation should use fewer operations"
+    )
     assert time_improvement > 2, "Should be at least 2x faster"
 
     print("\n✅ Batching optimization successful!")
@@ -224,7 +224,7 @@ async def test_memory_efficiency_of_batching():
     print(f"Baseline objects: {baseline_objects:,}")
     print(f"Final objects: {final_objects:,}")
     print(f"Object growth: {object_growth:,}")
-    print(f"Growth per cycle: {object_growth/100:.1f}")
+    print(f"Growth per cycle: {object_growth / 100:.1f}")
     print(f"Memory efficiency: {'✅ Good' if object_growth < 500 else '⚠️ High'}")
 
     # Memory should be efficient

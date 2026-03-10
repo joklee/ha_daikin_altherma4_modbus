@@ -91,9 +91,9 @@ def test_mock_client_fix():
 
     # Check for the simplified logic: random choice for all other addresses
     fix_pattern = "else:\n                value = random.choice([False, True])"
-    assert (
-        fix_pattern in content
-    ), "Mock client simplified discrete input logic is missing"
+    assert fix_pattern in content, (
+        "Mock client simplified discrete input logic is missing"
+    )
     print("✓ Mock client value assignment fix is present")
 
 
