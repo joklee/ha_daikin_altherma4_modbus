@@ -11,6 +11,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import UnitOfTemperature
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from .utils import to_signed_16bit, to_unsigned_16bit
 from .const import (
     DOMAIN,
     CALCULATED_DEVICE_INFO,
@@ -144,9 +145,8 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
             offset_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_HEATING}")
         offset_raw = offset_data.get("value", 0)
 
-        # Handle signed 16-bit integers
-        if offset_raw > 32767:
-            offset_raw = offset_raw - 65536
+        # Convert unsigned 16-bit to signed integer safely
+        offset_raw = to_signed_16bit(offset_raw)
 
         # Check if value is already scaled by checking if scale is stored in data
         data_scale = offset_data.get("scale")
@@ -245,9 +245,8 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         # Konvertiere zu Rohwert für Holding Register
         offset_raw = int(offset)
 
-        # Handle signed 16-bit integers
-        if offset_raw < 0:
-            offset_raw = 65536 + offset_raw
+        # Convert signed integer to unsigned 16-bit safely
+        offset_raw = to_unsigned_16bit(offset_raw)
 
         # Get operation mode from input_38 before try block
         offset_data = self._get_offset_data()

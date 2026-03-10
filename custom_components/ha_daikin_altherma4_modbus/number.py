@@ -1,6 +1,7 @@
 from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, HOLDING_REGISTERS, HOLDING_DEVICE_INFO
+from .utils import to_signed_16bit, to_unsigned_16bit
 import logging
 from typing import Any
 
@@ -141,9 +142,8 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
             scaled_value = val
         else:
             # Value is not scaled yet, apply scaling
-            # Handle signed 16-bit integers
-            if val > 32767:  # If value is negative (2's complement)
-                val = val - 65536
+            # Convert unsigned 16-bit to signed integer safely
+            val = to_signed_16bit(val)
             scaled_value = val * self._scale
 
         return scaled_value
@@ -158,9 +158,8 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
     async def async_set_native_value(self, value):
         raw = int(value / self._scale)
 
-        # Handle signed 16-bit integers for negative values
-        if raw < 0:
-            raw = 65536 + raw  # Convert negative to 2's complement
+        # Convert signed integer to unsigned 16-bit safely
+        raw = to_unsigned_16bit(raw)
 
         await self._coordinator.data_manager.write_holding_register(
             self._register_name, raw
