@@ -196,6 +196,10 @@ test-config:
 	@echo "🧪 Testing configuration flows..."
 	pytest tests/test_config_model.py tests/test_config_flow.py -v
 
+test-platform-setup:
+	@echo "🧪 Testing platform setup validation..."
+	pytest tests/test_platform_setup.py -v
+
 test-all-new:
 	@echo "🧪 Running all new tests..."
-	pytest tests/test_integration_lifecycle.py tests/test_config_model.py tests/test_config_flow.py -v
+	pytest tests/test_integration_lifecycle.py tests/test_config_model.py tests/test_config_flow.py tests/test_platform_setup.py -v
