@@ -1,8 +1,9 @@
 import logging
-from .const import DOMAIN, SLOW_SCAN_INTERVAL, NORMAL_SCAN_INTERVAL
+
+from .config_entry_utils import entry_data_value, entry_value
+from .const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
 from .coordinator_manager import CoordinatorManager, UnifiedCoordinator
 from .modbus_client import RealModbusTcpClient
-from .config_entry_utils import entry_value, entry_data_value
 
 _LOGGER = logging.getLogger(__name__)
 

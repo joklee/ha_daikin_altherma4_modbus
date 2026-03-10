@@ -3,10 +3,11 @@
 Final working test suite with proper coverage for Daikin Altherma 4 Modbus integration.
 """
 
-import pytest
 import sys
 import types
 from unittest.mock import Mock
+
+import pytest
 
 # Import shared test utilities
 from .test_utils import setup_home_assistant_mocks, setup_project_paths

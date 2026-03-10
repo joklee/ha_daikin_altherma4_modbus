@@ -1,9 +1,11 @@
-from homeassistant.components.number import NumberEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN, HOLDING_REGISTERS, HOLDING_DEVICE_INFO
-from .utils import to_signed_16bit, to_unsigned_16bit
 import logging
 from typing import Any
+
+from homeassistant.components.number import NumberEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS
+from .utils import to_signed_16bit, to_unsigned_16bit
 
 _LOGGER = logging.getLogger(__name__)
 

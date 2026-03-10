@@ -11,9 +11,9 @@ sys.path.insert(
 )
 
 from utils import (  # noqa: E402
+    clamp_16bit,
     to_signed_16bit,
     to_unsigned_16bit,
-    clamp_16bit,
 )
 
 

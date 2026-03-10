@@ -2,17 +2,19 @@
 
 import logging
 from typing import Any
+
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.exceptions import HomeAssistantError
-from .exceptions import DaikinModbusException
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
 from .const import (
-    DOMAIN,
-    COIL_SENSORS,
     COIL_DEVICE_INFO,
-    HOLDING_SWITCHES,
+    COIL_SENSORS,
+    DOMAIN,
     HOLDING_DEVICE_INFO,
+    HOLDING_SWITCHES,
 )
+from .exceptions import DaikinModbusException
 
 _LOGGER = logging.getLogger(__name__)
 

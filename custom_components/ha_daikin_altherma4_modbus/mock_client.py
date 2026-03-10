@@ -2,9 +2,9 @@
 
 import asyncio
 import logging
-from typing import List, Any
-from .client_interface import ModbusClientInterface
+from typing import Any, List
 
+from .client_interface import ModbusClientInterface
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -102,10 +102,11 @@ class MockModbusTcpClient(ModbusClientInterface):
     def generate_demo_register_data() -> dict:
         """Generate realistic demo data for all register types based on const.py."""
         import random
+
         from .const import (
             HOLDING_REGISTERS,
-            INPUT_REGISTERS,
             HOLDING_SWITCHES,
+            INPUT_REGISTERS,
             SELECT_REGISTERS,
         )
 

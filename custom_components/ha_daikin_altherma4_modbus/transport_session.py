@@ -1,8 +1,9 @@
 """Transport/session layer for Modbus connectivity."""
 
 import logging
-from .connection_manager import ensure_modbus_connection
+
 from .client_interface import ModbusClientInterface
+from .connection_manager import ensure_modbus_connection
 from .exceptions import DaikinModbusException
 
 _LOGGER = logging.getLogger(__name__)

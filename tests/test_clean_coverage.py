@@ -3,9 +3,10 @@
 Clean test suite with proper coverage - final solution.
 """
 
-import pytest
 import sys
 from unittest.mock import Mock
+
+import pytest
 
 # Import shared test utilities
 from .test_utils import setup_home_assistant_mocks, setup_project_paths
@@ -22,11 +23,11 @@ try:
     sys.path.insert(0, str(custom_path))
 
     # Import the modules we want to test
-    from ha_daikin_altherma4_modbus.mock_client import (
-        MockModbusTcpClient,
-        MockModbusResponse,
-    )
     from ha_daikin_altherma4_modbus import const
+    from ha_daikin_altherma4_modbus.mock_client import (
+        MockModbusResponse,
+        MockModbusTcpClient,
+    )
 
     COVERAGE_WORKING = True
 except ImportError as e:

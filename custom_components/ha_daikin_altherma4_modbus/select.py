@@ -1,11 +1,13 @@
 """Select platform for Daikin Altherma 4 Modbus integration."""
 
 import logging
+from typing import Any
+
 from homeassistant.components.select import SelectEntity
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN, SELECT_REGISTERS, HOLDING_DEVICE_INFO
-from typing import Any
+
+from .const import DOMAIN, HOLDING_DEVICE_INFO, SELECT_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
 

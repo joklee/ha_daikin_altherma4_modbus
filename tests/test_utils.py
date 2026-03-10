@@ -5,9 +5,9 @@ Shared test utilities for Daikin Altherma 4 Modbus integration tests.
 
 import sys
 import types
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock
-from datetime import datetime
 
 
 class MockConst:

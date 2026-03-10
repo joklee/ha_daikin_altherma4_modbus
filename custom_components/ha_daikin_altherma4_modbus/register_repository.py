@@ -5,7 +5,7 @@ import logging
 import time
 from typing import Any
 
-from .const import MIN_MODBUS_ADDRESS, MAX_MODBUS_ADDRESS
+from .const import MAX_MODBUS_ADDRESS, MIN_MODBUS_ADDRESS
 from .exceptions import (
     ModbusConnectionException,
     ModbusDeviceException,

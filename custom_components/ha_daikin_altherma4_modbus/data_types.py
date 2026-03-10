@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any, Dict, Mapping, MutableMapping, TypedDict, Union
 
-
 RegisterValue = Union[int, float, str, datetime, None]
 
 

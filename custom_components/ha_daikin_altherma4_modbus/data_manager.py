@@ -5,12 +5,12 @@ import time
 from typing import Any
 
 from .const import (
-    INPUT_REGISTERS,
-    HOLDING_REGISTERS,
-    SELECT_REGISTERS,
-    HOLDING_SWITCHES,
-    DISCRETE_INPUT_SENSORS,
     COIL_SENSORS,
+    DISCRETE_INPUT_SENSORS,
+    HOLDING_REGISTERS,
+    HOLDING_SWITCHES,
+    INPUT_REGISTERS,
+    SELECT_REGISTERS,
 )
 from .data_types import StateData
 from .mapping_transform import ModbusMappingTransform

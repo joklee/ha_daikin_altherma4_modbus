@@ -1,17 +1,19 @@
 """Simplified coordinator classes for Daikin Altherma 4 Modbus integration."""
 
-import logging
 import asyncio
-from .retry_utils import add_jitter, DEFAULT_JITTER
+import logging
+
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from .data_manager import ModbusDataManager
+
 from .const import DOMAIN
+from .data_manager import ModbusDataManager
 from .exceptions import (
     ModbusConnectionException,
     ModbusDeviceException,
     ModbusReadException,
     ModbusTimeoutException,
 )
+from .retry_utils import DEFAULT_JITTER, add_jitter
 
 _LOGGER = logging.getLogger(__name__)
 _COORDINATOR_IO_EXCEPTIONS = (
