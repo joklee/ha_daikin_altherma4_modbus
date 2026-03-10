@@ -1,10 +1,7 @@
 import json
 from pathlib import Path
 
-import pytest
 
-
-@pytest.mark.unit
 def test_manifest_has_version():
     manifest_path = Path("custom_components/ha_daikin_altherma4_modbus/manifest.json")
     data = json.loads(manifest_path.read_text())
