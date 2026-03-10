@@ -114,7 +114,13 @@ async def async_unload_entry(hass, entry):
         return False
 
     if unified_coordinator and hasattr(unified_coordinator, "async_shutdown"):
-        await unified_coordinator.async_shutdown()
+        try:
+            await unified_coordinator.async_shutdown()
+        except Exception as shutdown_err:
+            _LOGGER.debug(
+                "Failed shutting down unified coordinator during unload: %s",
+                shutdown_err,
+            )
 
     host = entry_data_value(entry, "host", "")
     port = entry_data_value(entry, "port", 502)
@@ -123,10 +129,20 @@ async def async_unload_entry(hass, entry):
     )
 
     if manager:
-        await manager.async_shutdown(disconnect_clients=not shared_endpoint_in_use)
+        try:
+            await manager.async_shutdown(disconnect_clients=not shared_endpoint_in_use)
+        except Exception as shutdown_err:
+            _LOGGER.debug(
+                "Failed shutting down manager during unload: %s", shutdown_err
+            )
 
     if not shared_endpoint_in_use:
-        await RealModbusTcpClient.async_close_cached_client(host, port)
+        try:
+            await RealModbusTcpClient.async_close_cached_client(host, port)
+        except Exception as shutdown_err:
+            _LOGGER.debug(
+                "Failed closing cached client during unload: %s", shutdown_err
+            )
 
     domain_data.pop(entry.entry_id, None)
     _LOGGER.info("Successfully unloaded entry %s", entry.entry_id)
