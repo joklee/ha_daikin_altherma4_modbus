@@ -405,6 +405,102 @@ async def test_options_flow_rejects_slow_interval_smaller_than_scan(monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_config_flow_user_step_shows_form_initially(monkeypatch):
+    """Test that config flow shows form when no user input provided."""
+    config_flow = _load_config_flow_module(monkeypatch)
+    flow = config_flow.ConfigFlow()
+
+    result = await flow.async_step_user(None)
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "user"
+    assert "data_schema" in result
+
+
+@pytest.mark.asyncio
+async def test_config_flow_user_step_trims_whitespace(monkeypatch):
+    """Test that config flow trims whitespace from inputs."""
+    config_flow = _load_config_flow_module(monkeypatch)
+    flow = config_flow.ConfigFlow()
+
+    result = await flow.async_step_user(
+        {
+            "host": " 192.168.1.100 ",
+            "port": 502,
+            "scan_interval": 15,
+            "slow_scan_interval": 300,
+            "electric_power_sensor": " sensor.power ",
+            "demo_mode": True,
+        }
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["data"] == {"host": "192.168.1.100", "port": 502}
+    assert result["options"]["electric_power_sensor"] == "sensor.power"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_user_step_handles_empty_electric_power_sensor(monkeypatch):
+    """Test that config flow handles empty electric power sensor."""
+    config_flow = _load_config_flow_module(monkeypatch)
+    flow = config_flow.ConfigFlow()
+
+    result = await flow.async_step_user(
+        {
+            "host": "192.168.1.100",
+            "port": 502,
+            "scan_interval": 15,
+            "slow_scan_interval": 300,
+            "electric_power_sensor": "",  # Empty
+            "demo_mode": False,
+        }
+    )
+
+    assert result["type"] == "create_entry"
+    assert "electric_power_sensor" not in result["options"]
+
+
+@pytest.mark.asyncio
+async def test_config_flow_get_options_flow_returns_options_flow_instance(monkeypatch):
+    """Test that ConfigFlow.async_get_options_flow returns OptionsFlow instance."""
+    config_flow = _load_config_flow_module(monkeypatch)
+
+    config_entry = SimpleNamespace(
+        entry_id="test_entry",
+        data={"host": "192.168.1.100", "port": 502},
+        options={"scan_interval": 15, "slow_scan_interval": 300, "demo_mode": False},
+    )
+
+    options_flow = config_flow.ConfigFlow.async_get_options_flow(config_entry)
+
+    assert isinstance(options_flow, config_flow.OptionsFlow)
+    assert options_flow._config_entry == config_entry
+
+
+@pytest.mark.asyncio
+async def test_config_flow_user_step_uses_default_values(monkeypatch):
+    """Test that config flow uses default values when not provided."""
+    config_flow = _load_config_flow_module(monkeypatch)
+    flow = config_flow.ConfigFlow()
+
+    result = await flow.async_step_user(
+        {
+            "host": "192.168.1.100",
+            "port": 502,
+            "scan_interval": 10,  # Default value
+            "slow_scan_interval": 600,  # Default value
+            "demo_mode": False,  # Default value
+        }
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["data"] == {"host": "192.168.1.100", "port": 502}
+    assert result["options"]["scan_interval"] == 10
+    assert result["options"]["slow_scan_interval"] == 600
+    assert result["options"]["demo_mode"] is False
+
+
+@pytest.mark.asyncio
 async def test_setup_entry_runs_single_initial_refresh_per_coordinator(monkeypatch):
     integration, manager_cls = _load_integration_module(monkeypatch)
 
