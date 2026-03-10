@@ -396,6 +396,7 @@ async def test_connection_pool_cache_management_concept():
 
 
 @pytest.mark.asyncio
+@pytest.mark.slow
 async def test_connection_pool_performance_metrics():
     """Test connection pool performance metrics."""
 
