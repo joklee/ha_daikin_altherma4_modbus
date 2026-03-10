@@ -1,6 +1,5 @@
 """Facade data manager composed of transport/session, repository and mapping layers."""
 
-import asyncio
 import logging
 import time
 from typing import Any
@@ -203,11 +202,8 @@ class ModbusDataManager:
         """Common method to fetch all register groups."""
         data = {}
         data.update(await self._fetch_input_registers())
-        await asyncio.sleep(0.1)
         data.update(await self._fetch_discrete_inputs())
-        await asyncio.sleep(0.1)
         data.update(await self._fetch_coils())
-        await asyncio.sleep(0.1)
         data.update(await self._fetch_holding_data())
         return data
 
