@@ -85,9 +85,8 @@ jobs:
           pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=xml --cov-report=term-missing -v
 
       # 📊 Coverage Reporting
-      - name: Combine coverage reports
+      - name: Generate coverage reports
         run: |
-          coverage combine
           coverage xml
           coverage html
           coverage report --show-missing
