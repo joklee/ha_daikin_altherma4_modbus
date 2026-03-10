@@ -17,6 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 # Global cache for AsyncModbusTcpClient instances and locks
 _client_cache = {}
 _client_locks = {}
+_cache_lock = asyncio.Lock()  # Global lock for cache operations
 
 
 class OneBasedModbusResponse:
@@ -79,32 +80,54 @@ class RealModbusTcpClient(ModbusClientInterface):
         self.port = port
         self.timeout = timeout
         self._reconnect_needed = False
+        self._client = None
+        self._lock = None
+
+    async def _initialize_client(self) -> None:
+        """Initialize the client with thread-safe cache access."""
+        if self._client is not None:
+            return  # Already initialized
 
         # Create cache key from host:port
-        cache_key = f"{host}:{port}"
+        cache_key = f"{self.host}:{self.port}"
 
-        # Return cached client if exists
-        if cache_key in _client_cache:
-            self._client = _client_cache[cache_key]
-            self._lock = _client_locks[cache_key]
-            _LOGGER.info(f"Using cached AsyncModbusTcpClient for {cache_key}")
-        else:
-            # Create new client and cache it
-            self._client = AsyncModbusTcpClient(
-                host, port=port, timeout=timeout, retries=1
-            )
-            self._lock = asyncio.Lock()
-            _client_cache[cache_key] = self._client
-            _client_locks[cache_key] = self._lock
-            _LOGGER.info(f"Created and cached new AsyncModbusTcpClient for {cache_key}")
+        # Use global lock to prevent race conditions during cache access
+        async with _cache_lock:
+            if cache_key in _client_cache:
+                self._client = _client_cache[cache_key]
+                self._lock = _client_locks[cache_key]
+                _LOGGER.info(f"Using cached AsyncModbusTcpClient for {cache_key}")
+            else:
+                # Create new client and cache it
+                self._client = AsyncModbusTcpClient(
+                    self.host, port=self.port, timeout=self.timeout, retries=1
+                )
+                self._lock = asyncio.Lock()
+                _client_cache[cache_key] = self._client
+                _client_locks[cache_key] = self._lock
+                _LOGGER.info(
+                    f"Created and cached new AsyncModbusTcpClient for {cache_key}"
+                )
+
+    @classmethod
+    async def create(
+        cls, host: str, port: int = 502, timeout: int = 10
+    ) -> "RealModbusTcpClient":
+        """Factory method to create and initialize a RealModbusTcpClient instance."""
+        instance = cls(host, port, timeout)
+        await instance._initialize_client()
+        return instance
 
     @property
     def connected(self) -> bool:
         """Check if client is connected."""
+        if self._client is None:
+            return False
         return self._client.connected
 
     async def connect(self) -> None:
         """Connect to Modbus server with lazy reconnect."""
+        await self._ensure_initialized()
         if self._reconnect_needed or not self._client.connected:
             _LOGGER.info(f"Lazy reconnect: connecting to {self.host}:{self.port}")
             await self._client.connect()
@@ -116,6 +139,7 @@ class RealModbusTcpClient(ModbusClientInterface):
 
     async def disconnect(self) -> None:
         """Disconnect from Modbus server."""
+        await self._ensure_initialized()
         if self._client.connected:
             _LOGGER.info(f"Disconnecting from {self.host}:{self.port}")
             self._client.close()
@@ -123,6 +147,7 @@ class RealModbusTcpClient(ModbusClientInterface):
 
     async def read_input_registers(self, address: int, count: int):
         """Read input registers."""
+        await self._ensure_initialized()
         async with self._lock:
             await self._ensure_connection()
             _LOGGER.debug(
@@ -152,6 +177,7 @@ class RealModbusTcpClient(ModbusClientInterface):
 
     async def read_holding_registers(self, address: int, count: int):
         """Read holding registers."""
+        await self._ensure_initialized()
         async with self._lock:
             await self._ensure_connection()
             _LOGGER.debug(
@@ -181,6 +207,7 @@ class RealModbusTcpClient(ModbusClientInterface):
 
     async def read_discrete_inputs(self, address: int, count: int):
         """Read discrete inputs."""
+        await self._ensure_initialized()
         async with self._lock:
             await self._ensure_connection()
             _LOGGER.debug(
@@ -210,6 +237,7 @@ class RealModbusTcpClient(ModbusClientInterface):
 
     async def read_coils(self, address: int, count: int):
         """Read coils."""
+        await self._ensure_initialized()
         async with self._lock:
             await self._ensure_connection()
             _LOGGER.debug(f"Reading coils from address {address} with count {count}")
@@ -230,6 +258,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusReadException(f"Modbus error reading coils at {address}", e)
 
     async def write_holding_register(self, address: int, value: int):
+        await self._ensure_initialized()
         async with self._lock:
             await self._ensure_connection()
             _LOGGER.debug(f"Writing to holding register {address} with value {value}")
@@ -254,6 +283,7 @@ class RealModbusTcpClient(ModbusClientInterface):
                 )
 
     async def write_coil_register(self, address: int, value: bool):
+        await self._ensure_initialized()
         async with self._lock:
             await self._ensure_connection()
             _LOGGER.debug(f"Writing to coil register {address} with value {value}")
@@ -269,8 +299,14 @@ class RealModbusTcpClient(ModbusClientInterface):
             except pymodbus.exceptions.ModbusException as e:
                 raise ModbusWriteException(f"Modbus error writing coil {address}", e)
 
+    async def _ensure_initialized(self) -> None:
+        """Ensure the client is initialized before use."""
+        if self._client is None:
+            await self._initialize_client()
+
     async def _ensure_connection(self) -> None:
         """Ensure connection is active before operations."""
+        await self._ensure_initialized()
         if not self._client.connected or self._reconnect_needed:
             _LOGGER.info(
                 f"Connection lost, attempting lazy reconnect to {self.host}:{self.port}"
@@ -297,21 +333,29 @@ class RealModbusTcpClient(ModbusClientInterface):
         _LOGGER.debug("AsyncModbusTcpClient cache cleared")
 
     @classmethod
+    async def safe_clear_cache(cls):
+        """Thread-safe version of clear_cache."""
+        async with _cache_lock:
+            cls.clear_cache()
+
+    @classmethod
     async def async_close_cached_client(cls, host: str, port: int = 502) -> None:
         """Close and remove a specific cached client."""
         global _client_cache, _client_locks
         cache_key = f"{host}:{port}"
-        client = _client_cache.get(cache_key)
 
-        if client is None:
-            return
+        async with _cache_lock:
+            client = _client_cache.get(cache_key)
 
-        try:
-            if getattr(client, "connected", False):
-                client.close()
-        except Exception as err:
-            _LOGGER.debug("Failed closing cached client %s: %s", cache_key, err)
-        finally:
-            _client_cache.pop(cache_key, None)
-            _client_locks.pop(cache_key, None)
-            _LOGGER.debug("Removed cached AsyncModbusTcpClient for %s", cache_key)
+            if client is None:
+                return
+
+            try:
+                if getattr(client, "connected", False):
+                    client.close()
+            except Exception as err:
+                _LOGGER.debug("Failed closing cached client %s: %s", cache_key, err)
+            finally:
+                _client_cache.pop(cache_key, None)
+                _client_locks.pop(cache_key, None)
+                _LOGGER.debug("Removed cached AsyncModbusTcpClient for %s", cache_key)
