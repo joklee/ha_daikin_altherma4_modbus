@@ -13,3 +13,12 @@ coverage>=7.0.0
 # Development and debugging
 pytest-xdist>=3.0.0  # Parallel test execution
 pytest-benchmark>=4.0.0  # Performance benchmarking
+
+# Code quality and security
+ruff>=0.1.0  # Linting and formatting
+bandit>=1.7.0  # Security linter
+safety>=2.3.0  # Dependency vulnerability scanner
+
+# Additional testing utilities
+pytest-json-report>=1.5.0  # JSON test reports
+pytest-html>=4.1.0  # HTML test reports

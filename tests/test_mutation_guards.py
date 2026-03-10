@@ -129,15 +129,15 @@ async def test_unified_write_event_schedules_and_runs_refresh(monkeypatch):
 
     normal = SimpleNamespace(
         async_request_refresh=AsyncMock(),
-        async_add_listener=lambda _cb: (lambda: None),
+        async_add_listener=lambda _cb: lambda: None,
     )
     slow = SimpleNamespace(
         async_request_refresh=AsyncMock(side_effect=RuntimeError("boom")),
-        async_add_listener=lambda _cb: (lambda: None),
+        async_add_listener=lambda _cb: lambda: None,
     )
     manager = SimpleNamespace(get_all_data=lambda: {})
     hass = SimpleNamespace(
-        bus=SimpleNamespace(async_listen=lambda *_args: (lambda: None))
+        bus=SimpleNamespace(async_listen=lambda *_args: lambda: None)
     )
 
     unified = module.UnifiedCoordinator(hass, manager, normal, slow)

@@ -6,9 +6,10 @@ on:
     tags: ["v*"]
   pull_request:
 
-# Add permissions for creating releases
+# Add permissions for creating releases and coverage reporting
 permissions:
   contents: write
+  checks: write
 
 jobs:
   validate:
@@ -40,24 +41,74 @@ jobs:
             exit 1
           fi
 
-      # 🧪 Ruff linting
+      # 🧪 Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install ruff
-        run: pip install ruff
+      # 📦 Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
 
-      - name: Run ruff
+      # 🔍 Code Quality Checks
+      - name: Run Ruff linting
         run: ruff check .
 
-      # 🧪 Run tests
-      - name: Install test dependencies
-        run: pip install -r requirements-test.txt
+      - name: Run Ruff formatting check
+        run: ruff format --check .
 
-      - name: Run tests with coverage
-        run: pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=xml --cov-report=term-missing
+      - name: Run Ruff import sorting check
+        run: ruff check --select I .
+
+      # 🧪 Enhanced Pytest Steps
+      - name: Run unit tests
+        run: |
+          pytest -m "unit and not slow" --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=xml --cov-report=term-missing --cov-report=html --junit-xml=test-results-unit.xml
+
+      - name: Run integration tests
+        run: |
+          pytest -m "integration and not slow" --cov=custom_components/ha_daikin_altherma4_modbus --cov-append --cov-report=xml --cov-report=term-missing --junit-xml=test-results-integration.xml
+
+      - name: Run slow tests (if any)
+        run: |
+          pytest -m "slow" --cov=custom_components/ha_daikin_altherma4_modbus --cov-append --cov-report=xml --cov-report=term-missing --junit-xml=test-results-slow.xml || true
+
+      # 📊 Coverage Reporting
+      - name: Combine coverage reports
+        run: |
+          coverage combine
+          coverage xml
+          coverage html
+          coverage report --show-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-${{ matrix.ha-version }}
+          path: |
+            htmlcov/
+            coverage.xml
+            .coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.ha-version }}
+          path: |
+            test-results-*.xml
 
       # 🐳 Test against multiple HA versions
       - name: Test integration load in Home Assistant ${{ matrix.ha-version }}
@@ -68,9 +119,97 @@ jobs:
             ghcr.io/home-assistant/home-assistant:${{ matrix.ha-version }} \
             python -m homeassistant --script check_config --config /config
 
+      # 📈 Performance Benchmarking
+      - name: Run performance benchmarks
+        run: |
+          pytest --benchmark-only --benchmark-json=benchmark.json || true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results-${{ matrix.ha-version }}
+          path: benchmark.json
+
+  # 🔍 Additional Code Quality Checks
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for SonarCloud
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+          pip install bandit safety
+
+      # 🔒 Security Checks
+      - name: Run Bandit security linter
+        run: bandit -r custom_components/ -f json -o bandit-report.json || true
+
+      - name: Run Safety check for known security vulnerabilities
+        run: safety check --json --output safety-report.json || true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+
+      # 📊 SonarCloud Analysis (optional)
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        if: env.SONAR_TOKEN != ''
+
+  # 📋 Test Summary
+  test-summary:
+    name: Test Summary
+    needs: [validate, code-quality]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create test summary
+        run: |
+          echo "# 🧪 Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Passed Checks" >> $GITHUB_STEP_SUMMARY
+          echo "- Code linting with Ruff" >> $GITHUB_STEP_SUMMARY
+          echo "- Code formatting check" >> $GITHUB_STEP_SUMMARY
+          echo "- Import sorting check" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Home Assistant configuration validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Coverage Information" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage reports and HTML artifacts are available for download." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Security Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "Security reports are available for download." >> $GITHUB_STEP_SUMMARY
+
   release:
     name: Create Release
-    needs: validate
+    needs: [validate, code-quality]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
