@@ -125,15 +125,24 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
         for key, value in self._enum_map.items():
             if value == option:
                 if hasattr(self._coordinator, "data_manager"):
-                    result = (
+                    try:
                         await self._coordinator.data_manager.write_holding_register(
                             self._register_name, key
                         )
-                    )
-                    if result is None:
-                        raise HomeAssistantError(
-                            f"Failed to write select option for {self._register_name}"
+                    except (ValueError, ConnectionError) as e:
+                        _LOGGER.error(
+                            f"Error writing select option for {self._register_name}: {e}"
                         )
+                        raise HomeAssistantError(
+                            f"Failed to set {self.name} to {option}: {e}"
+                        ) from e
+                    except Exception as e:
+                        _LOGGER.error(
+                            f"Error writing select option for {self._register_name}: {e}"
+                        )
+                        raise HomeAssistantError(
+                            f"Failed to set {self.name} to {option}"
+                        ) from e
                 else:
                     raise HomeAssistantError(
                         "Coordinator does not have data_manager attribute"

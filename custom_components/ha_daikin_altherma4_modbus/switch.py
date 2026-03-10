@@ -4,6 +4,7 @@ import logging
 from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.exceptions import HomeAssistantError
 from .exceptions import DaikinModbusException
 from .const import (
     DOMAIN,
@@ -89,28 +90,28 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):
         """Schaltet das Coil ein."""
         try:
-            result = await self.coordinator.data_manager.write_coil_register(
+            await self.coordinator.data_manager.write_coil_register(
                 self._register_name, True
             )
-            if result is None:
-                _LOGGER.error(f"Failed to turn on coil {self._address}")
-            else:
-                _LOGGER.debug(f"Successfully turned on coil {self._address}")
-        except DaikinModbusException as e:
+            _LOGGER.debug(f"Successfully turned on coil {self._address}")
+        except (DaikinModbusException, ValueError, ConnectionError) as e:
             _LOGGER.error(f"Error turning on coil {self._address}: {e}")
+            raise HomeAssistantError(
+                f"Failed to turn on coil {self._address}: {e}"
+            ) from e
 
     async def async_turn_off(self, **kwargs):
         """Schaltet das Coil aus."""
         try:
-            result = await self.coordinator.data_manager.write_coil_register(
+            await self.coordinator.data_manager.write_coil_register(
                 self._register_name, False
             )
-            if result is None:
-                _LOGGER.error(f"Failed to turn off coil {self._address}")
-            else:
-                _LOGGER.debug(f"Successfully turned off coil {self._address}")
-        except DaikinModbusException as e:
+            _LOGGER.debug(f"Successfully turned off coil {self._address}")
+        except (DaikinModbusException, ValueError, ConnectionError) as e:
             _LOGGER.error(f"Error turning off coil {self._address}: {e}")
+            raise HomeAssistantError(
+                f"Failed to turn off coil {self._address}: {e}"
+            ) from e
 
 
 class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
@@ -177,29 +178,25 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):
         """Schaltet das Holding Register ein."""
         try:
-            result = await self.coordinator.data_manager.write_holding_register(
+            await self.coordinator.data_manager.write_holding_register(
                 self._register_name, self._on_value
             )
-            if result is None:
-                _LOGGER.error(f"Failed to turn on holding register {self._address}")
-            else:
-                _LOGGER.debug(
-                    f"Successfully turned on holding register {self._address}"
-                )
-        except DaikinModbusException as e:
+            _LOGGER.debug(f"Successfully turned on holding register {self._address}")
+        except (DaikinModbusException, ValueError, ConnectionError) as e:
             _LOGGER.error(f"Error turning on holding register {self._address}: {e}")
+            raise HomeAssistantError(
+                f"Failed to turn on holding register {self._address}: {e}"
+            ) from e
 
     async def async_turn_off(self, **kwargs):
         """Schaltet das Holding Register aus."""
         try:
-            result = await self.coordinator.data_manager.write_holding_register(
+            await self.coordinator.data_manager.write_holding_register(
                 self._register_name, self._off_value
             )
-            if result is None:
-                _LOGGER.error(f"Failed to turn off holding register {self._address}")
-            else:
-                _LOGGER.debug(
-                    f"Successfully turned off holding register {self._address}"
-                )
-        except DaikinModbusException as e:
+            _LOGGER.debug(f"Successfully turned off holding register {self._address}")
+        except (DaikinModbusException, ValueError, ConnectionError) as e:
             _LOGGER.error(f"Error turning off holding register {self._address}: {e}")
+            raise HomeAssistantError(
+                f"Failed to turn off holding register {self._address}: {e}"
+            ) from e

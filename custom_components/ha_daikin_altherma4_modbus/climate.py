@@ -254,18 +254,18 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         op_mode_raw = offset_data["op_mode_raw"]
 
         try:
-            result = None
             if op_mode_raw == HVAC_COOL:
-                result = await self.coordinator.data_manager.write_holding_register(
+                await self.coordinator.data_manager.write_holding_register(
                     REGISTER_OFFSET_COOLING, offset_raw
                 )
             else:
-                result = await self.coordinator.data_manager.write_holding_register(
+                await self.coordinator.data_manager.write_holding_register(
                     REGISTER_OFFSET_HEATING, offset_raw
                 )
-            if result is None:
-                raise HomeAssistantError("Failed to set thermostat offset")
             _LOGGER.debug(f"Set thermostat offset to {offset}°C (raw: {offset_raw})")
+        except (ValueError, ConnectionError) as e:
+            _LOGGER.error(f"Failed to set thermostat offset: {e}")
+            raise HomeAssistantError(f"Failed to set thermostat offset: {e}") from e
         except Exception as e:
             _LOGGER.error(f"Failed to set thermostat offset: {e}")
             raise HomeAssistantError("Failed to set thermostat offset") from e
@@ -287,12 +287,13 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         mode_raw = mode_map.get(hvac_mode, 0)
 
         try:
-            result = await self.coordinator.data_manager.write_holding_register(
+            await self.coordinator.data_manager.write_holding_register(
                 REGISTER_OPERATION_MODE, mode_raw
             )
-            if result is None:
-                raise HomeAssistantError("Failed to set HVAC mode")
             _LOGGER.debug(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
+        except (ValueError, ConnectionError) as e:
+            _LOGGER.error(f"Failed to set HVAC mode: {e}")
+            raise HomeAssistantError(f"Failed to set HVAC mode: {e}") from e
         except Exception as e:
             _LOGGER.error(f"Failed to set HVAC mode: {e}")
             raise HomeAssistantError("Failed to set HVAC mode") from e
@@ -304,12 +305,13 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         mode_raw = fan_map.get(fan_mode, 0)
 
         try:
-            result = await self.coordinator.data_manager.write_holding_register(
+            await self.coordinator.data_manager.write_holding_register(
                 REGISTER_QUIET_MODE, mode_raw
             )
-            if result is None:
-                raise HomeAssistantError("Failed to set fan mode")
             _LOGGER.debug(f"Set fan mode to {fan_mode} (raw: {mode_raw})")
+        except (ValueError, ConnectionError) as e:
+            _LOGGER.error(f"Failed to set fan mode: {e}")
+            raise HomeAssistantError(f"Failed to set fan mode: {e}") from e
         except Exception as e:
             _LOGGER.error(f"Failed to set fan mode: {e}")
             raise HomeAssistantError("Failed to set fan mode") from e
@@ -478,30 +480,32 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
         """Set HVAC mode."""
         if hvac_mode == HVACMode.HEAT:
             try:
-                result = await self._write_register_func(
-                    self._hvac_mode_register, DHW_ON
-                )
-                if result is None:
-                    _LOGGER.error(f"Failed to turn on {self._dhw_type} DHW heat-up")
-                else:
-                    _LOGGER.debug(
-                        f"Successfully turned on {self._dhw_type} DHW heat-up"
-                    )
+                await self._write_register_func(self._hvac_mode_register, DHW_ON)
+                _LOGGER.debug(f"Successfully turned on {self._dhw_type} DHW heat-up")
+            except (ValueError, ConnectionError) as e:
+                _LOGGER.error(f"Error turning on {self._dhw_type} DHW heat-up: {e}")
+                raise HomeAssistantError(
+                    f"Failed to turn on {self._dhw_type} DHW heat-up: {e}"
+                ) from e
             except Exception as e:
                 _LOGGER.error(f"Error turning on {self._dhw_type} DHW heat-up: {e}")
+                raise HomeAssistantError(
+                    f"Failed to turn on {self._dhw_type} DHW heat-up"
+                ) from e
         elif hvac_mode == HVACMode.OFF:
             try:
-                result = await self._write_register_func(
-                    self._hvac_mode_register, DHW_OFF
-                )
-                if result is None:
-                    _LOGGER.error(f"Failed to turn off {self._dhw_type} DHW heat-up")
-                else:
-                    _LOGGER.debug(
-                        f"Successfully turned off {self._dhw_type} DHW heat-up"
-                    )
+                await self._write_register_func(self._hvac_mode_register, DHW_OFF)
+                _LOGGER.debug(f"Successfully turned off {self._dhw_type} DHW heat-up")
+            except (ValueError, ConnectionError) as e:
+                _LOGGER.error(f"Error turning off {self._dhw_type} DHW heat-up: {e}")
+                raise HomeAssistantError(
+                    f"Failed to turn off {self._dhw_type} DHW heat-up: {e}"
+                ) from e
             except Exception as e:
                 _LOGGER.error(f"Error turning off {self._dhw_type} DHW heat-up: {e}")
+                raise HomeAssistantError(
+                    f"Failed to turn off {self._dhw_type} DHW heat-up"
+                ) from e
 
     async def async_set_temperature(self, **kwargs):
         """Set target temperature."""
@@ -519,19 +523,26 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
             int(temperature / scale_factor) if scale_factor != 0 else int(temperature)
         )
         try:
-            result = await self.coordinator.data_manager.write_holding_register(
+            await self.coordinator.data_manager.write_holding_register(
                 self._setpoint_register, raw_value
             )
-            if result is None:
-                _LOGGER.error(f"Failed to set {self._dhw_type} DHW heat-up temperature")
-            else:
-                _LOGGER.debug(
-                    f"Successfully set {self._dhw_type} DHW heat-up temperature to {temperature}°C (raw: {raw_value})"
-                )
+            _LOGGER.debug(
+                f"Successfully set {self._dhw_type} DHW heat-up temperature to {temperature}°C (raw: {raw_value})"
+            )
+        except (ValueError, ConnectionError) as e:
+            _LOGGER.error(
+                f"Error setting {self._dhw_type} DHW heat-up temperature: {e}"
+            )
+            raise HomeAssistantError(
+                f"Failed to set {self._dhw_type} DHW temperature: {e}"
+            ) from e
         except Exception as e:
             _LOGGER.error(
                 f"Error setting {self._dhw_type} DHW heat-up temperature: {e}"
             )
+            raise HomeAssistantError(
+                f"Failed to set {self._dhw_type} DHW temperature"
+            ) from e
 
     async def async_turn_on(self):
         """Turn on DHW heat-up."""

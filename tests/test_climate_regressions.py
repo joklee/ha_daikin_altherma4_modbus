@@ -195,8 +195,9 @@ async def test_hvac_off_is_coerced_to_auto_register_value(monkeypatch):
 async def test_hvac_mode_raises_home_assistant_error_on_failed_write(monkeypatch):
     module = _load_climate_module(monkeypatch)
     thermostat = _make_thermostat(module, op_mode_raw=0)
+    # Mock write_holding_register to raise a connection error (simulating device unreachable)
     thermostat.coordinator.data_manager.write_holding_register = AsyncMock(
-        return_value=None
+        side_effect=ConnectionError("Device unreachable")
     )
 
     with pytest.raises(module.HomeAssistantError):

@@ -145,29 +145,23 @@ class ModbusRegisterRepository:
         """Write a holding register by register name."""
         client = await self._session.ensure_connection()
         if client is None:
-            _LOGGER.error(
-                "Cannot write holding register %s - Modbus connection unavailable",
-                register_name,
-            )
-            return None
+            error_msg = f"Cannot write holding register {register_name} - Modbus connection unavailable"
+            _LOGGER.error(error_msg)
+            raise ModbusConnectionException(error_msg)
 
         try:
             address = int(register_name.split("_")[1])
         except (ValueError, IndexError):
-            _LOGGER.error("Invalid address name format: %s", register_name)
-            return None
+            error_msg = f"Invalid address name format: {register_name}"
+            _LOGGER.error(error_msg)
+            raise ValueError(error_msg)
 
         try:
             result = await client.write_holding_register(address, value)
             if self._session.is_modbus_error(result):
-                _LOGGER.error(
-                    "Failed to write register %s (address %s) with value %s: %s",
-                    register_name,
-                    address,
-                    value,
-                    result,
-                )
-                return None
+                error_msg = f"Failed to write register {register_name} (address {address}) with value {value}: {result}"
+                _LOGGER.error(error_msg)
+                raise ModbusDeviceException(error_msg)
 
             _LOGGER.debug(
                 "Successfully wrote register %s (address %s) with value %s",
@@ -176,48 +170,44 @@ class ModbusRegisterRepository:
                 value,
             )
             return result
-        except _WRITE_EXCEPTIONS as err:
-            _LOGGER.error(
-                "Exception writing register %s (address %s) with value %s: %s",
-                register_name,
-                address,
-                value,
-                err,
-            )
-            return None
+        except _WRITE_EXCEPTIONS:
+            # Re-raise our custom exceptions without wrapping
+            raise
+        except Exception as err:
+            error_msg = f"Unexpected exception writing register {register_name} (address {address}) with value {value}: {err}"
+            _LOGGER.error(error_msg)
+            raise ModbusWriteException(error_msg) from err
 
     async def write_coil_register(self, register_name: str, value: bool) -> Any:
         """Write a coil register by register name."""
         client = await self._session.ensure_connection()
         if client is None:
-            _LOGGER.error(
-                "Cannot write coil %s - Modbus connection unavailable", register_name
+            error_msg = (
+                f"Cannot write coil {register_name} - Modbus connection unavailable"
             )
-            return None
+            _LOGGER.error(error_msg)
+            raise ModbusConnectionException(error_msg)
 
         if isinstance(register_name, str) and register_name.startswith("coil_"):
             try:
                 address = int(register_name.split("_")[1])
             except (ValueError, IndexError):
-                _LOGGER.error("Invalid address name format: %s", register_name)
-                return None
+                error_msg = f"Invalid address name format: {register_name}"
+                _LOGGER.error(error_msg)
+                raise ValueError(error_msg)
         elif isinstance(register_name, int):
             address = register_name
         else:
-            _LOGGER.error("Invalid address format: %s", register_name)
-            return None
+            error_msg = f"Invalid address format: {register_name}"
+            _LOGGER.error(error_msg)
+            raise ValueError(error_msg)
 
         try:
             result = await client.write_coil_register(address, value)
             if self._session.is_modbus_error(result):
-                _LOGGER.error(
-                    "Failed to write coil %s (address %s) with value %s: %s",
-                    register_name,
-                    address,
-                    value,
-                    result,
-                )
-                return None
+                error_msg = f"Failed to write coil {register_name} (address {address}) with value {value}: {result}"
+                _LOGGER.error(error_msg)
+                raise ModbusDeviceException(error_msg)
 
             _LOGGER.debug(
                 "Successfully wrote coil %s (address %s) with value %s",
@@ -226,15 +216,13 @@ class ModbusRegisterRepository:
                 value,
             )
             return result
-        except _WRITE_EXCEPTIONS as err:
-            _LOGGER.error(
-                "Exception writing coil %s (address %s) with value %s: %s",
-                register_name,
-                address,
-                value,
-                err,
-            )
-            return None
+        except _WRITE_EXCEPTIONS:
+            # Re-raise our custom exceptions without wrapping
+            raise
+        except Exception as err:
+            error_msg = f"Unexpected exception writing coil {register_name} (address {address}) with value {value}: {err}"
+            _LOGGER.error(error_msg)
+            raise ModbusWriteException(error_msg) from err
 
     async def read_single_holding_register(self, address: int) -> Any | None:
         """Read one holding register value."""

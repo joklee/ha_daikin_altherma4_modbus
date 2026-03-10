@@ -199,6 +199,15 @@ def _load_switch_module(monkeypatch):
         update_coordinator_module,
     )
 
+    # Mock homeassistant.exceptions
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+
+    class HomeAssistantError(Exception):
+        pass
+
+    exceptions_module.HomeAssistantError = HomeAssistantError
+    monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
+
     const_module = types.ModuleType(const_name)
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.COIL_SENSORS = []
@@ -248,7 +257,8 @@ async def test_switch_handles_daikin_modbus_exception(monkeypatch):
         register_name="holding_4",
     )
 
-    await entity.async_turn_on()
+    with pytest.raises(switch_module.HomeAssistantError):
+        await entity.async_turn_on()
 
 
 @pytest.mark.asyncio
