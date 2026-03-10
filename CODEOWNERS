@@ -1,0 +1,20 @@
+# Code owners for ha_daikin_altherma4_modbus integration
+
+# Primary maintainer
+* @joklee
+
+# Documentation and issues
+*.md @joklee
+ISSUE_TEMPLATE/* @joklee
+
+# CI/CD configuration
+.github/workflows/* @joklee
+*.{yml,yaml} @joklee
+
+# Test files
+tests/* @joklee
+pytest.ini @joklee
+requirements-test.txt @joklee
+
+# Core integration files
+custom_components/ha_daikin_altherma4_modbus/* @joklee
