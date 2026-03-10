@@ -5,6 +5,7 @@ import logging
 import time
 from typing import Any
 
+from .const import MIN_MODBUS_ADDRESS, MAX_MODBUS_ADDRESS
 from .exceptions import (
     ModbusConnectionException,
     ModbusDeviceException,
@@ -15,6 +16,36 @@ from .exceptions import (
 from .transport_session import ModbusTransportSession
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _validate_modbus_address(address: int, context: str = "address") -> int:
+    """
+    Validate and clamp Modbus address to valid range based on device documentation.
+
+    Args:
+        address: The address to validate
+        context: Context description for error messages
+
+    Returns:
+        Validated address clamped to device-specific range (1-87)
+
+    Raises:
+        ValueError: If address is not a valid integer
+    """
+    if not isinstance(address, int):
+        raise ValueError(
+            f"Invalid {context}: must be integer, got {type(address).__name__}"
+        )
+
+    if address < MIN_MODBUS_ADDRESS or address > MAX_MODBUS_ADDRESS:
+        _LOGGER.warning(
+            f"Modbus {context} {address} is outside valid device range ({MIN_MODBUS_ADDRESS}-{MAX_MODBUS_ADDRESS}), clamping"
+        )
+        address = max(MIN_MODBUS_ADDRESS, min(MAX_MODBUS_ADDRESS, address))
+
+    return address
+
+
 _READ_EXCEPTIONS = (
     ModbusReadException,
     ModbusTimeoutException,
@@ -156,6 +187,11 @@ class ModbusRegisterRepository:
             _LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
+        # Validate and clamp address to valid Modbus range
+        address = _validate_modbus_address(
+            address, f"holding register address {register_name}"
+        )
+
         try:
             result = await client.write_holding_register(address, value)
             if self._session.is_modbus_error(result):
@@ -201,6 +237,9 @@ class ModbusRegisterRepository:
             error_msg = f"Invalid address format: {register_name}"
             _LOGGER.error(error_msg)
             raise ValueError(error_msg)
+
+        # Validate and clamp address to valid Modbus range
+        address = _validate_modbus_address(address, f"coil address {register_name}")
 
         try:
             result = await client.write_coil_register(address, value)

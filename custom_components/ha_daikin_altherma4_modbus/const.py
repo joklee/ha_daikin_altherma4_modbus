@@ -6,6 +6,10 @@ DEFAULT_PORT = 502
 SLOW_SCAN_INTERVAL = 30
 NORMAL_SCAN_INTERVAL = 5
 
+# Valid Modbus address ranges based on device documentation
+MIN_MODBUS_ADDRESS = 1
+MAX_MODBUS_ADDRESS = 87
+
 INPUT_DEVICE_INFO = {
     "identifiers": {("daikin_altherma_modbus", "input_registers")},
     "translation_key": "daikin_altherma_modbus_input_registers",
