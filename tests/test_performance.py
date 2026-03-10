@@ -50,6 +50,75 @@ class MockPerformanceClient:
         return [0] * ((count + 7) // 8)
 
 
+def test_mock_client_performance(benchmark):
+    """Benchmark mock client basic operations."""
+    def basic_operations():
+        client = MockPerformanceClient("localhost", 502)
+        
+        # Connection
+        asyncio.run(client.connect())
+        
+        # Register reads
+        result1 = asyncio.run(client.read_input_registers(21, 5))
+        result2 = asyncio.run(client.read_holding_registers(100, 3))
+        result3 = asyncio.run(client.read_discrete_inputs(1, 8))
+        result4 = asyncio.run(client.read_coils(1, 8))
+        
+        return result1, result2, result3, result4, client
+    
+    result1, result2, result3, result4, client = benchmark(basic_operations)
+    
+    # Assertions
+    assert len(result1) == 5
+    assert len(result2) == 3
+    assert len(result3) == 1
+    assert len(result4) == 1
+    assert client.read_count == 4
+
+
+def test_register_read_performance(benchmark):
+    """Benchmark register read operations."""
+    def read_multiple_blocks():
+        client = MockPerformanceClient("localhost", 502)
+        results = []
+        
+        # Read multiple register blocks
+        for address in range(21, 87, 5):  # Read blocks of 5 registers
+            result = asyncio.run(client.read_input_registers(address, 5))
+            results.append(result)
+        
+        return results, client
+    
+    results, client = benchmark(read_multiple_blocks)
+    
+    # Should read 14 blocks efficiently (21, 26, 31, 36, 41, 46, 51, 56, 61, 66, 71, 76, 81, 86)
+    assert len(results) == 14
+    assert client.read_count == 14
+
+
+def test_memory_allocation_performance(benchmark):
+    """Benchmark memory usage patterns."""
+    
+    def allocate_register_data():
+        """Simulate register data allocation."""
+        # Simulate typical register data structures
+        data = {
+            'input_registers': [0] * 67,  # Max input register range
+            'holding_registers': [0] * 50,
+            'discrete_inputs': [0] * 26,
+            'coils': [0] * 3,
+            'timestamps': [time.time()] * 10,
+        }
+        return data
+    
+    # Allocate data multiple times
+    results = benchmark(lambda: [allocate_register_data() for _ in range(100)])
+    
+    # Should be very fast memory operations
+    assert len(results) == 100
+    assert all(len(r['input_registers']) == 67 for r in results)
+
+
 @pytest.mark.asyncio
 async def test_performance_scan_intervals():
     """Test performance impact of different scan intervals."""
