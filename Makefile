@@ -200,6 +200,10 @@ test-platform-setup:
 	@echo "🧪 Testing platform setup validation..."
 	pytest tests/test_platform_setup.py -v
 
+test-connection-pool:
+	@echo "🧪 Testing connection pool performance..."
+	pytest tests/test_connection_pool.py -v
+
 test-all-new:
 	@echo "🧪 Running all new tests..."
-	pytest tests/test_integration_lifecycle.py tests/test_config_model.py tests/test_config_flow.py tests/test_platform_setup.py -v
+	pytest tests/test_integration_lifecycle.py tests/test_config_model.py tests/test_config_flow.py tests/test_platform_setup.py tests/test_connection_pool.py -v
