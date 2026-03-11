@@ -742,7 +742,6 @@ INPUT_REGISTERS = [
 ]
 
 # Holding Register (beschreibbare Register)
-
 HOLDING_REGISTERS = [
     {
         "name": "Leaving water Main Heating setpoint",
@@ -812,10 +811,10 @@ HOLDING_REGISTERS = [
         "icon": "mdi:cog",
         "input_type": "holding",
         "register_name": "holding_68",
+        "translation_key": "holding_68",
         "enum_map": {
             0: "Fixed",
             1: "Weather dependent",
-            "translation_key": "holding_68",
         },
     },
     {
@@ -830,10 +829,10 @@ HOLDING_REGISTERS = [
         "icon": "mdi:cog",
         "input_type": "holding",
         "register_name": "holding_69",
+        "translation_key": "holding_69",
         "enum_map": {
             0: "Fixed",
             1: "Weather dependent",
-            "translation_key": "holding_69",
         },
     },
     {
@@ -848,11 +847,11 @@ HOLDING_REGISTERS = [
         "icon": "mdi:thermostat",
         "input_type": "holding",
         "register_name": "holding_74",
+        "translation_key": "holding_74",
         "enum_map": {
             0: "None",
             1: "Heating",
             2: "Cooling",
-            "translation_key": "holding_74",
         },
     },
     {
@@ -867,11 +866,11 @@ HOLDING_REGISTERS = [
         "icon": "mdi:thermostat",
         "input_type": "holding",
         "register_name": "holding_75",
+        "translation_key": "holding_75",
         "enum_map": {
             0: "None",
             1: "Heating",
             2: "Cooling",
-            "translation_key": "holding_75",
         },
     },
     {
@@ -1072,7 +1071,6 @@ HOLDING_REGISTERS = [
     },
 ]
 
-# Select Register (für Dropdown-Listen)
 
 SELECT_REGISTERS = [
     {
@@ -1539,16 +1537,16 @@ REGISTER_QUIET_MODE = "holding_9"  # Quiet mode operation
 REGISTER_COMPRESSOR = "input_31"  # Compressor status
 
 # DHW Control constants
-REGISTER_DWH_HVAC_MODE = "coil_1"  # Domestic Hot Water
+REGISTER_DHW_HVAC_MODE = "coil_1"  # Domestic Hot Water
 REGISTER_DHW_SETPOINT = "holding_10"  # DHW Single heat-up setpoint (Manual)
-REGISTER_DWH_RUNNING = "discrete_19"  # DHW running status
-REGISTER_DWH_TEMP = "input_43"  # DHW temperature
+REGISTER_DHW_RUNNING = "discrete_19"  # DHW running status
+REGISTER_DHW_TEMP = "input_43"  # DHW temperature
 
-# DWH Booster Control constants
-REGISTER_DWH_BOOSTER_HVAC_MODE = "holding_13"  # Domestic Hot Water
+# DHW Booster Control constants
+REGISTER_DHW_BOOSTER_HVAC_MODE = "holding_13"  # Domestic Hot Water
 REGISTER_DHW_BOOSTER_SETPOINT = "holding_14"  # DHW Single heat-up setpoint (Manual)
-REGISTER_DWH_BOOSTER_RUNNING = "discrete_19"  # DHW running status
-REGISTER_DWH_BOOSTER_TEMP = "input_43"  # DHW temperature
+REGISTER_DHW_BOOSTER_RUNNING = "discrete_19"  # DHW running status
+REGISTER_DHW_BOOSTER_TEMP = "input_43"  # DHW temperature
 
 # Fan mode constants (quiet mode)
 FAN_OFF = "OFF"

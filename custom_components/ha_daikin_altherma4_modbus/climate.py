@@ -30,12 +30,12 @@ from .const import (
     REGISTER_CURRENT_TEMP,
     REGISTER_DHW_BOOSTER_SETPOINT,
     REGISTER_DHW_SETPOINT,
-    REGISTER_DWH_BOOSTER_HVAC_MODE,
-    REGISTER_DWH_BOOSTER_RUNNING,
-    REGISTER_DWH_BOOSTER_TEMP,
-    REGISTER_DWH_HVAC_MODE,
-    REGISTER_DWH_RUNNING,
-    REGISTER_DWH_TEMP,
+    REGISTER_DHW_BOOSTER_HVAC_MODE,
+    REGISTER_DHW_BOOSTER_RUNNING,
+    REGISTER_DHW_BOOSTER_TEMP,
+    REGISTER_DHW_HVAC_MODE,
+    REGISTER_DHW_RUNNING,
+    REGISTER_DHW_TEMP,
     REGISTER_OFFSET_COOLING,
     REGISTER_OFFSET_HEATING,
     REGISTER_OPERATION_MODE,
@@ -389,9 +389,9 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
 
         # Set registers based on DHW type
         if dhw_type == "booster":
-            self._hvac_mode_register = REGISTER_DWH_BOOSTER_HVAC_MODE
-            self._running_register = REGISTER_DWH_BOOSTER_RUNNING
-            self._temp_register = REGISTER_DWH_BOOSTER_TEMP
+            self._hvac_mode_register = REGISTER_DHW_BOOSTER_HVAC_MODE
+            self._running_register = REGISTER_DHW_BOOSTER_RUNNING
+            self._temp_register = REGISTER_DHW_BOOSTER_TEMP
             self._setpoint_register = REGISTER_DHW_BOOSTER_SETPOINT
             self._unique_id_suffix = "dhw_booster_thermostat"
             self._icon = "mdi:water-boiler-alert"
@@ -400,9 +400,9 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
                 self.coordinator.data_manager.write_holding_register
             )
         else:  # manual
-            self._hvac_mode_register = REGISTER_DWH_HVAC_MODE
-            self._running_register = REGISTER_DWH_RUNNING
-            self._temp_register = REGISTER_DWH_TEMP
+            self._hvac_mode_register = REGISTER_DHW_HVAC_MODE
+            self._running_register = REGISTER_DHW_RUNNING
+            self._temp_register = REGISTER_DHW_TEMP
             self._setpoint_register = REGISTER_DHW_SETPOINT
             self._unique_id_suffix = "dhw_manual_thermostat"
             self._icon = "mdi:water-boiler"

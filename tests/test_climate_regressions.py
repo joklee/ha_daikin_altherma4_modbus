@@ -112,12 +112,12 @@ def _load_climate_module(monkeypatch):
     const_module.DHW_OFF = 0
     const_module.DHW_ON = 1
     const_module.REGISTER_DHW_SETPOINT = "holding_80"
-    const_module.REGISTER_DWH_RUNNING = "discrete_19"
-    const_module.REGISTER_DWH_HVAC_MODE = "coil_1"
+    const_module.REGISTER_DHW_RUNNING = "discrete_19"
+    const_module.REGISTER_DHW_HVAC_MODE = "coil_1"
     const_module.REGISTER_DHW_BOOSTER_SETPOINT = "holding_81"
-    const_module.REGISTER_DWH_BOOSTER_TEMP = "input_43"
-    const_module.REGISTER_DWH_BOOSTER_RUNNING = "discrete_19"
-    const_module.REGISTER_DWH_BOOSTER_HVAC_MODE = "holding_13"
+    const_module.REGISTER_DHW_BOOSTER_TEMP = "input_43"
+    const_module.REGISTER_DHW_BOOSTER_RUNNING = "discrete_19"
+    const_module.REGISTER_DHW_BOOSTER_HVAC_MODE = "holding_13"
     const_module.REGISTER_QUIET_MODE = "holding_9"
     const_module.FAN_MANUAL = "Manual"
     const_module.HVAC_HEAT = 1
@@ -125,7 +125,7 @@ def _load_climate_module(monkeypatch):
     const_module.REGISTER_COMPRESSOR = "discrete_11"
     const_module.FAN_AUTO = "Auto"
     const_module.FAN_OFF = "OFF"
-    const_module.REGISTER_DWH_TEMP = "input_43"
+    const_module.REGISTER_DHW_TEMP = "input_43"
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
     return importlib.import_module(module_name)

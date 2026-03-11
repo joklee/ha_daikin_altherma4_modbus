@@ -523,9 +523,6 @@
       "holding_2": {
         "name": "Vorlauf Haupt Kühlen-Sollwert"
       },
-      "holding_3": {
-        "name": "Betriebsart"
-      },
       "holding_4": {
         "name": "Raumheizen/-kühlen"
       },
