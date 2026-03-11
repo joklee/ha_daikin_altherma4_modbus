@@ -14,11 +14,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup select entities over Config Entry."""
-    coordinators = hass.data[DOMAIN][entry.entry_id]
-    coordinator = coordinators.get("coordinator")
+    runtime_data = entry.runtime_data
+    coordinator = runtime_data.coordinator
 
     if coordinator is None:
-        _LOGGER.error("Coordinator not found in hass data")
+        _LOGGER.error("Coordinator not found in runtime data")
         return
 
     entities = []

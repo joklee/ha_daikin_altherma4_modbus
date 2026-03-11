@@ -362,8 +362,8 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup climate entities."""
-    coordinators = hass.data["ha_daikin_altherma4_modbus"][entry.entry_id]
-    coordinator = coordinators["coordinator"]
+    runtime_data = entry.runtime_data
+    coordinator = runtime_data.coordinator
 
     entities = [
         DaikinThermostatClimate(coordinator, entry),

@@ -128,7 +128,8 @@ async def test_async_setup_entry_success(monkeypatch):
     hass = SimpleNamespace(
         data={},
         config_entries=SimpleNamespace(
-            async_forward_entry_setups=AsyncMock(return_value=None)
+            async_forward_entry_setups=AsyncMock(return_value=None),
+            async_entries=lambda domain: []
         ),
     )
 
@@ -154,10 +155,10 @@ async def test_async_setup_entry_success(monkeypatch):
     assert entry.entry_id in hass.data["ha_daikin_altherma4_modbus"]
 
     stored_data = hass.data["ha_daikin_altherma4_modbus"][entry.entry_id]
-    assert stored_data["coordinator"] == unified
-    assert stored_data["manager"] == manager
-    assert stored_data["normal_coordinator"] == manager.normal
-    assert stored_data["slow_coordinator"] == manager.slow
+    assert stored_data["runtime_data"].coordinator == unified
+    assert stored_data["runtime_data"].manager == manager
+    assert stored_data["runtime_data"].normal_coordinator == manager.normal
+    assert stored_data["runtime_data"].slow_coordinator == manager.slow
 
     # Verify platforms were forwarded
     hass.config_entries.async_forward_entry_setups.assert_awaited_once_with(
@@ -172,30 +173,39 @@ async def test_async_unload_entry_success(monkeypatch):
         monkeypatch
     )
 
-    # Set up initial state
+    # Set up initial state with runtime data
+    from types import SimpleNamespace
+    
+    class MockRuntimeData:
+        def __init__(self, coordinator, manager):
+            self.coordinator = coordinator
+            self.manager = manager
+            self.normal_coordinator = SimpleNamespace()
+            self.slow_coordinator = SimpleNamespace()
+    
     manager = SimpleNamespace(
         host="192.168.1.100", port=502, async_shutdown=AsyncMock()
     )
     unified_coordinator = SimpleNamespace(async_shutdown=AsyncMock())
-
+    runtime_data = MockRuntimeData(unified_coordinator, manager)
+    
     hass = SimpleNamespace()
     hass.data = {
         "ha_daikin_altherma4_modbus": {
             "test_entry_1": {
-                "coordinator": unified_coordinator,
-                "normal_coordinator": SimpleNamespace(),
-                "slow_coordinator": SimpleNamespace(),
-                "manager": manager,
+                "runtime_data": runtime_data,
             }
         }
     }
     hass.config_entries = SimpleNamespace(
-        async_unload_platforms=AsyncMock(return_value=True)
+        async_unload_platforms=AsyncMock(return_value=True),
+        async_entries=lambda domain: []
     )
 
     entry = SimpleNamespace(
         entry_id="test_entry_1",
         data={"host": "192.168.1.100", "port": 502},
+        runtime_data=runtime_data
     )
 
     result = await integration.async_unload_entry(hass, entry)
@@ -240,7 +250,10 @@ async def test_async_setup_entry_unified_coordinator_failure(monkeypatch):
 
     hass = SimpleNamespace(
         data={},
-        config_entries=SimpleNamespace(async_forward_entry_setups=AsyncMock()),
+        config_entries=SimpleNamespace(
+            async_forward_entry_setups=AsyncMock(),
+            async_entries=lambda domain: []
+        ),
     )
 
     entry = SimpleNamespace(
@@ -280,7 +293,8 @@ async def test_async_setup_entry_platform_forward_failure(monkeypatch):
         config_entries=SimpleNamespace(
             async_forward_entry_setups=AsyncMock(
                 side_effect=RuntimeError("Platform forward failed")
-            )
+            ),
+            async_entries=lambda domain: []
         ),
     )
 
@@ -324,7 +338,10 @@ async def test_async_setup_entry_manager_setup_failure(monkeypatch):
 
     hass = SimpleNamespace(
         data={},
-        config_entries=SimpleNamespace(async_forward_entry_setups=AsyncMock()),
+        config_entries=SimpleNamespace(
+            async_forward_entry_setups=AsyncMock(),
+            async_entries=lambda domain: []
+        ),
     )
 
     entry = SimpleNamespace(

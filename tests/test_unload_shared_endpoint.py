@@ -63,27 +63,43 @@ async def test_unload_keeps_shared_endpoint_client(monkeypatch):
     )
     unified_coordinator_1 = SimpleNamespace(async_shutdown=AsyncMock())
 
+    class MockRuntimeData:
+        def __init__(self, coordinator, manager):
+            self.coordinator = coordinator
+            self.manager = manager
+    
+    runtime_data_1 = MockRuntimeData(unified_coordinator_1, manager_1)
+    runtime_data_2 = MockRuntimeData(SimpleNamespace(async_shutdown=AsyncMock()), manager_2)
+    
+    # Create mock entries for the shared endpoint test
+    entry_1 = SimpleNamespace(
+        entry_id="entry_1",
+        data={"host": shared_host, "port": shared_port},
+        runtime_data=runtime_data_1
+    )
+    entry_2 = SimpleNamespace(
+        entry_id="entry_2", 
+        data={"host": shared_host, "port": shared_port},
+        runtime_data=runtime_data_2
+    )
+    
     hass = SimpleNamespace()
     hass.data = {
         domain: {
             "entry_1": {
-                "manager": manager_1,
-                "coordinator": unified_coordinator_1,
+                "runtime_data": runtime_data_1,
             },
             "entry_2": {
-                "manager": manager_2,
-                "coordinator": SimpleNamespace(async_shutdown=AsyncMock()),
+                "runtime_data": runtime_data_2,
             },
         }
     }
     hass.config_entries = SimpleNamespace(
-        async_unload_platforms=AsyncMock(return_value=True)
+        async_unload_platforms=AsyncMock(return_value=True),
+        async_entries=lambda domain: [entry_1, entry_2]
     )
 
-    entry = SimpleNamespace(
-        entry_id="entry_1",
-        data={"host": shared_host, "port": shared_port},
-    )
+    entry = entry_1
 
     unload_ok = await integration.async_unload_entry(hass, entry)
 
@@ -107,22 +123,30 @@ async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
     manager = SimpleNamespace(host=host, port=port, async_shutdown=AsyncMock())
     unified_coordinator = SimpleNamespace(async_shutdown=AsyncMock())
 
+    class MockRuntimeData:
+        def __init__(self, coordinator, manager):
+            self.coordinator = coordinator
+            self.manager = manager
+    
+    runtime_data = MockRuntimeData(unified_coordinator, manager)
+    
     hass = SimpleNamespace()
     hass.data = {
         domain: {
             "entry_1": {
-                "manager": manager,
-                "coordinator": unified_coordinator,
+                "runtime_data": runtime_data,
             }
         }
     }
     hass.config_entries = SimpleNamespace(
-        async_unload_platforms=AsyncMock(return_value=True)
+        async_unload_platforms=AsyncMock(return_value=True),
+        async_entries=lambda domain: []
     )
 
     entry = SimpleNamespace(
         entry_id="entry_1",
         data={"host": host, "port": port},
+        runtime_data=runtime_data
     )
 
     unload_ok = await integration.async_unload_entry(hass, entry)

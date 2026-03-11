@@ -21,11 +21,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup aller Sensors über Config Entry."""
-    coordinators = hass.data[DOMAIN][entry.entry_id]
-    unified_coordinator = coordinators.get("coordinator")
+    runtime_data = entry.runtime_data
+    unified_coordinator = runtime_data.coordinator
 
     if unified_coordinator is None:
-        _LOGGER.error("Unified coordinator not found in hass data")
+        _LOGGER.error("Unified coordinator not found in runtime data")
         return
     entities = []
 

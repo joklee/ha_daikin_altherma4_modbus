@@ -93,7 +93,8 @@ def _load_integration_module(
     hass = SimpleNamespace(
         data={},
         config_entries=SimpleNamespace(
-            async_forward_entry_setups=AsyncMock(side_effect=forward_setups_side_effect)
+            async_forward_entry_setups=AsyncMock(side_effect=forward_setups_side_effect),
+            async_entries=lambda domain: []
         ),
     )
     entry = SimpleNamespace(
