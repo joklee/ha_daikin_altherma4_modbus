@@ -17,7 +17,7 @@ def _has_other_entry_for_endpoint(
     for entry in domain_entries:
         if entry.entry_id == current_entry_id:
             continue
-        if hasattr(entry, 'runtime_data') and entry.runtime_data:
+        if hasattr(entry, "runtime_data") and entry.runtime_data:
             manager = entry.runtime_data.manager
             if manager and manager.host == host and manager.port == port:
                 return True
@@ -55,7 +55,7 @@ async def async_setup_entry(hass, entry):
         )
 
         hass.data.setdefault(DOMAIN, {})
-        
+
         # Store runtime data in ConfigEntry.runtime_data
         entry.runtime_data = RuntimeData(
             coordinator=unified_coordinator,
@@ -63,7 +63,7 @@ async def async_setup_entry(hass, entry):
             slow_coordinator=slow_coordinator,
             manager=manager,
         )
-        
+
         # Keep minimal data in hass.data for backward compatibility during transition
         hass.data[DOMAIN][entry.entry_id] = {
             "runtime_data": entry.runtime_data,
@@ -113,11 +113,11 @@ async def async_unload_entry(hass, entry):
     _LOGGER.info("Unloading entry %s - closing Modbus connections", entry.entry_id)
 
     # Get runtime data from config entry
-    runtime_data = getattr(entry, 'runtime_data', None)
+    runtime_data = getattr(entry, "runtime_data", None)
     if not runtime_data:
         _LOGGER.warning("No runtime data found for entry %s", entry.entry_id)
         return False
-        
+
     unified_coordinator = runtime_data.coordinator
     manager = runtime_data.manager
 
@@ -164,6 +164,6 @@ async def async_unload_entry(hass, entry):
     domain_data.pop(entry.entry_id, None)
     if not domain_data and DOMAIN in hass.data:
         hass.data.pop(DOMAIN, None)
-        
+
     _LOGGER.info("Successfully unloaded entry %s", entry.entry_id)
     return True

@@ -67,22 +67,24 @@ async def test_unload_keeps_shared_endpoint_client(monkeypatch):
         def __init__(self, coordinator, manager):
             self.coordinator = coordinator
             self.manager = manager
-    
+
     runtime_data_1 = MockRuntimeData(unified_coordinator_1, manager_1)
-    runtime_data_2 = MockRuntimeData(SimpleNamespace(async_shutdown=AsyncMock()), manager_2)
-    
+    runtime_data_2 = MockRuntimeData(
+        SimpleNamespace(async_shutdown=AsyncMock()), manager_2
+    )
+
     # Create mock entries for the shared endpoint test
     entry_1 = SimpleNamespace(
         entry_id="entry_1",
         data={"host": shared_host, "port": shared_port},
-        runtime_data=runtime_data_1
+        runtime_data=runtime_data_1,
     )
     entry_2 = SimpleNamespace(
-        entry_id="entry_2", 
+        entry_id="entry_2",
         data={"host": shared_host, "port": shared_port},
-        runtime_data=runtime_data_2
+        runtime_data=runtime_data_2,
     )
-    
+
     hass = SimpleNamespace()
     hass.data = {
         domain: {
@@ -96,7 +98,7 @@ async def test_unload_keeps_shared_endpoint_client(monkeypatch):
     }
     hass.config_entries = SimpleNamespace(
         async_unload_platforms=AsyncMock(return_value=True),
-        async_entries=lambda domain: [entry_1, entry_2]
+        async_entries=lambda domain: [entry_1, entry_2],
     )
 
     entry = entry_1
@@ -127,9 +129,9 @@ async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
         def __init__(self, coordinator, manager):
             self.coordinator = coordinator
             self.manager = manager
-    
+
     runtime_data = MockRuntimeData(unified_coordinator, manager)
-    
+
     hass = SimpleNamespace()
     hass.data = {
         domain: {
@@ -140,13 +142,11 @@ async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
     }
     hass.config_entries = SimpleNamespace(
         async_unload_platforms=AsyncMock(return_value=True),
-        async_entries=lambda domain: []
+        async_entries=lambda domain: [],
     )
 
     entry = SimpleNamespace(
-        entry_id="entry_1",
-        data={"host": host, "port": port},
-        runtime_data=runtime_data
+        entry_id="entry_1", data={"host": host, "port": port}, runtime_data=runtime_data
     )
 
     unload_ok = await integration.async_unload_entry(hass, entry)

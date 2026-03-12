@@ -129,7 +129,7 @@ async def test_async_setup_entry_success(monkeypatch):
         data={},
         config_entries=SimpleNamespace(
             async_forward_entry_setups=AsyncMock(return_value=None),
-            async_entries=lambda domain: []
+            async_entries=lambda domain: [],
         ),
     )
 
@@ -175,20 +175,20 @@ async def test_async_unload_entry_success(monkeypatch):
 
     # Set up initial state with runtime data
     from types import SimpleNamespace
-    
+
     class MockRuntimeData:
         def __init__(self, coordinator, manager):
             self.coordinator = coordinator
             self.manager = manager
             self.normal_coordinator = SimpleNamespace()
             self.slow_coordinator = SimpleNamespace()
-    
+
     manager = SimpleNamespace(
         host="192.168.1.100", port=502, async_shutdown=AsyncMock()
     )
     unified_coordinator = SimpleNamespace(async_shutdown=AsyncMock())
     runtime_data = MockRuntimeData(unified_coordinator, manager)
-    
+
     hass = SimpleNamespace()
     hass.data = {
         "ha_daikin_altherma4_modbus": {
@@ -199,13 +199,13 @@ async def test_async_unload_entry_success(monkeypatch):
     }
     hass.config_entries = SimpleNamespace(
         async_unload_platforms=AsyncMock(return_value=True),
-        async_entries=lambda domain: []
+        async_entries=lambda domain: [],
     )
 
     entry = SimpleNamespace(
         entry_id="test_entry_1",
         data={"host": "192.168.1.100", "port": 502},
-        runtime_data=runtime_data
+        runtime_data=runtime_data,
     )
 
     result = await integration.async_unload_entry(hass, entry)
@@ -251,8 +251,7 @@ async def test_async_setup_entry_unified_coordinator_failure(monkeypatch):
     hass = SimpleNamespace(
         data={},
         config_entries=SimpleNamespace(
-            async_forward_entry_setups=AsyncMock(),
-            async_entries=lambda domain: []
+            async_forward_entry_setups=AsyncMock(), async_entries=lambda domain: []
         ),
     )
 
@@ -294,7 +293,7 @@ async def test_async_setup_entry_platform_forward_failure(monkeypatch):
             async_forward_entry_setups=AsyncMock(
                 side_effect=RuntimeError("Platform forward failed")
             ),
-            async_entries=lambda domain: []
+            async_entries=lambda domain: [],
         ),
     )
 
@@ -339,8 +338,7 @@ async def test_async_setup_entry_manager_setup_failure(monkeypatch):
     hass = SimpleNamespace(
         data={},
         config_entries=SimpleNamespace(
-            async_forward_entry_setups=AsyncMock(),
-            async_entries=lambda domain: []
+            async_forward_entry_setups=AsyncMock(), async_entries=lambda domain: []
         ),
     )
 
