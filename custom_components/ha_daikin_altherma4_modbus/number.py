@@ -5,7 +5,12 @@ from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS
-from .utils import to_signed_16bit, to_unsigned_16bit
+from .common import (
+    is_entity_available,
+    safe_write_register,
+    to_signed_16bit,
+    to_unsigned_16bit,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,25 +99,7 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        data = self.coordinator.data.get(self._register_name)
-        if data is None:
-            return False
-
-        val = data.get("value")
-        if val is None:
-            return False
-
-        # Convert to integer if it's a string
-        try:
-            val = int(val)
-        except (ValueError, TypeError):
-            return False
-
-        # Sensor is unavailable if value is 32765 or 32766
-        if val == 32765 or val == 32766:
-            return False
-
-        return True
+        return is_entity_available(self.coordinator.data, self._register_name)
 
     @property
     def native_value(self):
@@ -164,6 +151,10 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         # Convert signed integer to unsigned 16-bit safely
         raw = to_unsigned_16bit(raw)
 
-        await self._coordinator.data_manager.write_holding_register(
-            self._register_name, raw
+        await safe_write_register(
+            self._coordinator.data_manager.write_holding_register,
+            self._register_name,
+            raw,
+            operation_name="set value for",
+            register_type="number",
         )

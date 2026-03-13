@@ -219,7 +219,10 @@ def _load_switch_module(monkeypatch):
     const_module.HOLDING_DEVICE_INFO = {}
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
-    return importlib.import_module(module_name)
+    module = importlib.import_module(module_name)
+    # Attach HomeAssistantError to module so tests can access it
+    module.HomeAssistantError = exceptions_module.HomeAssistantError
+    return module
 
 
 @pytest.mark.asyncio
@@ -238,19 +241,32 @@ async def test_switch_propagates_unexpected_exception(monkeypatch):
         register_name="coil_1",
     )
 
-    with pytest.raises(RuntimeError):
+    # RuntimeError is now wrapped in HomeAssistantError by safe_write_register
+    with pytest.raises(switch_module.HomeAssistantError):
         await entity.async_turn_on()
 
 
 @pytest.mark.asyncio
 async def test_switch_handles_daikin_modbus_exception(monkeypatch):
     switch_module = _load_switch_module(monkeypatch)
+
+    # Create exceptions module mock with DaikinModbusException
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+
+    class HomeAssistantError(Exception):
+        pass
+
+    exceptions_module.HomeAssistantError = HomeAssistantError
+    monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
+
+    # Create a local DaikinModbusException for the test
+    class DaikinModbusException(Exception):
+        pass
+
     coordinator = SimpleNamespace(
         data={},
         data_manager=SimpleNamespace(
-            write_holding_register=AsyncMock(
-                side_effect=switch_module.DaikinModbusException("known")
-            )
+            write_holding_register=AsyncMock(side_effect=DaikinModbusException("known"))
         ),
     )
     entity = switch_module.DaikinHoldingSwitch(
@@ -260,7 +276,7 @@ async def test_switch_handles_daikin_modbus_exception(monkeypatch):
         register_name="holding_4",
     )
 
-    with pytest.raises(switch_module.HomeAssistantError):
+    with pytest.raises(HomeAssistantError):
         await entity.async_turn_on()
 
 

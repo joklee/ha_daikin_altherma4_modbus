@@ -58,6 +58,8 @@ def setup_home_assistant_mocks():
     sys.modules["homeassistant.const"] = MockConst()
     sys.modules["homeassistant.core"] = Mock()
     sys.modules["homeassistant.helpers"] = Mock()
+    sys.modules["homeassistant.helpers.typing"] = Mock()
+    sys.modules["homeassistant.helpers.typing"].ConfigType = Mock()
     sys.modules["homeassistant.helpers.update_coordinator"] = Mock()
     sys.modules[
         "homeassistant.helpers.update_coordinator"

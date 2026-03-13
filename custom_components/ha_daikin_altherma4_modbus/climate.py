@@ -10,7 +10,6 @@ from homeassistant.components.climate.const import (
     HVACMode,
 )
 from homeassistant.const import UnitOfTemperature
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -41,7 +40,12 @@ from .const import (
     REGISTER_OPERATION_MODE,
     REGISTER_QUIET_MODE,
 )
-from .utils import to_signed_16bit, to_unsigned_16bit
+from .common import (
+    safe_write_register,
+    get_coordinator_register_data,
+    to_signed_16bit,
+    to_unsigned_16bit,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -90,12 +94,7 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
 
     def _get_register_data(self, register_name):
         """Get register data without DOMAIN prefix."""
-        # Create address_name without DOMAIN prefix for coordinator.data access
-        if register_name.startswith(f"{DOMAIN}_"):
-            address_name = register_name[len(f"{DOMAIN}_") :]
-        else:
-            address_name = register_name
-        return self.coordinator.data.get(address_name, {})
+        return get_coordinator_register_data(self.coordinator, register_name)
 
     def _get_operation_mode(self):
         """Get the current operation mode value."""
@@ -257,20 +256,24 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
 
         try:
             if op_mode_raw == HVAC_COOL:
-                await self.coordinator.data_manager.write_holding_register(
-                    REGISTER_OFFSET_COOLING, offset_raw
+                await safe_write_register(
+                    self.coordinator.data_manager.write_holding_register,
+                    REGISTER_OFFSET_COOLING,
+                    offset_raw,
+                    operation_name="set",
+                    register_type="thermostat offset",
                 )
             else:
-                await self.coordinator.data_manager.write_holding_register(
-                    REGISTER_OFFSET_HEATING, offset_raw
+                await safe_write_register(
+                    self.coordinator.data_manager.write_holding_register,
+                    REGISTER_OFFSET_HEATING,
+                    offset_raw,
+                    operation_name="set",
+                    register_type="thermostat offset",
                 )
             _LOGGER.debug(f"Set thermostat offset to {offset}°C (raw: {offset_raw})")
-        except (ValueError, ConnectionError) as e:
-            _LOGGER.error(f"Failed to set thermostat offset: {e}")
-            raise HomeAssistantError(f"Failed to set thermostat offset: {e}") from e
-        except Exception as e:
-            _LOGGER.error(f"Failed to set thermostat offset: {e}")
-            raise HomeAssistantError("Failed to set thermostat offset") from e
+        except Exception:
+            raise
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
@@ -289,16 +292,16 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         mode_raw = mode_map.get(hvac_mode, 0)
 
         try:
-            await self.coordinator.data_manager.write_holding_register(
-                REGISTER_OPERATION_MODE, mode_raw
+            await safe_write_register(
+                self.coordinator.data_manager.write_holding_register,
+                REGISTER_OPERATION_MODE,
+                mode_raw,
+                operation_name="set",
+                register_type="HVAC mode",
             )
             _LOGGER.debug(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
-        except (ValueError, ConnectionError) as e:
-            _LOGGER.error(f"Failed to set HVAC mode: {e}")
-            raise HomeAssistantError(f"Failed to set HVAC mode: {e}") from e
-        except Exception as e:
-            _LOGGER.error(f"Failed to set HVAC mode: {e}")
-            raise HomeAssistantError("Failed to set HVAC mode") from e
+        except Exception:
+            raise
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode (quiet mode)."""
@@ -307,16 +310,16 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         mode_raw = fan_map.get(fan_mode, 0)
 
         try:
-            await self.coordinator.data_manager.write_holding_register(
-                REGISTER_QUIET_MODE, mode_raw
+            await safe_write_register(
+                self.coordinator.data_manager.write_holding_register,
+                REGISTER_QUIET_MODE,
+                mode_raw,
+                operation_name="set",
+                register_type="fan mode",
             )
             _LOGGER.debug(f"Set fan mode to {fan_mode} (raw: {mode_raw})")
-        except (ValueError, ConnectionError) as e:
-            _LOGGER.error(f"Failed to set fan mode: {e}")
-            raise HomeAssistantError(f"Failed to set fan mode: {e}") from e
-        except Exception as e:
-            _LOGGER.error(f"Failed to set fan mode: {e}")
-            raise HomeAssistantError("Failed to set fan mode") from e
+        except Exception:
+            raise
 
     @property
     def extra_state_attributes(self):
@@ -426,12 +429,7 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
 
     def _get_register_data(self, register_name):
         """Get register data without DOMAIN prefix."""
-        # Create address_name without DOMAIN prefix for coordinator.data access
-        if register_name.startswith(f"{DOMAIN}_"):
-            address_name = register_name[len(f"{DOMAIN}_") :]
-        else:
-            address_name = register_name
-        return self.coordinator.data.get(address_name, {})
+        return get_coordinator_register_data(self.coordinator, register_name)
 
     def _get_scaled_register_value(self, register_name, register_type):
         """Get scaled value from a register."""
@@ -482,33 +480,23 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode):
         """Set HVAC mode."""
         if hvac_mode == HVACMode.HEAT:
-            try:
-                await self._write_register_func(self._hvac_mode_register, DHW_ON)
-                _LOGGER.debug(f"Successfully turned on {self._dhw_type} DHW heat-up")
-            except (ValueError, ConnectionError) as e:
-                _LOGGER.error(f"Error turning on {self._dhw_type} DHW heat-up: {e}")
-                raise HomeAssistantError(
-                    f"Failed to turn on {self._dhw_type} DHW heat-up: {e}"
-                ) from e
-            except Exception as e:
-                _LOGGER.error(f"Error turning on {self._dhw_type} DHW heat-up: {e}")
-                raise HomeAssistantError(
-                    f"Failed to turn on {self._dhw_type} DHW heat-up"
-                ) from e
+            await safe_write_register(
+                self._write_register_func,
+                self._hvac_mode_register,
+                DHW_ON,
+                operation_name="turn on",
+                register_type=f"{self._dhw_type} DHW heat-up",
+            )
+            _LOGGER.debug(f"Successfully turned on {self._dhw_type} DHW heat-up")
         elif hvac_mode == HVACMode.OFF:
-            try:
-                await self._write_register_func(self._hvac_mode_register, DHW_OFF)
-                _LOGGER.debug(f"Successfully turned off {self._dhw_type} DHW heat-up")
-            except (ValueError, ConnectionError) as e:
-                _LOGGER.error(f"Error turning off {self._dhw_type} DHW heat-up: {e}")
-                raise HomeAssistantError(
-                    f"Failed to turn off {self._dhw_type} DHW heat-up: {e}"
-                ) from e
-            except Exception as e:
-                _LOGGER.error(f"Error turning off {self._dhw_type} DHW heat-up: {e}")
-                raise HomeAssistantError(
-                    f"Failed to turn off {self._dhw_type} DHW heat-up"
-                ) from e
+            await safe_write_register(
+                self._write_register_func,
+                self._hvac_mode_register,
+                DHW_OFF,
+                operation_name="turn off",
+                register_type=f"{self._dhw_type} DHW heat-up",
+            )
+            _LOGGER.debug(f"Successfully turned off {self._dhw_type} DHW heat-up")
 
     async def async_set_temperature(self, **kwargs):
         """Set target temperature."""
@@ -525,27 +513,16 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
         raw_value = (
             int(temperature / scale_factor) if scale_factor != 0 else int(temperature)
         )
-        try:
-            await self.coordinator.data_manager.write_holding_register(
-                self._setpoint_register, raw_value
-            )
-            _LOGGER.debug(
-                f"Successfully set {self._dhw_type} DHW heat-up temperature to {temperature}°C (raw: {raw_value})"
-            )
-        except (ValueError, ConnectionError) as e:
-            _LOGGER.error(
-                f"Error setting {self._dhw_type} DHW heat-up temperature: {e}"
-            )
-            raise HomeAssistantError(
-                f"Failed to set {self._dhw_type} DHW temperature: {e}"
-            ) from e
-        except Exception as e:
-            _LOGGER.error(
-                f"Error setting {self._dhw_type} DHW heat-up temperature: {e}"
-            )
-            raise HomeAssistantError(
-                f"Failed to set {self._dhw_type} DHW temperature"
-            ) from e
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            self._setpoint_register,
+            raw_value,
+            operation_name="set",
+            register_type=f"{self._dhw_type} DHW temperature",
+        )
+        _LOGGER.debug(
+            f"Successfully set {self._dhw_type} DHW heat-up temperature to {temperature}°C (raw: {raw_value})"
+        )
 
     async def async_turn_on(self):
         """Turn on DHW heat-up."""

@@ -14,18 +14,17 @@ from .const import (
     INPUT_DEVICE_INFO,
     INPUT_REGISTERS,
 )
-from .utils import to_signed_16bit
+from .common import is_unavailable_value, is_entity_available, to_signed_16bit
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup aller Sensors über Config Entry."""
-    runtime_data = entry.runtime_data
-    unified_coordinator = runtime_data.coordinator
+    from .common import get_coordinator_from_entry
 
+    unified_coordinator = get_coordinator_from_entry(hass, entry)
     if unified_coordinator is None:
-        _LOGGER.error("Unified coordinator not found in runtime data")
         return
     entities = []
 
@@ -148,7 +147,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
     """A Sensor for Input-Register."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -192,25 +190,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        data = self.coordinator.data.get(self._attr_register_name)
-        if data is None:
-            return False
-
-        val = data.get("value")
-        if val is None:
-            return False
-
-        # Convert to integer if it's a string
-        try:
-            val = int(val)
-        except (ValueError, TypeError):
-            return False
-
-        # Sensor is unavailable if value is 32765 or 32766
-        if val == 32765 or val == 32766:
-            return False
-
-        return True
+        return is_entity_available(self.coordinator.data, self._attr_register_name)
 
     @property
     def native_value(self):
@@ -242,7 +222,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
             return None
 
         # Return None for unavailable value (32765 or 32766)
-        if val == 32765 or val == 32766:
+        if is_unavailable_value(val):
             return None
 
         # Convert unsigned 16-bit to signed integer safely
@@ -316,7 +296,6 @@ class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Wärmepumpenleistung."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -354,7 +333,6 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Coefficient of Performance (CoP)."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -434,7 +412,6 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
     """Sensor für das letzte Auslösen eines Binärsensors."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -509,7 +486,6 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
     """Sensor für externen elektrischen Leistungssensor."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -581,7 +557,6 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
     """Calculated sensor for temperature difference (Delta-T)."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
 
     def __init__(
         self,

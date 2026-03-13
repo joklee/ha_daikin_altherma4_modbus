@@ -10,7 +10,7 @@ from .data_types import (
     StateData,
     StateMapping,
 )
-from .helper import update_value_if_changed
+from .common import update_value_if_changed
 
 _LOGGER = logging.getLogger(__name__)
 

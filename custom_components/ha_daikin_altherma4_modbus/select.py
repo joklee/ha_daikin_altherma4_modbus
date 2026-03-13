@@ -8,17 +8,15 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, HOLDING_DEVICE_INFO, SELECT_REGISTERS
+from .common import get_coordinator_from_entry, is_entity_available, safe_write_register
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup select entities over Config Entry."""
-    runtime_data = entry.runtime_data
-    coordinator = runtime_data.coordinator
-
+    coordinator = get_coordinator_from_entry(hass, entry)
     if coordinator is None:
-        _LOGGER.error("Coordinator not found in runtime data")
         return
 
     entities = []
@@ -50,7 +48,6 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
     """Select entity for Daikin Altherma 4."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
 
     def __init__(
         self,
@@ -79,25 +76,7 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        data = self.coordinator.data.get(self._register_name)
-        if data is None:
-            return False
-
-        val = data.get("value")
-        if val is None:
-            return False
-
-        # Convert to integer if it's a string
-        try:
-            val = int(val)
-        except (ValueError, TypeError):
-            return False
-
-        # Sensor is unavailable if value is 32765 or 32766
-        if val == 32765 or val == 32766:
-            return False
-
-        return True
+        return is_entity_available(self.coordinator.data, self._register_name)
 
     @property
     def current_option(self):
@@ -128,24 +107,13 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
         for key, value in self._enum_map.items():
             if value == option:
                 if hasattr(self._coordinator, "data_manager"):
-                    try:
-                        await self._coordinator.data_manager.write_holding_register(
-                            self._register_name, key
-                        )
-                    except (ValueError, ConnectionError) as e:
-                        _LOGGER.error(
-                            f"Error writing select option for {self._register_name}: {e}"
-                        )
-                        raise HomeAssistantError(
-                            f"Failed to set {self.name} to {option}: {e}"
-                        ) from e
-                    except Exception as e:
-                        _LOGGER.error(
-                            f"Error writing select option for {self._register_name}: {e}"
-                        )
-                        raise HomeAssistantError(
-                            f"Failed to set {self.name} to {option}"
-                        ) from e
+                    await safe_write_register(
+                        self._coordinator.data_manager.write_holding_register,
+                        self._register_name,
+                        key,
+                        operation_name="set option for",
+                        register_type="select",
+                    )
                 else:
                     raise HomeAssistantError(
                         "Coordinator does not have data_manager attribute"

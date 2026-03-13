@@ -128,7 +128,10 @@ def _load_climate_module(monkeypatch):
     const_module.REGISTER_DHW_TEMP = "input_43"
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
-    return importlib.import_module(module_name)
+    module = importlib.import_module(module_name)
+    # Attach HomeAssistantError to module so tests can access it
+    module.HomeAssistantError = exceptions_module.HomeAssistantError
+    return module
 
 
 def _make_thermostat(module, quiet_raw=0, op_mode_raw=0):

@@ -4,7 +4,6 @@ import logging
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
@@ -14,7 +13,7 @@ from .const import (
     HOLDING_DEVICE_INFO,
     HOLDING_SWITCHES,
 )
-from .exceptions import DaikinModbusException
+from .common import safe_write_register
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,29 +91,25 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs):
         """Schaltet das Coil ein."""
-        try:
-            await self.coordinator.data_manager.write_coil_register(
-                self._register_name, True
-            )
-            _LOGGER.debug(f"Successfully turned on coil {self._address}")
-        except (DaikinModbusException, ValueError, ConnectionError) as e:
-            _LOGGER.error(f"Error turning on coil {self._address}: {e}")
-            raise HomeAssistantError(
-                f"Failed to turn on coil {self._address}: {e}"
-            ) from e
+        await safe_write_register(
+            self.coordinator.data_manager.write_coil_register,
+            self._register_name,
+            True,
+            operation_name="turn on",
+            register_type="coil",
+        )
+        _LOGGER.debug(f"Successfully turned on coil {self._address}")
 
     async def async_turn_off(self, **kwargs):
         """Schaltet das Coil aus."""
-        try:
-            await self.coordinator.data_manager.write_coil_register(
-                self._register_name, False
-            )
-            _LOGGER.debug(f"Successfully turned off coil {self._address}")
-        except (DaikinModbusException, ValueError, ConnectionError) as e:
-            _LOGGER.error(f"Error turning off coil {self._address}: {e}")
-            raise HomeAssistantError(
-                f"Failed to turn off coil {self._address}: {e}"
-            ) from e
+        await safe_write_register(
+            self.coordinator.data_manager.write_coil_register,
+            self._register_name,
+            False,
+            operation_name="turn off",
+            register_type="coil",
+        )
+        _LOGGER.debug(f"Successfully turned off coil {self._address}")
 
 
 class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
@@ -181,26 +176,22 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs):
         """Schaltet das Holding Register ein."""
-        try:
-            await self.coordinator.data_manager.write_holding_register(
-                self._register_name, self._on_value
-            )
-            _LOGGER.debug(f"Successfully turned on holding register {self._address}")
-        except (DaikinModbusException, ValueError, ConnectionError) as e:
-            _LOGGER.error(f"Error turning on holding register {self._address}: {e}")
-            raise HomeAssistantError(
-                f"Failed to turn on holding register {self._address}: {e}"
-            ) from e
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            self._register_name,
+            self._on_value,
+            operation_name="turn on",
+            register_type="holding register",
+        )
+        _LOGGER.debug(f"Successfully turned on holding register {self._address}")
 
     async def async_turn_off(self, **kwargs):
         """Schaltet das Holding Register aus."""
-        try:
-            await self.coordinator.data_manager.write_holding_register(
-                self._register_name, self._off_value
-            )
-            _LOGGER.debug(f"Successfully turned off holding register {self._address}")
-        except (DaikinModbusException, ValueError, ConnectionError) as e:
-            _LOGGER.error(f"Error turning off holding register {self._address}: {e}")
-            raise HomeAssistantError(
-                f"Failed to turn off holding register {self._address}: {e}"
-            ) from e
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            self._register_name,
+            self._off_value,
+            operation_name="turn off",
+            register_type="holding register",
+        )
+        _LOGGER.debug(f"Successfully turned off holding register {self._address}")
