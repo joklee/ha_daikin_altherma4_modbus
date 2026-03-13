@@ -7,8 +7,8 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, HOLDING_DEVICE_INFO, SELECT_REGISTERS
 from .common import get_coordinator_from_entry, is_entity_available, safe_write_register
+from .const import DOMAIN, HOLDING_DEVICE_INFO, SELECT_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
 

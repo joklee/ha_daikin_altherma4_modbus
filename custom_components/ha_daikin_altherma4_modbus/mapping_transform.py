@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Dict, List
 
+from .common import update_value_if_changed
 from .const import CALCULATED_SENSORS
 from .data_types import (
     LastTriggeredData,
@@ -10,7 +11,6 @@ from .data_types import (
     StateData,
     StateMapping,
 )
-from .common import update_value_if_changed
 
 _LOGGER = logging.getLogger(__name__)
 

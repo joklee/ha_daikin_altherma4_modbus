@@ -4,13 +4,13 @@ from typing import Any
 from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS
 from .common import (
     is_entity_available,
     safe_write_register,
     to_signed_16bit,
     to_unsigned_16bit,
 )
+from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -6,6 +6,7 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .common import safe_write_register
 from .const import (
     COIL_DEVICE_INFO,
     COIL_SENSORS,
@@ -13,7 +14,6 @@ from .const import (
     HOLDING_DEVICE_INFO,
     HOLDING_SWITCHES,
 )
-from .common import safe_write_register
 
 _LOGGER = logging.getLogger(__name__)
 

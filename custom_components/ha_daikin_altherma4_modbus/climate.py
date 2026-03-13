@@ -12,6 +12,12 @@ from homeassistant.components.climate.const import (
 from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .common import (
+    get_coordinator_register_data,
+    safe_write_register,
+    to_signed_16bit,
+    to_unsigned_16bit,
+)
 from .const import (
     CALCULATED_DEVICE_INFO,
     DHW_OFF,
@@ -39,12 +45,6 @@ from .const import (
     REGISTER_OFFSET_HEATING,
     REGISTER_OPERATION_MODE,
     REGISTER_QUIET_MODE,
-)
-from .common import (
-    safe_write_register,
-    get_coordinator_register_data,
-    to_signed_16bit,
-    to_unsigned_16bit,
 )
 
 _LOGGER = logging.getLogger(__name__)

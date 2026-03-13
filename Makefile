@@ -99,6 +99,7 @@ test-all: test-unit test-integration test-config-flow test-options-flow test-set
 lint:
 	@echo "🔍 Running linting with Ruff..."
 	ruff check .
+	ruff check --select I .
 
 format:
 	@echo "🎨 Formatting code with Ruff..."

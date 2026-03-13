@@ -3,6 +3,7 @@ import logging
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .common import get_coordinator_from_entry, is_entity_available
 from .const import (
     DISCRETE_INPUT_DEVICE_INFO,
     DISCRETE_INPUT_SENSORS,
@@ -10,7 +11,6 @@ from .const import (
     INPUT_DEVICE_INFO,
     INPUT_REGISTERS,
 )
-from .common import get_coordinator_from_entry, is_entity_available
 
 _LOGGER = logging.getLogger(__name__)
 
