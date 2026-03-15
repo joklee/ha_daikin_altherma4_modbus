@@ -3,8 +3,13 @@
 import asyncio
 import logging
 
-import pymodbus.exceptions
-from pymodbus.client import AsyncModbusTcpClient
+try:
+    import pymodbus.exceptions
+    from pymodbus.client import AsyncModbusTcpClient
+except ImportError:
+    # pymodbus not available - provide fallback for testing
+    pymodbus = None
+    AsyncModbusTcpClient = None
 
 from .client_interface import ModbusClientInterface
 from .exceptions import (
@@ -172,7 +177,11 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusTimeoutException(
                     f"Timeout reading input registers at {address}", e
                 )
-            except pymodbus.exceptions.ModbusException as e:
+            except Exception as e:
+                if pymodbus is None:
+                    raise ModbusReadException(
+                        f"Modbus not available - error reading input registers at {address}: {e}"
+                    )
                 raise ModbusReadException(
                     f"Modbus error reading input registers at {address}", e
                 )
@@ -202,7 +211,11 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusTimeoutException(
                     f"Timeout reading holding registers at {address}", e
                 )
-            except pymodbus.exceptions.ModbusException as e:
+            except Exception as e:
+                if pymodbus is None:
+                    raise ModbusReadException(
+                        f"Modbus not available - error reading holding registers at {address}: {e}"
+                    )
                 raise ModbusReadException(
                     f"Modbus error reading holding registers at {address}", e
                 )
@@ -232,7 +245,11 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusTimeoutException(
                     f"Timeout reading discrete inputs at {address}", e
                 )
-            except pymodbus.exceptions.ModbusException as e:
+            except Exception as e:
+                if pymodbus is None:
+                    raise ModbusReadException(
+                        f"Modbus not available - error reading discrete inputs at {address}: {e}"
+                    )
                 raise ModbusReadException(
                     f"Modbus error reading discrete inputs at {address}", e
                 )
@@ -252,7 +269,11 @@ class RealModbusTcpClient(ModbusClientInterface):
                         f"Device error reading coils at {address}"
                     )
                 return OneBasedModbusResponse(original_response, address, is_bits=True)
-            except pymodbus.exceptions.ModbusIOException as e:
+            except Exception as e:
+                if pymodbus is None:
+                    raise ModbusReadException(
+                        f"I/O error reading coils at {address}", e
+                    )
                 raise ModbusReadException(f"I/O error reading coils at {address}", e)
             except asyncio.TimeoutError as e:
                 raise ModbusTimeoutException(f"Timeout reading coils at {address}", e)
@@ -279,7 +300,11 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusTimeoutException(
                     f"Timeout writing holding register {address}", e
                 )
-            except pymodbus.exceptions.ModbusException as e:
+            except Exception as e:
+                if pymodbus is None:
+                    raise ModbusWriteException(
+                        f"Modbus not available - error writing holding register {address}: {e}"
+                    )
                 raise ModbusWriteException(
                     f"Modbus error writing holding register {address}", e
                 )
@@ -298,7 +323,11 @@ class RealModbusTcpClient(ModbusClientInterface):
                 raise ModbusWriteException(f"I/O error writing coil {address}", e)
             except asyncio.TimeoutError as e:
                 raise ModbusTimeoutException(f"Timeout writing coil {address}", e)
-            except pymodbus.exceptions.ModbusException as e:
+            except Exception as e:
+                if pymodbus is None:
+                    raise ModbusWriteException(
+                        f"Modbus not available - error writing coil {address}: {e}"
+                    )
                 raise ModbusWriteException(f"Modbus error writing coil {address}", e)
 
     async def _ensure_initialized(self) -> None:
