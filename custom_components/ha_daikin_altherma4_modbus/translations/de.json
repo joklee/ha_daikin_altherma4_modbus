@@ -8,7 +8,17 @@
           "host": "Host",
           "port": "Port",
           "scan_interval": "Scan-Intervall",
-          "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID"
+          "slow_scan_interval": "Langsames Scan-Intervall",
+          "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID",
+          "demo_mode": "Demo-Modus"
+        },
+        "data_description": {
+          "host": "IP-Adresse oder Hostname der Daikin Wärmepumpe",
+          "port": "Modbus TCP Port (Standard: 502)",
+          "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
+          "slow_scan_interval": "Abfrageintervall in Sekunden für langsame Daten",
+          "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
+          "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren"
         }
       }
     }
@@ -19,10 +29,16 @@
         "title": "Daikin Altherma 4 Optionen",
         "description": "Konfiguriere die Daikin Altherma 4 Modbus Integration Optionen",
         "data": {
-          "host": "Host",
-          "port": "Port",
           "scan_interval": "Scan-Intervall",
-          "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID"
+          "slow_scan_interval": "Langsames Scan-Intervall",
+          "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID",
+          "demo_mode": "Demo-Modus"
+        },
+        "data_description": {
+          "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
+          "slow_scan_interval": "Abfrageintervall in Sekunden für langsame Daten",
+          "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
+          "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren"
         }
       }
     }

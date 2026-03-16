@@ -103,14 +103,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data_schema=data_schema,
                     errors=errors,
                     last_step=True,
-                    data_description={
-                        CONF_HOST: "IP-Adresse oder Hostname der Daikin Wärmepumpe",
-                        CONF_PORT: "Modbus TCP Port (Standard: 502)",
-                        "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
-                        "slow_scan_interval": "Abfrageintervall in Sekunden für langsame Daten",
-                        "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
-                        "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren",
-                    },
                 )
 
             data = {
@@ -136,14 +128,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=data_schema,
             errors=errors,
             last_step=True,
-            data_description={
-                CONF_HOST: "IP-Adresse oder Hostname der Daikin Wärmepumpe",
-                CONF_PORT: "Modbus TCP Port (Standard: 502)",
-                "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
-                "slow_scan_interval": "Abfrageintervall in Sekunden für langsame Daten",
-                "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
-                "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren",
-            },
         )
 
     @staticmethod
@@ -231,10 +215,4 @@ class OptionsFlow(config_entries.OptionsFlow):
             data_schema=data_schema,
             errors=errors,
             last_step=True,
-            data_description={
-                "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
-                "slow_scan_interval": "Abfrageintervall in Sekunden für langsame Daten",
-                "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
-                "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren",
-            },
         )
