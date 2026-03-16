@@ -1,4 +1,10 @@
-from homeassistant.const import EntityCategory
+try:
+    from homeassistant.const import EntityCategory
+except ImportError:
+    # Fallback for testing when homeassistant is not available
+    class EntityCategory:
+        DIAGNOSTIC = "diagnostic"
+
 
 DOMAIN = "ha_daikin_altherma4_modbus"
 DEFAULT_PORT = 502

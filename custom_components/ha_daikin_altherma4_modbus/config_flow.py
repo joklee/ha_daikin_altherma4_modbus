@@ -4,7 +4,13 @@ import re
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_PORT
+
+try:
+    from homeassistant.const import CONF_HOST, CONF_PORT
+except ImportError:
+    # Fallback for testing when homeassistant is not available
+    CONF_HOST = "host"
+    CONF_PORT = "port"
 
 from . import NORMAL_SCAN_INTERVAL
 from .config_entry_utils import entry_value

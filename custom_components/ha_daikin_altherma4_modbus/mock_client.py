@@ -304,6 +304,10 @@ class MockModbusTcpClient(ModbusClientInterface):
                     # Generate scaled value within range
                     scaled_value = random.uniform(min_val, max_val)
                     value = int(scaled_value / scale)
+
+                    # For signed registers (dtype: int16), convert to unsigned 16-bit
+                    if register_def.get("dtype") == "int16" and value < 0:
+                        value = value + 65536  # Convert to 2's complement
             else:
                 value = 0  # Default for undefined registers
 
