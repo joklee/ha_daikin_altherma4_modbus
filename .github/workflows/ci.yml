@@ -167,14 +167,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-          pip install bandit safety
+          pip install bandit pip-audit
 
       # 🔒 Security Checks
       - name: Run Bandit security linter
         run: bandit -r custom_components/ -f json -o bandit-report.json || true
 
-      - name: Run Safety check for known security vulnerabilities
-        run: safety check --json --output safety-report.json || true
+      - name: Run pip-audit for known vulnerabilities
+        run: pip-audit -r requirements.txt -r requirements-dev.txt --json -o audit-report.json || true
 
       - name: Upload security reports
         uses: actions/upload-artifact@v4
@@ -183,15 +183,7 @@ jobs:
           name: security-reports
           path: |
             bandit-report.json
-            safety-report.json
-
-      # 📊 SonarCloud Analysis (optional)
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        if: env.SONAR_TOKEN != ''
+            audit-report.json
 
   # 📋 Test Summary
   test-summary:
