@@ -151,7 +151,7 @@ jobs:
     name: Code Quality Analysis
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    container: python:3.12
+    container: python:3.12-alpine
 
     steps:
       - name: Checkout repository
