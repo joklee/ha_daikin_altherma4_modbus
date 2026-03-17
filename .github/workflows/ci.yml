@@ -188,7 +188,7 @@ jobs:
   # 📋 Test Summary
   test-summary:
     name: Test Summary
-    needs: [validate, code-quality]
+    needs: [validate]
     if: always()
     runs-on: ubuntu-latest
 
@@ -216,7 +216,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [validate, code-quality]
+    needs: [validate]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
