@@ -151,17 +151,11 @@ jobs:
     name: Code Quality Analysis
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    container: python:3.12
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Needed for SonarCloud
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
 
       - name: Install dependencies
         run: |
@@ -174,7 +168,7 @@ jobs:
         run: bandit -r custom_components/ -f json -o bandit-report.json || true
 
       - name: Run pip-audit for known vulnerabilities
-        run: pip-audit -r requirements.txt -r requirements-dev.txt --json -o audit-report.json || true
+        run: pip-audit -r requirements-dev.txt -o audit-report.json || true
 
       - name: Upload security reports
         uses: actions/upload-artifact@v4
