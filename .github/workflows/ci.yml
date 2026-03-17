@@ -18,7 +18,7 @@ jobs:
 
     strategy:
       matrix:
-        ha-version: ["stable", "beta", "dev"]
+        ha-version: ["stable", "beta"]
 
     steps:
       - name: Checkout repository
