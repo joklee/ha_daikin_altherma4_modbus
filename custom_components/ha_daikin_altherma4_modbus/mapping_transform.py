@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List
 
-from .common import update_value_if_changed
+from .common import to_signed_16bit, update_value_if_changed
 from .const import CALCULATED_SENSORS
 from .data_types import (
     LastTriggeredData,
@@ -75,6 +75,10 @@ class ModbusMappingTransform:
         item = processed_item["item"]
 
         if "scale" in item:
+            # Convert signed 16-bit integers before scaling (for int16 dtype)
+            if item.get("dtype") == "int16":
+                raw_value = to_signed_16bit(raw_value)
+
             if raw_value == 32765 or raw_value == 32766:
                 return update_value_if_changed(
                     register_name,

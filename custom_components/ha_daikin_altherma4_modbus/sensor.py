@@ -6,7 +6,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .common import is_entity_available, is_unavailable_value, to_signed_16bit
+from .common import is_entity_available, is_unavailable_value
 from .config_entry_utils import entry_value
 from .const import (
     CALCULATED_DEVICE_INFO,
@@ -206,6 +206,10 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         if self._dtype == "string":
             return str(val) if val is not None else None
 
+        # Return None for unavailable value (32765 or 32766)
+        if is_unavailable_value(val):
+            return None
+
         # Check if value is already scaled by checking if scale is stored in data
         data_scale = data.get("scale")
 
@@ -220,13 +224,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
                 val = int(val)
         except (ValueError, TypeError):
             return None
-
-        # Return None for unavailable value (32765 or 32766)
-        if is_unavailable_value(val):
-            return None
-
-        # Convert unsigned 16-bit to signed integer safely
-        val = to_signed_16bit(val)
 
         # ENUM Mapping
         if self._enum_map:

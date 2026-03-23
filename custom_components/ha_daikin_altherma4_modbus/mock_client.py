@@ -177,6 +177,8 @@ class MockModbusTcpClient(ModbusClientInterface):
                     value = 2850  # 28.5°C
                 elif address == 43:
                     value = 2950  # 29.5°C
+                elif address == 44:
+                    value = 65036  # -5.0°C
                 elif address == 51:
                     value = 45
                 elif address == 52:  # DHW normal operation

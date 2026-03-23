@@ -15,7 +15,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .common import (
     get_coordinator_register_data,
     safe_write_register,
-    to_signed_16bit,
     to_unsigned_16bit,
 )
 from .const import (
@@ -146,9 +145,6 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         else:
             offset_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_HEATING}")
         offset_raw = offset_data.get("value", 0)
-
-        # Convert unsigned 16-bit to signed integer safely
-        offset_raw = to_signed_16bit(offset_raw)
 
         # Check if value is already scaled by checking if scale is stored in data
         data_scale = offset_data.get("scale")

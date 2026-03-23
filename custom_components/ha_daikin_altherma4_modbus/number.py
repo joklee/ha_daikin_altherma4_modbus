@@ -7,7 +7,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .common import (
     is_entity_available,
     safe_write_register,
-    to_signed_16bit,
     to_unsigned_16bit,
 )
 from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_REGISTERS
@@ -132,8 +131,6 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
             scaled_value = val
         else:
             # Value is not scaled yet, apply scaling
-            # Convert unsigned 16-bit to signed integer safely
-            val = to_signed_16bit(val)
             scaled_value = val * self._scale
 
         return scaled_value
