@@ -198,7 +198,12 @@
     },
     "sensor": {
       "input_21": {
-        "name": "Unit abnormality"
+        "name": "Unit abnormality",
+        "state": {
+          "0": "No error",
+          "1": "Fault",
+          "2": "Warning"
+        }
       },
       "input_22": {
         "name": "Abnormality code"
@@ -342,7 +347,7 @@
         "name": "Water pressure"
       },
       "input_80": {
-        "name": "Space heating/cooling target for Main zone Temp16"
+        "name": "Space heating/cooling target for Main zone"
       },
       "input_81": {
         "name": "Space heating/cooling target for Add zone"

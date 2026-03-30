@@ -674,7 +674,7 @@ INPUT_REGISTERS = [
         "translation_key": "input_78",
     },
     {
-        "name": "Space heating/cooling target for Main zone Temp16",
+        "name": "Space heating/cooling target for Main zone",
         "address": 80,
         "unit": "°C",
         "scale": 0.01,
@@ -710,7 +710,7 @@ INPUT_REGISTERS = [
         "translation_key": "input_82",
     },
     {
-        "name": "Room Heating setpoint Lower limit Temp16",
+        "name": "Room Heating setpoint Lower limit",
         "address": 84,
         "unit": "°C",
         "scale": 0.01,
