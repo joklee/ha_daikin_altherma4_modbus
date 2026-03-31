@@ -65,7 +65,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_21",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "enum_map": {0: "Kein Fehler", 1: "Störung", 2: "Warnung"},
+        "enum_map": {0: "no_error", 1: "fault", 2: "warning"},
         "translation_key": "input_21",
     },
     {
@@ -91,7 +91,7 @@ INPUT_REGISTERS = [
         "input_type": "input",
         "register_name": "input_23",
         "entity_category": EntityCategory.DIAGNOSTIC,
-        "enum_map": {**{i: f"Fehler {i}" for i in range(100)}, 32766: "No error"},
+        "enum_map": {**{i: f"error_{i}" for i in range(100)}, 32766: "no_error"},
         "translation_key": "input_23",
     },
     {
