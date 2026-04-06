@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
@@ -85,24 +85,64 @@ def update_value_if_changed(
         EntityStatePayload: Complete data payload for the register (new or unchanged)
     """
     # Get previous value
-    prev_data = previous_data.get(unique_id, {})
-    previous_value = prev_data.get("value")
+    prev_data = previous_data.get(unique_id)
+    previous_value = prev_data.value if prev_data else None
 
     # Always update if no previous value exists
     if previous_value is None:
         _LOGGER.debug(f"{register_type} {unique_id} first read: {raw_value}")
-        return {"value": raw_value, **kwargs}
+        return EntityStatePayload(value=raw_value, **kwargs)
 
     # Check if value changed
     if raw_value != previous_value:
         _LOGGER.debug(
             f"{register_type} {unique_id} changed: {previous_value} -> {raw_value}"
         )
-        return {"value": raw_value, **kwargs}
+        return EntityStatePayload(value=raw_value, **kwargs)
 
     # Value unchanged - return previous data for this specific sensor
     _LOGGER.debug(f"{register_type} {unique_id} unchanged: {raw_value}")
     return prev_data
+
+
+def get_register_value(data: Any) -> Any:
+    """Get value from register data, supporting both dataclass and dictionary formats.
+
+    Args:
+        data: Register data (dataclass instance or dictionary)
+
+    Returns:
+        The value field or None if not found
+    """
+    if data is None:
+        return None
+
+    if hasattr(data, "value"):
+        return data.value
+    elif isinstance(data, dict):
+        return data.get("value")
+    else:
+        return None
+
+
+def get_register_scale(data: Any) -> Union[int, float]:
+    """Get scale from register data, supporting both dataclass and dictionary formats.
+
+    Args:
+        data: Register data (dataclass instance or dictionary)
+
+    Returns:
+        The scale field or 1 if not found
+    """
+    if data is None:
+        return 1
+
+    if hasattr(data, "scale"):
+        return data.scale
+    elif isinstance(data, dict):
+        return data.get("scale", 1)
+    else:
+        return 1
 
 
 def is_entity_available(coordinator_data: dict, register_name: str) -> bool:
@@ -116,10 +156,7 @@ def is_entity_available(coordinator_data: dict, register_name: str) -> bool:
         bool: True if entity is available, False otherwise
     """
     data = coordinator_data.get(register_name)
-    if data is None:
-        return False
-
-    val = data.get("value")
+    val = get_register_value(data)
     return validate_register_value(val)
 
 

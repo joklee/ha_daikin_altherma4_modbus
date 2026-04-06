@@ -10,7 +10,11 @@ from unittest.mock import Mock
 import pytest
 
 # Import shared test utilities
-from .test_utils import setup_home_assistant_mocks, setup_project_paths
+from .test_utils import (
+    load_const_module,
+    setup_home_assistant_mocks,
+    setup_project_paths,
+)
 
 # Set up mocks and paths
 setup_home_assistant_mocks()
@@ -44,8 +48,7 @@ custom_components_path = (
     project_root / "custom_components" / "ha_daikin_altherma4_modbus"
 )
 
-# Load const first
-const_module = create_testable_module("const", custom_components_path / "const.py")
+const_module = load_const_module(project_root)
 
 # Load client_interface
 client_interface_module = create_testable_module(

@@ -53,8 +53,10 @@ def get_translation_keys_from_python(filepath: Path) -> set:
     with open(filepath, encoding="utf-8") as f:
         content = f.read()
 
-    # Match "translation_key": "value" format (used in dict definitions)
-    pattern = r'"translation_key":\s*"([^"]+)"'
+    # Match both formats:
+    # - "translation_key": "value" (dict format in const.py)
+    # - translation_key="value" (dataclass format in register_constants.py)
+    pattern = r'["\']?translation_key["\']?\s*[:=]\s*["\']([^"\']+)["\']'
     return set(re.findall(pattern, content))
 
 
@@ -95,9 +97,14 @@ class TestTranslations:
         return get_translation_keys_from_python(component_dir / "const.py")
 
     @pytest.fixture
-    def all_python_keys(self, const_keys):
+    def register_constants_keys(self, component_dir):
+        """Extract translation keys from register_constants.py."""
+        return get_translation_keys_from_python(component_dir / "register_constants.py")
+
+    @pytest.fixture
+    def all_python_keys(self, const_keys, register_constants_keys):
         """Return all translation keys from Python files."""
-        return const_keys
+        return const_keys | register_constants_keys
 
     def test_all_python_keys_in_en_json(self, all_python_keys, en_keys):
         """Verify all translation keys from Python are in en.json."""

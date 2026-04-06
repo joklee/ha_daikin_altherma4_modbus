@@ -5,7 +5,7 @@ import logging
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN
+from .const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
 from .data_manager import ModbusDataManager
 from .exceptions import (
     ModbusConnectionException,
@@ -35,7 +35,7 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         hass,
         host: str,
         port: int,
-        scan_interval: int = 10,
+        scan_interval: int = NORMAL_SCAN_INTERVAL,
         demo_mode: bool = False,
     ):
         # Add jitter to scan interval
@@ -85,7 +85,7 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         hass,
         host: str,
         port: int,
-        scan_interval: int = 600,
+        scan_interval: int = SLOW_SCAN_INTERVAL,
         demo_mode: bool = False,
     ):
         # Add jitter to scan interval

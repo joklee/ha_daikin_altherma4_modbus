@@ -173,6 +173,36 @@ def _load_config_flow_module(monkeypatch):
     const_module.SLOW_SCAN_INTERVAL = 600
     monkeypatch.setitem(sys.modules, const_module_name, const_module)
 
+    # Mock modbus_client module for connection testing
+    modbus_client_name = f"{package_name}.modbus_client"
+    modbus_client_module = types.ModuleType(modbus_client_name)
+
+    class FakeModbusClient:
+        def __init__(self, host, port, timeout=10):
+            self.host = host
+            self.port = port
+            self._connected = False
+
+        @classmethod
+        async def create(cls, host, port, timeout=10):
+            return cls(host, port, timeout)
+
+        async def connect(self):
+            self._connected = True
+
+        async def disconnect(self):
+            self._connected = False
+
+        @property
+        def connected(self):
+            return self._connected
+
+        async def read_input_registers(self, address, count):
+            return type("Response", (), {"registers": [0] * count})()
+
+    modbus_client_module.RealModbusTcpClient = FakeModbusClient
+    monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
+
     module_name = f"{package_name}.config_flow"
     _reset_modules(module_name)
     return importlib.import_module(module_name)
@@ -241,7 +271,28 @@ def _load_integration_module(monkeypatch):
     modbus_client_module = types.ModuleType(modbus_client_name)
 
     class FakeRealModbusTcpClient:
-        async_close_cached_client = AsyncMock()
+        def __init__(self, host, port, timeout=10):
+            self.host = host
+            self.port = port
+            self._connected = False
+
+        @classmethod
+        async def create(cls, host, port, timeout=10):
+            return cls(host, port, timeout)
+
+        async def connect(self):
+            self._connected = True
+
+        async def disconnect(self):
+            self._connected = False
+
+        @property
+        def connected(self):
+            return self._connected
+
+        @classmethod
+        async def async_close_cached_client(cls, host, port):
+            pass
 
     modbus_client_module.RealModbusTcpClient = FakeRealModbusTcpClient
     monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)

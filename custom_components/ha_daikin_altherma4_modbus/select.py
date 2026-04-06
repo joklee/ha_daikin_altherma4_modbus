@@ -7,7 +7,12 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .common import get_coordinator_from_entry, is_entity_available, safe_write_register
+from .common import (
+    get_coordinator_from_entry,
+    get_register_value,
+    is_entity_available,
+    safe_write_register,
+)
 from .const import DOMAIN, HOLDING_DEVICE_INFO, SELECT_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
@@ -22,12 +27,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities = []
 
     for item in SELECT_REGISTERS:
-        if item.get("enum_map"):  # Nur für Register mit enum_map
-            address = item["address"]
-            register_name = item["register_name"]
-            enum_map = item["enum_map"]
-            entity_category = item.get("entity_category")
-            translation_key = item.get("translation_key")
+        if item.enum_map:  # Nur für Register mit enum_map
+            address = item.address
+            register_name = item.register_name
+            enum_map = item.enum_map
+            entity_category = item.entity_category
+            translation_key = item.translation_key
 
             entities.append(
                 DaikinSelect(
@@ -83,7 +88,7 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
         data = self.coordinator.data.get(self._register_name)
 
         if data:
-            val = data.get("value")
+            val = get_register_value(data)
 
             # Convert to integer if it's a string
             try:

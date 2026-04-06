@@ -4,7 +4,6 @@ Shared test utilities for Daikin Altherma 4 Modbus integration tests.
 """
 
 import sys
-import types
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock
@@ -79,17 +78,31 @@ def setup_project_paths():
 
 def load_const_module(project_root):
     """Load the const module for testing."""
-    custom_components_path = (
-        project_root / "custom_components" / "ha_daikin_altherma4_modbus"
-    )
+    # Add the custom_components path to sys.path to allow imports
+    import os
+    import sys
 
-    # Load const first
-    with open(custom_components_path / "const.py", "r") as f:
-        source = f.read()
-    const_module = types.ModuleType("const_module")
-    exec(source, const_module.__dict__)
+    custom_components_parent = str(project_root / "custom_components")
+    if custom_components_parent not in sys.path:
+        sys.path.insert(0, custom_components_parent)
 
-    return const_module
+    # Change to the custom_components directory to make relative imports work
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(custom_components_parent)
+
+        # Import the module properly
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "ha_daikin_altherma4_modbus.const", "ha_daikin_altherma4_modbus/const.py"
+        )
+        const_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(const_module)
+
+        return const_module
+    finally:
+        os.chdir(original_cwd)
 
 
 def create_mock_coordinator():

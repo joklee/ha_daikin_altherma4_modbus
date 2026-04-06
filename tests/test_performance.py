@@ -53,19 +53,23 @@ class MockPerformanceClient:
 def test_mock_client_performance(benchmark):
     """Benchmark mock client basic operations."""
 
-    def basic_operations():
+    async def _async_operations():
+        """All async operations in one coroutine."""
         client = MockPerformanceClient("localhost", 502)
 
         # Connection
-        asyncio.run(client.connect())
+        await client.connect()
 
         # Register reads
-        result1 = asyncio.run(client.read_input_registers(21, 5))
-        result2 = asyncio.run(client.read_holding_registers(100, 3))
-        result3 = asyncio.run(client.read_discrete_inputs(1, 8))
-        result4 = asyncio.run(client.read_coils(1, 8))
+        r1 = await client.read_input_registers(21, 5)
+        r2 = await client.read_holding_registers(100, 3)
+        r3 = await client.read_discrete_inputs(1, 8)
+        r4 = await client.read_coils(1, 8)
 
-        return result1, result2, result3, result4, client
+        return r1, r2, r3, r4, client
+
+    def basic_operations():
+        return asyncio.run(_async_operations())
 
     result1, result2, result3, result4, client = benchmark(basic_operations)
 

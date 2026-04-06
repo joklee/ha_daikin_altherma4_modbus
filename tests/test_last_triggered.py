@@ -40,7 +40,7 @@ class TestLastTriggeredSensors:
         found_sensors = {}
 
         for sensor in const_module.CALCULATED_SENSORS:
-            register_name = sensor.get("register_name")
+            register_name = sensor.register_name
             if register_name in expected_sensors:
                 found_sensors[register_name] = sensor
 
@@ -52,21 +52,21 @@ class TestLastTriggeredSensors:
 
         # Check each sensor has correct properties
         for register_name, sensor_config in found_sensors.items():
-            assert sensor_config["type"] == "last_triggered", (
-                f"{register_name} should have type 'last_triggered'"
+            assert sensor_config.calc_type == "last_triggered", (
+                f"{register_name} should have calc_type 'last_triggered'"
             )
-            assert sensor_config["device_class"] == "timestamp", (
+            assert sensor_config.device_class == "timestamp", (
                 f"{register_name} should have device_class 'timestamp'"
             )
-            assert "trigger_register_name" in sensor_config, (
+            assert hasattr(sensor_config, "trigger_register_name"), (
                 f"{register_name} should have trigger_register_name"
             )
-            assert "translation_key" in sensor_config, (
+            assert hasattr(sensor_config, "translation_key"), (
                 f"{register_name} should have translation_key"
             )
 
             print(
-                f"✓ {register_name} sensor definition found: {sensor_config['trigger_register_name']}"
+                f"✓ {register_name} sensor definition found: {sensor_config.trigger_register_name}"
             )
 
     def test_trigger_registers_mapping(self):
@@ -81,12 +81,12 @@ class TestLastTriggeredSensors:
         for sensor_name, expected_trigger in expected_mappings.items():
             sensor_config = None
             for sensor in const_module.CALCULATED_SENSORS:
-                if sensor.get("register_name") == sensor_name:
+                if sensor.register_name == sensor_name:
                     sensor_config = sensor
                     break
 
             assert sensor_config is not None, f"{sensor_name} not found"
-            assert sensor_config["trigger_register_name"] == expected_trigger, (
+            assert sensor_config.trigger_register_name == expected_trigger, (
                 f"{sensor_name} should trigger on {expected_trigger}"
             )
 
@@ -253,7 +253,7 @@ class TestLastTriggeredSensors:
 
         found_sensors = {}
         for sensor in const_module.CALCULATED_SENSORS:
-            register_name = sensor.get("register_name")
+            register_name = sensor.register_name
             if register_name in expected_sensors:
                 found_sensors[register_name] = sensor
 
@@ -261,11 +261,11 @@ class TestLastTriggeredSensors:
             sensor_config = found_sensors[register_name]
 
             # Verify sensor configuration
-            assert sensor_config["name"] == expected_name
-            assert sensor_config["type"] == "last_triggered"
-            assert sensor_config["device_class"] == "timestamp"
-            assert "trigger_register_name" in sensor_config
-            assert "translation_key" in sensor_config
+            assert sensor_config.name == expected_name
+            assert sensor_config.calc_type == "last_triggered"
+            assert sensor_config.device_class == "timestamp"
+            assert hasattr(sensor_config, "trigger_register_name")
+            assert hasattr(sensor_config, "translation_key")
 
             print(f"✓ {expected_name} sensor properties correct")
 
@@ -349,8 +349,11 @@ class TestLastTriggeredSensors:
             if is_on and not was_on:
                 # Find corresponding sensor
                 for sensor in const_module.CALCULATED_SENSORS:
-                    if sensor.get("trigger_register_name") == register_name:
-                        actual_triggers.append(sensor.get("register_name"))
+                    if (
+                        hasattr(sensor, "trigger_register_name")
+                        and sensor.trigger_register_name == register_name
+                    ):
+                        actual_triggers.append(sensor.register_name)
                         break
 
         # Verify expected triggers occurred

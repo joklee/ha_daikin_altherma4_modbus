@@ -31,6 +31,27 @@ async def async_setup_entry(hass, entry):
     scan_interval = entry_value(entry, "scan_interval", NORMAL_SCAN_INTERVAL)
     slow_scan_interval = entry_value(entry, "slow_scan_interval", SLOW_SCAN_INTERVAL)
     demo_mode = entry_value(entry, "demo_mode", False)
+
+    # Test connection before setting up (unless in demo mode)
+    if not demo_mode:
+        _LOGGER.debug(f"Testing connection during setup to {host}:{port}")
+        try:
+            client = await RealModbusTcpClient.create(host, port, timeout=10)
+            await client.connect()
+            if not client.connected:
+                _LOGGER.error(f"Cannot connect to {host}:{port} during setup")
+                await RealModbusTcpClient.async_close_cached_client(host, port)
+                return False
+            # Disconnect after test - coordinators will create their own connections
+            await client.disconnect()
+            _LOGGER.debug(f"Connection test successful during setup to {host}:{port}")
+        except Exception as err:
+            _LOGGER.error(
+                f"Connection test failed during setup to {host}:{port}: {err}"
+            )
+            await RealModbusTcpClient.async_close_cached_client(host, port)
+            return False
+
     manager = CoordinatorManager(
         hass, host, port, scan_interval, slow_scan_interval, demo_mode
     )

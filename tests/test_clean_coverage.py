@@ -33,7 +33,6 @@ try:
 except ImportError as e:
     print(f"Could not import for coverage: {e}")
     # Fallback to manual loading
-    import importlib.util
     import types
 
     custom_components_path = (
@@ -57,13 +56,10 @@ except ImportError as e:
     MockModbusTcpClient = mock_client_module.MockModbusTcpClient
     MockModbusResponse = mock_client_module.MockModbusResponse
 
-    # Load const
-    const_spec = importlib.util.spec_from_file_location(
-        "ha_daikin_altherma4_modbus.const", custom_components_path / "const.py"
-    )
-    const = importlib.util.module_from_spec(const_spec)
-    const_spec.loader.exec_module(const)
-    sys.modules["ha_daikin_altherma4_modbus.const"] = const
+    # Load const using the same method as test_utils
+    from .test_utils import load_const_module
+
+    const = load_const_module(project_root)
 
     COVERAGE_WORKING = False
 

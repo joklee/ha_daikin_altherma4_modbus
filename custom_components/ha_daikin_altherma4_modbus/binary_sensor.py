@@ -3,7 +3,7 @@ import logging
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .common import get_coordinator_from_entry, is_entity_available
+from .common import get_coordinator_from_entry, get_register_value, is_entity_available
 from .const import (
     DISCRETE_INPUT_DEVICE_INFO,
     DISCRETE_INPUT_SENSORS,
@@ -25,18 +25,18 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Process binary sensors from INPUT_REGISTERS with device_class
     for item in INPUT_REGISTERS:
-        device_class = item.get("device_class")
+        device_class = item.device_class
         if device_class in ["running", "problem"]:
             entities.append(
                 DaikinBinarySensor(
                     coordinator=coordinator,
                     entry=entry,
-                    address=item["address"],
+                    address=item.address,
                     device_class=device_class,
-                    register_name=item.get("register_name"),
-                    entity_category=item.get("entity_category"),
-                    unique_id=item.get("register_name"),
-                    translation_key=item.get("translation_key"),
+                    register_name=item.register_name,
+                    entity_category=item.entity_category,
+                    unique_id=item.register_name,
+                    translation_key=item.translation_key,
                 )
             )
 
@@ -47,12 +47,12 @@ async def async_setup_entry(hass, entry, async_add_entities):
             DaikinDiscreteInputSensor(
                 coordinator=coordinator,
                 entry=entry,
-                address=discrete["address"],
-                device_class=discrete["device_class"],
-                entity_category=discrete.get("entity_category"),
-                register_name=discrete.get("register_name"),
-                unique_id=discrete.get("register_name"),
-                translation_key=discrete.get("translation_key"),
+                address=discrete.address,
+                device_class=discrete.device_class,
+                entity_category=discrete.entity_category,
+                register_name=discrete.register_name,
+                unique_id=discrete.register_name,
+                translation_key=discrete.translation_key,
             )
         )
 
@@ -95,7 +95,7 @@ class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
         data = self.coordinator.data.get(self._attr_register_name)
         if data is None:
             return False
-        val = data.get("value")
+        val = get_register_value(data)
         return val == 1
 
 
@@ -136,5 +136,5 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
         data = self.coordinator.data.get(self._attr_register_name)
         if data is None:
             return False
-        val = data.get("value")
+        val = get_register_value(data)
         return val == 1

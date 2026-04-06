@@ -22,6 +22,47 @@ DEFAULT_PORT = 502
 HOSTNAME_PATTERN = re.compile(r"^[A-Za-z0-9-]{1,63}$")
 
 
+async def _test_connection(host: str, port: int) -> tuple[bool, str | None]:
+    """Test Modbus connection to the device.
+
+    Returns:
+        Tuple of (success, error_message)
+        - success: True if connection was successful
+        - error_message: None if successful, otherwise the error description
+    """
+    try:
+        # Import here to avoid issues during testing without dependencies
+        from .modbus_client import RealModbusTcpClient
+
+        _LOGGER.debug(f"Testing connection to {host}:{port}")
+        client = await RealModbusTcpClient.create(host, port, timeout=10)
+
+        # Try to connect
+        await client.connect()
+
+        if not client.connected:
+            return False, "cannot_connect"
+
+        # Try to read a basic register to verify device is responsive
+        # Using input register 1 which should exist on most Modbus devices
+        try:
+            await client.read_input_registers(1, 1)
+        except Exception as err:
+            _LOGGER.debug(f"Connection test read failed: {err}")
+            # Even if read fails, connection might be valid
+            # Just verify we can connect
+
+        # Disconnect after test
+        await client.disconnect()
+
+        _LOGGER.debug(f"Connection test successful to {host}:{port}")
+        return True, None
+
+    except Exception as err:
+        _LOGGER.debug(f"Connection test failed to {host}:{port}: {err}")
+        return False, "cannot_connect"
+
+
 def _is_valid_host(host: str) -> bool:
     """Validate host as IP address or DNS hostname."""
     if not host or " " in host:
@@ -111,6 +152,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     last_step=True,
                 )
 
+            # Test connection to device (unless in demo mode)
+            demo_mode = user_input.get("demo_mode", False)
+            if not demo_mode:
+                connection_ok, error_key = await _test_connection(host, port)
+                if not connection_ok:
+                    errors = {CONF_HOST: error_key}
+                    return self.async_show_form(
+                        step_id="user",
+                        data_schema=data_schema,
+                        errors=errors,
+                        last_step=True,
+                    )
+
             data = {
                 CONF_HOST: host,
                 CONF_PORT: port,
@@ -118,7 +172,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             options = {
                 "scan_interval": scan_interval,
                 "slow_scan_interval": slow_scan_interval,
-                "demo_mode": user_input.get("demo_mode", False),
+                "demo_mode": demo_mode,
             }
             electric_power_sensor = user_input.get("electric_power_sensor", "").strip()
             if electric_power_sensor:
@@ -134,6 +188,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=data_schema,
             errors=errors,
             last_step=True,
+            data_description={
+                CONF_HOST: "IP address of your Daikin Altherma 4 heat pump (e.g., 192.168.1.100)",
+                CONF_PORT: "Modbus TCP port (default: 502, use 802 for TLS)",
+                "scan_interval": "Polling interval in seconds for normal sensors (default: 5)",
+                "slow_scan_interval": "Polling interval in seconds for slow-changing sensors (default: 30)",
+                "electric_power_sensor": "Optional: Entity ID of external power sensor for CoP calculation (e.g., sensor.shelly_em_power)",
+                "demo_mode": "Enable demo mode for testing without actual hardware",
+            },
         )
 
     @staticmethod
@@ -221,4 +283,10 @@ class OptionsFlow(config_entries.OptionsFlow):
             data_schema=data_schema,
             errors=errors,
             last_step=True,
+            data_description={
+                "scan_interval": "Polling interval in seconds for normal sensors (default: 5)",
+                "slow_scan_interval": "Polling interval in seconds for slow-changing sensors (default: 30)",
+                "electric_power_sensor": "Optional: Entity ID of external power sensor for CoP calculation (e.g., sensor.shelly_em_power)",
+                "demo_mode": "Enable demo mode for testing without actual hardware",
+            },
         )

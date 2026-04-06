@@ -1,31 +1,34 @@
 """Typed data models for Modbus register/state payloads."""
 
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Mapping, MutableMapping, TypedDict, Union
+from typing import Any, Dict, Mapping, MutableMapping, Union
 
 RegisterValue = Union[int, float, str, datetime, None]
 
 
-class EntityStatePayload(TypedDict, total=False):
+@dataclass
+class EntityStatePayload:
     """Normalized state payload stored per register/entity."""
 
-    value: RegisterValue
-    input_type: str
-    address: int
-    register_name: str
-    description: str
-    scale: Union[int, float]
-    last_updated: float
+    value: RegisterValue = None
+    input_type: str = ""
+    address: int = 0
+    register_name: str = ""
+    description: str = ""
+    scale: Union[int, float] = 1
+    last_updated: float = 0.0
 
 
-class ProcessedRegisterItem(TypedDict):
+@dataclass
+class ProcessedRegisterItem:
     """Intermediate payload used while transforming raw register blocks."""
 
     raw_value: int
     input_type: str
     address: int
     description: str
-    item: Dict[str, Any]
+    item: Dict[str, Any] = field(default_factory=dict)
 
 
 StateData = Dict[str, EntityStatePayload]

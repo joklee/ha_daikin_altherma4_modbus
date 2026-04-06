@@ -90,8 +90,26 @@ def _load_integration_module(monkeypatch):
     modbus_client_module = types.ModuleType(modbus_client_name)
 
     class FakeRealModbusTcpClient:
-        async_close_cached_client = AsyncMock()
+        def __init__(self, host, port, timeout=10):
+            self.host = host
+            self.port = port
+            self._connected = False
 
+        @classmethod
+        async def create(cls, host, port, timeout=10):
+            return cls(host, port, timeout)
+
+        async def connect(self):
+            self._connected = True
+
+        async def disconnect(self):
+            self._connected = False
+
+        @property
+        def connected(self):
+            return self._connected
+
+    FakeRealModbusTcpClient.async_close_cached_client = AsyncMock()
     modbus_client_module.RealModbusTcpClient = FakeRealModbusTcpClient
     monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
 

@@ -5,6 +5,8 @@ from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .common import (
+    get_register_scale,
+    get_register_value,
     is_entity_available,
     safe_write_register,
     to_unsigned_16bit,
@@ -25,16 +27,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities = []
 
     for item in HOLDING_REGISTERS:
-        address = item["address"]
-        min_v = item.get("min_value", 0)
-        max_v = item.get("max_value", 100)
-        step = item.get("step", 1)
-        unit = item.get("unit", "")
-        scale = item.get("scale", 1)
-        register_name = item.get("register_name")
-        enum_map = item.get("enum_map")
-        entity_category = item.get("entity_category")
-        translation_key = item.get("translation_key")
+        address = item.address
+        min_v = item.min_value
+        max_v = item.max_value
+        step = item.step
+        unit = item.unit or ""
+        scale = item.scale
+        register_name = item.register_name
+        enum_map = item.enum_map
+        entity_category = item.entity_category
+        translation_key = item.translation_key
 
         entities.append(
             DaikinNumber(
@@ -105,7 +107,7 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         data = self.coordinator.data.get(self._register_name)
         if data is None:
             return None
-        val = data.get("value")
+        val = get_register_value(data)
         if val is None:
             return None
 
@@ -124,7 +126,7 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
             return val  # Rohwert für enum
 
         # Check if value is already scaled by checking if scale is stored in data
-        data_scale = data.get("scale")
+        data_scale = get_register_scale(data)
 
         if data_scale is not None:
             # Value is already scaled by data_manager

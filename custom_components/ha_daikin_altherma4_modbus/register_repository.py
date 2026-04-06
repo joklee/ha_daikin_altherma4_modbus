@@ -299,38 +299,6 @@ class ModbusRegisterRepository:
             _LOGGER.error(error_msg)
             raise ModbusWriteException(error_msg) from err
 
-    async def read_single_holding_register(self, address: int) -> Any | None:
-        """Read one holding register value."""
-        client = self._session.client
-        if client is None:
-            _LOGGER.error("Modbus client is None, cannot read holding register")
-            return None
-        try:
-            result = await client.read_holding_registers(address, 1)
-            if self._session.is_modbus_error(result):
-                _LOGGER.error("Failed to read holding register %s: %s", address, result)
-                return None
-            return result
-        except _READ_EXCEPTIONS as err:
-            _LOGGER.error("Exception reading holding register %s: %s", address, err)
-            return None
-
-    async def read_single_coil(self, address: int) -> Any | None:
-        """Read one coil value."""
-        client = self._session.client
-        if client is None:
-            _LOGGER.error("Modbus client is None, cannot read coil")
-            return None
-        try:
-            result = await client.read_coils(address, 1)
-            if self._session.is_modbus_error(result):
-                _LOGGER.error("Failed to read coil %s: %s", address, result)
-                return None
-            return result
-        except _READ_EXCEPTIONS as err:
-            _LOGGER.error("Exception reading coil %s: %s", address, err)
-            return None
-
     async def _retry_read_discrete_inputs(self) -> Any | None:
         """Reconnect and retry discrete inputs once."""
         try:

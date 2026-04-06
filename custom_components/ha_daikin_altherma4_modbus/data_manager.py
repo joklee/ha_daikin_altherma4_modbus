@@ -2,6 +2,7 @@
 
 import logging
 import time
+from dataclasses import dataclass, field
 from typing import Any
 
 from .const import (
@@ -20,23 +21,29 @@ from .transport_session import ModbusTransportSession
 _LOGGER = logging.getLogger(__name__)
 
 
+@dataclass
 class ModbusDataManager:
     """Compatibility facade orchestrating the three data layers."""
 
-    def __init__(self, host: str, port: int, demo_mode: bool = False):
-        self.host = host
-        self.port = port
-        self.demo_mode = demo_mode
+    host: str
+    port: int
+    demo_mode: bool = False
 
-        self._session = ModbusTransportSession(host, port, demo_mode)
+    _session: ModbusTransportSession = field(init=False)
+    _repository: ModbusRegisterRepository = field(init=False)
+    _mapping: ModbusMappingTransform = field(init=False)
+    _client_initialized: bool = field(default=False, init=False)
+    coordinator: Any = field(default=None, init=False)
+
+    def __post_init__(self):
+        """Initialize internal components after dataclass creation."""
+        self._session = ModbusTransportSession(self.host, self.port, self.demo_mode)
         self._repository = ModbusRegisterRepository(self._session)
         self._mapping = ModbusMappingTransform()
 
         # Keep legacy public state references for compatibility.
         self.previous_data = self._mapping.previous_data
         self.last_triggered = self._mapping.last_triggered
-        self._client_initialized = False
-        self.coordinator = None
 
     @property
     def client(self):
@@ -289,36 +296,6 @@ class ModbusDataManager:
         if result is not None:
             self._update_coordinator_data(register_name, value)
         return result
-
-    async def _refresh_single_holding_register(
-        self, register_id: str, address: int
-    ) -> StateData:
-        """Refresh a single holding register."""
-        result = await self._repository.read_single_holding_register(address)
-        if result is None:
-            return {}
-
-        raw_value = result.registers[address] if len(result.registers) > address else 0
-        _LOGGER.debug("Refreshed holding register %s: %s", register_id, raw_value)
-        return {
-            register_id: {
-                "value": raw_value,
-                "input_type": "holding",
-                "address": address,
-            }
-        }
-
-    async def _refresh_single_coil(self, register_id: str, address: int) -> StateData:
-        """Refresh a single coil."""
-        result = await self._repository.read_single_coil(address)
-        if result is None:
-            return {}
-
-        raw_value = 1 if result.bits[0] else 0
-        _LOGGER.debug("Refreshed coil %s: %s", register_id, raw_value)
-        return {
-            register_id: {"value": raw_value, "input_type": "coil", "address": address}
-        }
 
     def _update_last_triggered(self, data: StateData):
         """Update last-triggered calculated sensors."""

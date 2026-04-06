@@ -269,16 +269,16 @@ class RealModbusTcpClient(ModbusClientInterface):
                         f"Device error reading coils at {address}"
                     )
                 return OneBasedModbusResponse(original_response, address, is_bits=True)
+            except asyncio.TimeoutError as e:
+                raise ModbusTimeoutException(f"Timeout reading coils at {address}", e)
+            except pymodbus.exceptions.ModbusException as e:
+                raise ModbusReadException(f"Modbus error reading coils at {address}", e)
             except Exception as e:
                 if pymodbus is None:
                     raise ModbusReadException(
                         f"I/O error reading coils at {address}", e
                     )
                 raise ModbusReadException(f"I/O error reading coils at {address}", e)
-            except asyncio.TimeoutError as e:
-                raise ModbusTimeoutException(f"Timeout reading coils at {address}", e)
-            except pymodbus.exceptions.ModbusException as e:
-                raise ModbusReadException(f"Modbus error reading coils at {address}", e)
 
     async def write_holding_register(self, address: int, value: int):
         await self._ensure_initialized()

@@ -1,9 +1,9 @@
 """Mapping/transform layer for raw Modbus responses."""
 
 import logging
-from typing import Any, Dict, List
+from typing import Dict, List
 
-from .common import to_signed_16bit, update_value_if_changed
+from .common import get_register_value, update_value_if_changed
 from .const import CALCULATED_SENSORS
 from .data_types import (
     LastTriggeredData,
@@ -11,6 +11,7 @@ from .data_types import (
     StateData,
     StateMapping,
 )
+from .register_types import RegisterDefinition
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class ModbusMappingTransform:
     @staticmethod
     def process_register_block(
         register_data,
-        register_list: List[Dict[str, Any]],
+        register_list: List[RegisterDefinition],
         min_address: int,
         max_address: int,
         offset: int,
@@ -35,9 +36,9 @@ class ModbusMappingTransform:
         """Build raw register map for a configured address range."""
         data: Dict[str, ProcessedRegisterItem] = {}
         for item in register_list:
-            address = item["address"]
-            input_type = item.get("input_type", default_input_type)
-            register_name = item.get("register_name")
+            address = item.address
+            input_type = item.input_type or default_input_type
+            register_name = item.register_name
             if min_address <= address <= max_address:
                 try:
                     raw_value = register_data.registers[address]
@@ -50,13 +51,13 @@ class ModbusMappingTransform:
                     )
                     raise
 
-                data[register_name] = {
-                    "raw_value": raw_value,
-                    "input_type": input_type,
-                    "address": address,
-                    "description": f"{register_description} {address}",
-                    "item": item,
-                }
+                data[register_name] = ProcessedRegisterItem(
+                    raw_value=raw_value,
+                    input_type=input_type,
+                    address=address,
+                    description=f"{register_description} {address}",
+                    item=item,
+                )
 
         return data
 
@@ -68,17 +69,15 @@ class ModbusMappingTransform:
         include_scale: bool = True,
     ):
         """Apply scaling and unavailable handling to processed register payload."""
-        raw_value = processed_item["raw_value"]
-        input_type = processed_item["input_type"]
-        address = processed_item["address"]
-        description = processed_item["description"]
-        item = processed_item["item"]
+        raw_value = processed_item.raw_value
+        input_type = processed_item.input_type
+        address = processed_item.address
+        description = processed_item.description
+        item = processed_item.item
 
-        if "scale" in item:
-            # Convert signed 16-bit integers before scaling (for int16 dtype)
-            if item.get("dtype") == "int16":
-                raw_value = to_signed_16bit(raw_value)
+        scale = getattr(item, "scale", 1)
 
+        if scale is not None and scale != 1:
             if raw_value == 32765 or raw_value == 32766:
                 return update_value_if_changed(
                     register_name,
@@ -87,10 +86,10 @@ class ModbusMappingTransform:
                     description,
                     input_type=input_type,
                     address=address,
-                    scale=item["scale"],
+                    scale=scale,
                 )
 
-            scaled_value = round(raw_value * item["scale"], 2)
+            scaled_value = round(raw_value * scale, 2)
             return update_value_if_changed(
                 register_name,
                 scaled_value,
@@ -98,25 +97,24 @@ class ModbusMappingTransform:
                 description,
                 input_type=input_type,
                 address=address,
-                scale=item["scale"],
+                scale=scale,
             )
 
         kwargs = {
-            "register_name": register_name,
-            "value": raw_value,
-            "previous_data": previous_data,
-            "description": description,
             "input_type": input_type,
             "address": address,
+            "description": description,
         }
         if include_scale:
             kwargs["scale"] = 1
-        return update_value_if_changed(**kwargs)
+        return update_value_if_changed(
+            register_name, raw_value, previous_data, "register", **kwargs
+        )
 
     def process_input_register_block(
         self,
         register_data,
-        register_list: List[Dict[str, Any]],
+        register_list: List[RegisterDefinition],
         min_address: int,
         max_address: int,
         offset: int,
@@ -134,14 +132,14 @@ class ModbusMappingTransform:
 
         data: StateData = {}
         for register_name, processed_item in processed_data.items():
-            raw_value = processed_item["raw_value"]
-            item = processed_item["item"]
-            input_type = processed_item["input_type"]
-            address = processed_item["address"]
-            description = processed_item["description"]
+            raw_value = processed_item.raw_value
+            item = processed_item.item
+            input_type = processed_item.input_type
+            address = processed_item.address
+            description = processed_item.description
 
-            if item.get("enum_map"):
-                if raw_value == 32766 and len(item["enum_map"]) <= 2:
+            if item.enum_map:
+                if raw_value == 32766 and len(item.enum_map) <= 2:
                     continue
                 data[register_name] = update_value_if_changed(
                     register_name,
@@ -164,7 +162,7 @@ class ModbusMappingTransform:
     def process_holding_register_block(
         self,
         register_data,
-        register_list: List[Dict[str, Any]],
+        register_list: List[RegisterDefinition],
         min_address: int,
         max_address: int,
         offset: int,
@@ -188,14 +186,14 @@ class ModbusMappingTransform:
         return data
 
     def process_bit_sensors(
-        self, result, sensor_list: List[Dict[str, Any]], sensor_type: str
+        self, result, sensor_list: List[RegisterDefinition], sensor_type: str
     ) -> StateData:
         """Process bit-based sensors from Modbus bit response."""
         data: StateData = {}
         for item in sensor_list:
-            address = item["address"]
-            input_type = item.get("input_type", sensor_type)
-            register_name = item.get("register_name")
+            address = item.address
+            input_type = item.input_type or sensor_type
+            register_name = item.register_name
 
             if address < len(result.bits):
                 raw_value = 1 if result.bits[address] else 0
@@ -222,16 +220,16 @@ class ModbusMappingTransform:
         from homeassistant.util import dt as dt_util
 
         for item in CALCULATED_SENSORS:
-            if item.get("trigger_register_name") is None:
+            if item.trigger_register_name is None:
                 continue
 
-            register_name = item.get("register_name")
-            trigger_register_name = item.get("trigger_register_name")
+            register_name = item.register_name
+            trigger_register_name = item.trigger_register_name
 
-            current_data = data.get(trigger_register_name, {})
-            current_val = current_data.get("value")
-            previous_data = self.previous_data.get(trigger_register_name, {})
-            previous_val = previous_data.get("value")
+            current_data = data.get(trigger_register_name)
+            current_val = get_register_value(current_data)
+            previous_data = self.previous_data.get(trigger_register_name)
+            previous_val = get_register_value(previous_data)
 
             is_on = current_val == 1
             was_on = previous_val == 1 if previous_val is not None else False

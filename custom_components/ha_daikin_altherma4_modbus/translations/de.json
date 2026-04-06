@@ -545,6 +545,9 @@
       "holding_4": {
         "name": "Raumheizen/-kühlen"
       },
+      "holding_5": {
+        "name": "Brauchwasser Temperatur-Sollwert"
+      },
       "holding_6": {
         "name": "Raumthermostat-Steuerung Heizen-Sollwert Haupt"
       },

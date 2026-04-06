@@ -4,3 +4,7 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+
+[tool.ruff.lint]
+# Ignore E402 (module level import not at top of file) for const.py due to circular dependencies
+per-file-ignores = {"custom_components/ha_daikin_altherma4_modbus/const.py" = ["E402"]}

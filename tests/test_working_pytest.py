@@ -53,11 +53,40 @@ def load_module(module_name, file_path):
     return sys.modules[module_name]
 
 
-# Load required modules
-const_module = load_module("const", custom_components_path / "const.py")
-client_interface_module = load_module(
-    "client_interface", custom_components_path / "client_interface.py"
-)
+# Load const module using the old method but with proper relative import handling
+def load_const_module_legacy(project_root):
+    """Load const module using legacy method with relative import fixes."""
+    custom_components_path = (
+        project_root / "custom_components" / "ha_daikin_altherma4_modbus"
+    )
+
+    # Add path to sys.path
+    custom_components_parent = str(project_root / "custom_components")
+    if custom_components_parent not in sys.path:
+        sys.path.insert(0, custom_components_parent)
+
+    with open(custom_components_path / "const.py", "r") as f:
+        source = f.read()
+
+    # Replace relative imports with absolute imports
+    source = source.replace(
+        "from .register_constants import",
+        "from ha_daikin_altherma4_modbus.register_constants import",
+    )
+    source = source.replace(
+        "from .register_converter import",
+        "from ha_daikin_altherma4_modbus.register_converter import",
+    )
+
+    module = types.ModuleType("const_module")
+    exec(source, module.__dict__)
+    return module
+
+
+# Load const module
+const_module = load_const_module_legacy(project_root)
+
+# Load other modules using the old method for now (they don't have complex imports)
 mock_client_module = load_module(
     "mock_client", custom_components_path / "mock_client.py"
 )

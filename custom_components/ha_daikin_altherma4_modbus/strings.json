@@ -410,6 +410,9 @@
       "holding_4": {
         "name": "Space heating/cooling"
       },
+      "holding_5": {
+        "name": "DHW temperature setpoint"
+      },
       "holding_6": {
         "name": "Room thermostat control heating setpoint main"
       },
