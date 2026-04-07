@@ -98,13 +98,13 @@ DHW_ON = True
 # These replace the old dictionary-based constants
 from .register_constants import (  # noqa: F401
     CALCULATED_SENSORS,
-    COIL_SENSORS,
+    COIL_REGISTERS,
     DISCRETE_INPUT_SENSORS,
     HOLDING_REGISTERS,
     HOLDING_SWITCHES,
     INPUT_REGISTERS,
-    SELECT_REGISTERS,
+    HOLDING_SELECT_REGISTERS,
 )
 
 # Alias for backward compatibility
-COIL_REGISTERS = COIL_SENSORS
+COIL_REGISTERS = COIL_REGISTERS

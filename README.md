@@ -306,76 +306,91 @@ sensor.total_home_power
 
 | Address | Name | Description | Unit | Scale | Type |
 |---------|------|-------------|------|-------|------|
-| 21 | Unit abnormality | Error status | - | 1 | int16 |
-| 22 | Unit abnormality code | Specific error code | - | 1 | string |
-| 23 | Unit abnormality sub code | Error sub-code | - | 1 | uint16 |
-| 30 | Circulation pump running | Pump status | - | 1 | uint16 |
-| 31 | Compressor run | Compressor status | - | 1 | uint16 |
-| 32 | Booster heater run | Auxiliary heating | - | 1 | uint16 |
-| 33 | Disinfection operation | Disinfection status | - | 1 | uint16 |
-| 35 | Defrost/Restart | Defrost cycle status | - | 1 | uint16 |
-| 36 | Hot start | Hot start status | - | 1 | uint16 |
-| 37 | 3-way valve | Valve position | - | 1 | uint16 |
-| 38 | Operation mode | Current operation mode | - | 1 | uint16 |
-| 40 | Leaving water temperature PHE | Primary heat exchanger | °C | 0.01 | int16 |
-| 41 | Leaving water temperature BUH | Backup heater | °C | 0.01 | int16 |
-| 42 | Return water temperature | Return flow | °C | 0.01 | int16 |
-| 43 | DHW temperature | Domestic hot water | °C | 0.01 | int16 |
-| 44 | Outside air temperature | Ambient temperature | °C | 0.01 | int16 |
-| 45 | Liquid refrigerant temperature | Refrigerant temp | °C | 0.01 | int16 |
-| 46 | Heat pump power consumption | Electrical power | W | 1 | uint16 |
-| 47 | Flow rate | Water flow rate | L/min | 0.01 | uint16 |
-| 48 | Abnormality counter (user) | User error counter | - | 1 | uint16 |
-| 49 | Abnormality counter (factory) | Factory error counter | - | 1 | uint16 |
-| 50 | Remote control room temperature (Main) | Main zone temp | °C | 0.01 | int16 |
-| 51 | Heat pump power consumption | Electrical power | W | 10 | uint16 |
-| 52 | DHW normal operation | DHW operation status | - | 1 | uint16 |
-| 53 | Space heating/cooling normal operation | Space operation | - | 1 | uint16 |
-| 54-61 | Setpoint limits | Heating/Cooling limits | °C | 0.01 | int16 |
-| 63 | Disinfection state | Disinfection status | - | 1 | uint16 |
-| 64 | Holiday mode | Holiday status | - | 1 | uint16 |
-| 65 | Demand response mode | Demand response | - | 1 | uint16 |
-| 66-71 | Valve/Pump positions | Various positions | %/L/min | 1 | uint16 |
-| 72-77 | Mixing kit temperatures | Various temperatures | °C | 0.01 | int16 |
-| 78 | Remote controller room temperature (Add) | Add zone temp | °C | 0.01 | int16 |
-| 79 | Water pressure | System pressure | bar | 0.01 | int16 |
-| 80-81 | Space heating/cooling targets | Target temperatures | °C | 0.01 | int16 |
-| 82 | Abnormality counter (user) | User error counter | - | 1 | int16 |
-| 83 | Unit operation mode | Operation mode select | - | 1 | uint16 |
-| 84-87 | Room setpoint limits | Heating/Cooling limits | °C | 0.01 | int16 |
+| 21      | Unit abnormality | Error status | - | 1 | int16 |
+| 22      | Unit abnormality code | Specific error code | - | 1 | string |
+| 23      | Unit abnormality sub code | Error sub-code | - | 1 | uint16 |
+| 30      | Circulation pump running | Pump status | - | 1 | uint16 |
+| 31      | Compressor run | Compressor status | - | 1 | uint16 |
+| 32      | Booster heater run | Auxiliary heating | - | 1 | uint16 |
+| 33      | Disinfection operation | Disinfection status | - | 1 | uint16 |
+| 35      | Defrost/Restart | Defrost cycle status | - | 1 | uint16 |
+| 36      | Hot start | Hot start status | - | 1 | uint16 |
+| 37      | 3-way valve | Valve position | - | 1 | uint16 |
+| 38      | Operation mode | Current operation mode | - | 1 | uint16 |
+| 40      | Leaving water temperature PHE | Primary heat exchanger | °C | 0.01 | int16 |
+| 41      | Leaving water temperature BUH | Backup heater | °C | 0.01 | int16 |
+| 42      | Return water temperature | Return flow | °C | 0.01 | int16 |
+| 43      | Domestic Hot Water temperature | Domestic hot water | °C | 0.01 | int16 |
+| 44      | Outside air temperature | Ambient temperature | °C | 0.01 | int16 |
+| 45      | Liquid refrigerant temperature | Refrigerant temp | °C | 0.01 | int16 |
+| 49      | Flow rate | Water flow rate | L/min | 0.01 | uint16 |
+| 50      | Remote control room temperature (Main) | Main zone temp | °C | 0.01 | int16 |
+| 51      | Heat pump power consumption | Electrical power | W | 10 | uint16 |
+| 52      | DHW normal operation | DHW operation status | - | 1 | uint16 |
+| 53      | Space heating/cooling normal operation | Space operation | - | 1 | uint16 |
+| 58      | Leaving water Add Heating setpoint lower | Add heat limit lower | °C | 0.01 | int16 |
+| 59      | Leaving water Add Heating setpoint upper | Add heat limit upper | °C | 0.01 | int16 |
+| 60      | Leaving water Add Cooling setpoint lower | Add cool limit lower | °C | 0.01 | int16 |
+| 61      | Leaving water Add Cooling setpoint upper | Add cool limit upper | °C | 0.01 | int16 |
+| 63      | Disinfection state | Disinfection status | - | 1 | uint16 |
+| 64      | Holiday mode | Holiday status | - | 1 | uint16 |
+| 65      | Demand response mode | Demand response | - | 1 | uint16 |
+| 66      | Bypass valve position | Bypass valve | % | 1 | uint16 |
+| 67      | Tank valve position | Tank valve | % | 1 | uint16 |
+| 68      | Circulation pump speed | Circulation pump | L/min | 1 | uint16 |
+| 69      | Mixed pump PWM | Mixed pump | % | 1 | uint16 |
+| 70      | Direct pump PWM | Direct pump | % | 1 | uint16 |
+| 71      | Mixing valve position in mixing kit | Mixing valve | % | 1 | uint16 |
+| 72      | Mixing Leaving water temperature in mixing kit | Mixing LWT | °C | 0.01 | int16 |
+| 73      | Space heating/cooling target for Main zone in mixing kit | Mixing target | °C | 0.01 | int16 |
+| 74      | Leaving water temperature prePHE outdoor | prePHE outdoor | °C | 0.01 | int16 |
+| 75      | Leaving water temperature Tank valve | Tank valve LWT | °C | 0.01 | int16 |
+| 76      | Domestic Hot Water Upper temperature | DHW upper | °C | 0.01 | int16 |
+| 77      | Domestic Hot Water Lower temperature | DHW lower | °C | 0.01 | int16 |
+| 78      | Remote controller room temperature (Add) | Add zone temp | °C | 0.01 | int16 |
+| 79      | Water pressure | System pressure | bar | 0.01 | int16 |
+| 80      | Space heating/cooling target for Main zone | Main zone target | °C | 0.01 | int16 |
+| 81      | Space heating/cooling target for Add zone | Add zone target | °C | 0.01 | int16 |
+| 82      | Abnormality counter (user) | User error counter | - | 1 | int16 |
+| 83      | Unit operation mode | Operation mode select | - | 1 | uint16 |
+| 84      | Room Heating setpoint Lower limit | Heat limit lower | °C | 0.01 | int16 |
+| 85      | Room Heating setpoint Upper limit | Heat limit upper | °C | 0.01 | int16 |
+| 86      | Room Cooling setpoint Lower limit | Cool limit lower | °C | 0.01 | int16 |
+| 87      | Room Cooling setpoint Upper limit | Cool limit upper | °C | 0.01 | int16 |
 
 ### Holding Registers (1-60)
 
 | Address | Name | Description | Unit | Scale | Type |
 |---------|------|-------------|------|-------|------|
-| 1 | Leaving water Main Heating setpoint | Main heating setpoint | °C | 1 | int16 |
-| 2 | Leaving water Main Cooling setpoint | Main cooling setpoint | °C | 1 | int16 |
+| 1 | Leaving water Main Heating setpoint | Main heating setpoint | °C | 0.01 | int16 |
+| 2 | Leaving water Main Cooling setpoint | Main cooling setpoint | °C | 0.01 | int16 |
 | 3 | Operation mode | System operation mode | - | 1 | uint16 |
 | 4 | Space heating/cooling | Space heating/cooling control | - | 1 | uint16 |
-| 6 | Room Thermostat Heating Setpoint Main | Room heating setpoint | °C | 1 | int16 |
-| 7 | Room Thermostat Cooling Setpoint Main | Room cooling setpoint | °C | 1 | int16 |
+| 5 | DHW temperature setpoint | DHW setpoint | °C | 0.01 | int16 |
+| 6 | Room Thermostat Heating Setpoint Main | Room heating setpoint | °C | 0.01 | int16 |
+| 7 | Room Thermostat Cooling Setpoint Main | Room cooling setpoint | °C | 0.01 | int16 |
 | 9 | Quiet mode operation | Quiet mode setting | - | 1 | uint16 |
-| 10 | DHW reheat setpoint | DHW reheat temperature | °C | 1 | int16 |
+| 10 | DHW reheat setpoint | DHW reheat temperature | °C | 0.01 | int16 |
 | 13 | DHW booster mode (Powerful) | DHW powerful mode | - | 1 | uint16 |
 | 14 | DHW boost setpoint (Powerful) | DHW boost temperature | °C | 0.01 | int16 |
 | 15 | DHW Single heat-up ON/OFF (Manual) | Manual DHW heating | - | 1 | int16 |
 | 16 | DHW Single Heat-up Setpoint (Manual) | Manual DHW setpoint | °C | 0.01 | int16 |
-| 54 | Weather-dependent mode Main LWT Heating offset | Heating offset | °C | 1 | int16 |
-| 55 | Weather-dependent mode Main LWT Cooling offset | Cooling offset | °C | 1 | int16 |
+| 54 | Weather-dependent mode Main LWT Heating offset | Heating offset | °C | 0.01 | int16 |
+| 55 | Weather-dependent mode Main LWT Cooling offset | Cooling offset | °C | 0.01 | int16 |
 | 56 | Smart Grid Operation Mode | Smart grid mode | - | 1 | uint16 |
 | 58 | Imposed power limit | Power limitation | kW | 0.001 | uint16 |
-| 63 | Leaving water Add Heating setpoint | Add heating setpoint | °C | 1 | int16 |
-| 64 | Leaving water Add Cooling setpoint | Add cooling setpoint | °C | 1 | int16 |
-| 66 | Weather-dependent mode Add LWT Heating offset | Add heating offset | °C | 1 | int16 |
-| 67 | Weather-dependent mode Add LWT Cooling offset | Add cooling offset | °C | 1 | int16 |
+| 63 | Leaving water Add Heating setpoint | Add heating setpoint | °C | 0.01 | int16 |
+| 64 | Leaving water Add Cooling setpoint | Add cooling setpoint | °C | 0.01 | int16 |
+| 66 | Weather-dependent mode Add LWT Heating offset | Add heating offset | °C | 0.01 | int16 |
+| 67 | Weather-dependent mode Add LWT Cooling offset | Add cooling offset | °C | 0.01 | int16 |
 | 68 | Weather-dependent mode Heating Main | Weather heating mode | - | 1 | uint16 |
 | 69 | Weather-dependent mode Cooling Main | Weather cooling mode | - | 1 | uint16 |
 | 74 | Thermostat Request Main | Main thermostat request | - | 1 | uint16 |
 | 75 | Thermostat Request Additional | Add thermostat request | - | 1 | uint16 |
-| 76 | Room Thermostat Heating Setpoint Main | Room heating setpoint | °C | 1 | int16 |
-| 77 | Room Thermostat Cooling Setpoint Main | Room cooling setpoint | °C | 1 | int16 |
-| 78 | Room thermostat control Heating setpoint Add | Add heating setpoint | °C | 1 | int16 |
-| 79 | Room thermostat control Cooling setpoint Add | Add cooling setpoint | °C | 1 | int16 |
+| 76 | Room Thermostat Heating Setpoint Main | Room heating setpoint | °C | 0.01 | int16 |
+| 77 | Room Thermostat Cooling Setpoint Main | Room cooling setpoint | °C | 0.01 | int16 |
+| 78 | Room thermostat control Heating setpoint Add | Add heating setpoint | °C | 0.01 | int16 |
+| 79 | Room thermostat control Cooling setpoint Add | Add cooling setpoint | °C | 0.01 | int16 |
 | 80 | DHW mode setting | DHW operation mode | - | 1 | int16 |
 
 ### Discrete Inputs (1-26)
@@ -383,7 +398,12 @@ sensor.total_home_power
 | Address | Name | Description | Type |
 |---------|------|-------------|------|
 | 1 | Shut-off valve | Main valve status | Binary |
-| 2-7 | Backup heater relay 1-6 | Backup heater status | Binary |
+| 2 | Backup heater relay 1 | Backup heater 1 status | Binary |
+| 3 | Backup heater relay 2 | Backup heater 2 status | Binary |
+| 4 | Backup heater relay 3 | Backup heater 3 status | Binary |
+| 5 | Backup heater relay 4 | Backup heater 4 status | Binary |
+| 6 | Backup heater relay 5 | Backup heater 5 status | Binary |
+| 7 | Backup heater relay 6 | Backup heater 6 status | Binary |
 | 8 | Booster heater | Auxiliary heating | Binary |
 | 9 | Tank boiler | Boiler status | Binary |
 | 10 | Bivalent | Bivalent operation | Binary |

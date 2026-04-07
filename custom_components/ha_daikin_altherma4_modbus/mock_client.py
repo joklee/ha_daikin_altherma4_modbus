@@ -107,7 +107,7 @@ class MockModbusTcpClient(ModbusClientInterface):
             HOLDING_REGISTERS,
             HOLDING_SWITCHES,
             INPUT_REGISTERS,
-            SELECT_REGISTERS,
+            HOLDING_SELECT_REGISTERS,
         )
 
         # Use fixed seed for deterministic mock data
@@ -242,10 +242,10 @@ class MockModbusTcpClient(ModbusClientInterface):
             max(
                 [
                     reg.address
-                    for reg in HOLDING_REGISTERS + HOLDING_SWITCHES + SELECT_REGISTERS
+                    for reg in HOLDING_REGISTERS + HOLDING_SWITCHES + HOLDING_SELECT_REGISTERS
                 ]
             )
-            if (HOLDING_REGISTERS + HOLDING_SWITCHES + SELECT_REGISTERS)
+            if (HOLDING_REGISTERS + HOLDING_SWITCHES + HOLDING_SELECT_REGISTERS)
             else 0
         )
 
@@ -254,7 +254,7 @@ class MockModbusTcpClient(ModbusClientInterface):
 
             # Find corresponding register definition
             register_def = None
-            for reg in HOLDING_REGISTERS + HOLDING_SWITCHES + SELECT_REGISTERS:
+            for reg in HOLDING_REGISTERS + HOLDING_SWITCHES + HOLDING_SELECT_REGISTERS:
                 if reg.address == address:
                     register_def = reg
                     break

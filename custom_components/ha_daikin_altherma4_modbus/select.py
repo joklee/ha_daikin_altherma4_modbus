@@ -13,7 +13,7 @@ from .common import (
     is_entity_available,
     safe_write_register,
 )
-from .const import DOMAIN, HOLDING_DEVICE_INFO, SELECT_REGISTERS
+from .const import DOMAIN, HOLDING_DEVICE_INFO, HOLDING_SELECT_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     entities = []
 
-    for item in SELECT_REGISTERS:
+    for item in HOLDING_SELECT_REGISTERS:
         if item.enum_map:  # Nur für Register mit enum_map
             address = item.address
             register_name = item.register_name

@@ -9,7 +9,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .common import get_register_value, safe_write_register
 from .const import (
     COIL_DEVICE_INFO,
-    COIL_SENSORS,
+    COIL_REGISTERS,
     DOMAIN,
     HOLDING_DEVICE_INFO,
     HOLDING_SWITCHES,
@@ -28,8 +28,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
     entities = []
 
     # Coil Switches
-    _LOGGER.debug(f"Processing {len(COIL_SENSORS)} coil switches")
-    for coil in COIL_SENSORS:
+    _LOGGER.debug(f"Processing {len(COIL_REGISTERS)} coil switches")
+    for coil in COIL_REGISTERS:
         entities.append(
             DaikinCoilSwitch(
                 coordinator=coordinator,

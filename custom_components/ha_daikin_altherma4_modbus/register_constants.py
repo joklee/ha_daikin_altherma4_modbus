@@ -4,7 +4,9 @@ try:
     from homeassistant.const import EntityCategory
 except ImportError:
     # Fallback for testing when homeassistant is not available
-    class EntityCategory:
+    from enum import StrEnum
+
+    class EntityCategory(StrEnum):
         DIAGNOSTIC = "diagnostic"
 
 
@@ -143,7 +145,7 @@ INPUT_REGISTERS = [
         translation_key="input_42",
     ),
     SensorRegister(
-        name="Outdoor temperature",
+        name="Domestic Hot Water temperature",
         address=43,
         input_type="input",
         register_name="input_43",
@@ -154,7 +156,7 @@ INPUT_REGISTERS = [
         translation_key="input_43",
     ),
     SensorRegister(
-        name="Refrigerant temperature",
+        name="Outside air temperature",
         address=44,
         input_type="input",
         register_name="input_44",
@@ -285,6 +287,16 @@ INPUT_REGISTERS = [
         dtype="uint16",
         enum_map={0: "Idle/Buffering", 1: "Operation"},
         translation_key="input_52",
+    ),
+    SensorRegister(
+        name="Space heating/cooling normal operation",
+        address=53,
+        input_type="input",
+        register_name="input_53",
+        icon="mdi:information",
+        dtype="uint16",
+        enum_map={0: "Idle/Buffering", 1: "Operation"},
+        translation_key="input_53",
     ),
     SensorRegister(
         name="Leaving water Add Heating setpoint lower",
@@ -941,6 +953,52 @@ HOLDING_SWITCHES = [
     ),
 ]
 
+# Select Registers using dataclasses
+HOLDING_SELECT_REGISTERS = [
+    SelectRegister(
+        name="Operation mode select",
+        address=3,
+        input_type="holding",
+        register_name="select_3",
+        enum_map={0: "Off", 1: "Heating", 2: "Cooling"},
+        translation_key="holding_3",
+    ),
+    SelectRegister(
+        name="Quiet mode operation",
+        address=9,
+        input_type="holding",
+        register_name="select_9",
+        enum_map={0: "Off", 1: "On (Automatic)", 2: "On (Manual)"},
+        translation_key="holding_9",
+    ),
+    SelectRegister(
+        name="Smart Grid Operation Mode",
+        address=56,
+        input_type="holding",
+        register_name="select_56",
+        enum_map={
+            0: "Free running",
+            1: "Forced off",
+            2: "Recommended on",
+            3: "Forced on",
+        },
+        translation_key="holding_56",
+    ),
+    SelectRegister(
+        name="DHW mode setting",
+        address=80,
+        input_type="holding",
+        register_name="select_80",
+        enum_map={
+            0: "Reheat",
+            1: "Schedule and reheat",
+            2: "Scheduled",
+            32766: "Off",
+        },
+        translation_key="holding_80",
+    ),
+]
+
 # Discrete Input Sensors using dataclasses
 DISCRETE_INPUT_SENSORS = [
     SensorRegister(
@@ -1172,8 +1230,8 @@ DISCRETE_INPUT_SENSORS = [
     ),
 ]
 
-# Coil Sensors using dataclasses
-COIL_SENSORS = [
+# Coil Registers using dataclasses
+COIL_REGISTERS = [
     SwitchRegister(
         name="Domestic Hot Water ON/OFF",
         address=1,
@@ -1194,52 +1252,6 @@ COIL_SENSORS = [
         input_type="coil",
         register_name="coil_3",
         translation_key="coil_3",
-    ),
-]
-
-# Select Registers using dataclasses
-SELECT_REGISTERS = [
-    SelectRegister(
-        name="Operation mode select",
-        address=3,
-        input_type="holding",
-        register_name="select_3",
-        enum_map={0: "Off", 1: "Heating", 2: "Cooling"},
-        translation_key="holding_3",
-    ),
-    SelectRegister(
-        name="Quiet mode operation",
-        address=9,
-        input_type="holding",
-        register_name="select_9",
-        enum_map={0: "Off", 1: "On (Automatic)", 2: "On (Manual)"},
-        translation_key="holding_9",
-    ),
-    SelectRegister(
-        name="Smart Grid Operation Mode",
-        address=56,
-        input_type="holding",
-        register_name="select_56",
-        enum_map={
-            0: "Free running",
-            1: "Forced off",
-            2: "Recommended on",
-            3: "Forced on",
-        },
-        translation_key="holding_56",
-    ),
-    SelectRegister(
-        name="DHW mode setting",
-        address=80,
-        input_type="holding",
-        register_name="select_80",
-        enum_map={
-            0: "Reheat",
-            1: "Schedule and reheat",
-            2: "Scheduled",
-            32766: "Off",
-        },
-        translation_key="holding_80",
     ),
 ]
 
