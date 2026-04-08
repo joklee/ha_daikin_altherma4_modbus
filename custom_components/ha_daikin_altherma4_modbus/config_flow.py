@@ -188,14 +188,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=data_schema,
             errors=errors,
             last_step=True,
-            data_description={
-                CONF_HOST: "IP address of your Daikin Altherma 4 heat pump (e.g., 192.168.1.100)",
-                CONF_PORT: "Modbus TCP port (default: 502, use 802 for TLS)",
-                "scan_interval": "Polling interval in seconds for normal sensors (default: 5)",
-                "slow_scan_interval": "Polling interval in seconds for slow-changing sensors (default: 30)",
-                "electric_power_sensor": "Optional: Entity ID of external power sensor for CoP calculation (e.g., sensor.shelly_em_power)",
-                "demo_mode": "Enable demo mode for testing without actual hardware",
-            },
         )
 
     @staticmethod
@@ -283,10 +275,4 @@ class OptionsFlow(config_entries.OptionsFlow):
             data_schema=data_schema,
             errors=errors,
             last_step=True,
-            data_description={
-                "scan_interval": "Polling interval in seconds for normal sensors (default: 5)",
-                "slow_scan_interval": "Polling interval in seconds for slow-changing sensors (default: 30)",
-                "electric_power_sensor": "Optional: Entity ID of external power sensor for CoP calculation (e.g., sensor.shelly_em_power)",
-                "demo_mode": "Enable demo mode for testing without actual hardware",
-            },
         )
