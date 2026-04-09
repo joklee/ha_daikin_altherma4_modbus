@@ -105,6 +105,3 @@ from .register_constants import (  # noqa: F401
     INPUT_REGISTERS,
     HOLDING_SELECT_REGISTERS,
 )
-
-# Alias for backward compatibility
-COIL_REGISTERS = COIL_REGISTERS

@@ -1,13 +1,61 @@
 """Test to verify mock client doesn't generate invalid 16-bit values."""
 
+import sys
+import types
+
+# Setup homeassistant stubs immediately at import time
+def _ensure_homeassistant_stubs():
+    """Ensure homeassistant stubs are available and correctly configured."""
+    # Remove any existing homeassistant modules to avoid conflicts
+    modules_to_remove = [k for k in sys.modules.keys() if k.startswith('homeassistant')]
+    for module in modules_to_remove:
+        del sys.modules[module]
+    
+    # Setup fresh stubs
+    homeassistant = types.ModuleType("homeassistant")
+    homeassistant.__path__ = []
+    sys.modules["homeassistant"] = homeassistant
+
+    const_module = types.ModuleType("homeassistant.const")
+    const_module.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
+    sys.modules["homeassistant.const"] = const_module
+
+    core_module = types.ModuleType("homeassistant.core")
+    core_module.Event = object
+    core_module.HomeAssistant = object
+    sys.modules["homeassistant.core"] = core_module
+
+    helpers_module = types.ModuleType("homeassistant.helpers")
+    helpers_module.__path__ = []
+    sys.modules["homeassistant.helpers"] = helpers_module
+
+    update_coordinator_module = types.ModuleType("homeassistant.helpers.update_coordinator")
+    update_coordinator_module.DataUpdateCoordinator = object
+    update_coordinator_module.CoordinatorEntity = object
+    update_coordinator_module.UpdateFailed = Exception
+    sys.modules["homeassistant.helpers.update_coordinator"] = update_coordinator_module
+
+    helpers_typing_module = types.ModuleType("homeassistant.helpers.typing")
+    helpers_typing_module.ConfigType = dict
+    sys.modules["homeassistant.helpers.typing"] = helpers_typing_module
+
+# Setup stubs immediately
+_ensure_homeassistant_stubs()
+
 import pytest
 
+# Re-ensure stubs before import to handle any interference
+_ensure_homeassistant_stubs()
+
+# Import after stubs are set up
 from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
 
 
 @pytest.mark.asyncio
 async def test_mock_client_valid_16bit_values():
     """Test that mock client generates only valid 16-bit values."""
+    # Ensure stubs are available at test execution time
+    _ensure_homeassistant_stubs()
 
     client = MockModbusTcpClient("localhost", 502)
     await client.connect()
@@ -32,6 +80,8 @@ async def test_mock_client_valid_16bit_values():
 @pytest.mark.asyncio
 async def test_mock_client_signed_register_conversion():
     """Test that signed registers are properly converted to unsigned."""
+    # Ensure stubs are available at test execution time
+    _ensure_homeassistant_stubs()
 
     client = MockModbusTcpClient("localhost", 502)
     await client.connect()
@@ -60,6 +110,8 @@ async def test_mock_client_signed_register_conversion():
 
 def test_mock_client_data_generation():
     """Test the demo data generation function directly."""
+    # Ensure stubs are available at test execution time
+    _ensure_homeassistant_stubs()
 
     demo_data = MockModbusTcpClient.generate_demo_register_data()
 
@@ -81,6 +133,8 @@ def test_mock_client_data_generation():
 @pytest.mark.asyncio
 async def test_mock_client_reproducible_data():
     """Test that mock client generates consistent data structure."""
+    # Ensure stubs are available at test execution time
+    _ensure_homeassistant_stubs()
 
     client1 = MockModbusTcpClient("localhost", 502)
     await client1.connect()

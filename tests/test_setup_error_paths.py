@@ -233,6 +233,7 @@ def _load_switch_module(monkeypatch):
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.COIL_SENSORS = []
     const_module.COIL_DEVICE_INFO = {}
+    const_module.COIL_REGISTERS = []
     const_module.HOLDING_SWITCHES = []
     const_module.HOLDING_DEVICE_INFO = {}
     monkeypatch.setitem(sys.modules, const_name, const_module)
@@ -368,6 +369,7 @@ def _load_select_module(monkeypatch):
     const_module = types.ModuleType(const_name)
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.SELECT_REGISTERS = []
+    const_module.HOLDING_SELECT_REGISTERS = []
     const_module.HOLDING_DEVICE_INFO = {}
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
