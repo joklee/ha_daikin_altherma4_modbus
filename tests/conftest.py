@@ -27,7 +27,9 @@ if "homeassistant" not in sys.modules:
     helpers_module.__path__ = []
     sys.modules["homeassistant.helpers"] = helpers_module
 
-    update_coordinator_module = types.ModuleType("homeassistant.helpers.update_coordinator")
+    update_coordinator_module = types.ModuleType(
+        "homeassistant.helpers.update_coordinator"
+    )
     update_coordinator_module.DataUpdateCoordinator = object
     update_coordinator_module.CoordinatorEntity = object
     update_coordinator_module.UpdateFailed = Exception

@@ -4,9 +4,18 @@ import asyncio
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../custom_components"))
+# Add the custom_components directory to Python path
+project_root = os.path.dirname(os.path.dirname(__file__))
+custom_components_path = os.path.join(project_root, "custom_components")
+if custom_components_path not in sys.path:
+    sys.path.insert(0, custom_components_path)
 
-from ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
+try:
+    from ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
+except ImportError as e:
+    print(f"Failed to import MockModbusTcpClient: {e}")
+    print(f"Python path: {sys.path}")
+    raise
 
 
 def test_mock_client():

@@ -6,8 +6,6 @@ import types
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
-
 
 def _reset_modules(*names: str) -> None:
     for name in names:
@@ -106,6 +104,7 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
 
     dt_module = types.ModuleType("homeassistant.util.dt")
     from datetime import datetime
+
     dt_module.parse_datetime = lambda value: datetime.fromisoformat(value)
     monkeypatch.setitem(sys.modules, "homeassistant.util.dt", dt_module)
 
@@ -290,9 +289,7 @@ def test_cop_sensor_with_modbus_power_data(monkeypatch):
     sensor_module = _load_sensor_module(monkeypatch)
 
     # No external sensor configured - should use input_51
-    hass = SimpleNamespace(
-        states=SimpleNamespace(get=lambda entity_id: None)
-    )
+    hass = SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: None))
 
     coordinator = SimpleNamespace(
         hass=hass,
@@ -331,9 +328,15 @@ def test_cop_sensor_returns_none_when_heat_power_is_zero(monkeypatch):
     coordinator = SimpleNamespace(
         hass=hass,
         data={
-            "input_49": {"value": 0, },  # Flow = 0 L/min
-            "input_40": {"value": 4500, },  # Vorlauf = 45°C
-            "input_42": {"value": 4500, },  # Rücklauf = 45°C, delta_T = 0
+            "input_49": {
+                "value": 0,
+            },  # Flow = 0 L/min
+            "input_40": {
+                "value": 4500,
+            },  # Vorlauf = 45°C
+            "input_42": {
+                "value": 4500,
+            },  # Rücklauf = 45°C, delta_T = 0
         },
     )
 
@@ -365,9 +368,15 @@ def test_cop_sensor_returns_none_when_electric_power_is_zero(monkeypatch):
     coordinator = SimpleNamespace(
         hass=hass,
         data={
-            "input_49": {"value": 1000, },  # Flow = 10 L/min
-            "input_40": {"value": 4500, },  # Vorlauf = 45°C
-            "input_42": {"value": 4000, },  # Rücklauf = 40°C
+            "input_49": {
+                "value": 1000,
+            },  # Flow = 10 L/min
+            "input_40": {
+                "value": 4500,
+            },  # Vorlauf = 45°C
+            "input_42": {
+                "value": 4000,
+            },  # Rücklauf = 40°C
         },
     )
 
@@ -401,9 +410,15 @@ def test_cop_sensor_returns_none_when_external_sensor_unavailable(monkeypatch):
     coordinator = SimpleNamespace(
         hass=hass,
         data={
-            "input_49": {"value": 1000, },
-            "input_40": {"value": 4500, },
-            "input_42": {"value": 4000, },
+            "input_49": {
+                "value": 1000,
+            },
+            "input_40": {
+                "value": 4500,
+            },
+            "input_42": {
+                "value": 4000,
+            },
         },
     )
 
@@ -425,9 +440,7 @@ def test_cop_sensor_with_unscaled_modbus_data(monkeypatch):
     """Test CoP calculation when Modbus data has no scale stored."""
     sensor_module = _load_sensor_module(monkeypatch)
 
-    hass = SimpleNamespace(
-        states=SimpleNamespace(get=lambda entity_id: None)
-    )
+    hass = SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: None))
 
     coordinator = SimpleNamespace(
         hass=hass,
@@ -470,9 +483,15 @@ def test_cop_sensor_rounds_to_two_decimals(monkeypatch):
     coordinator = SimpleNamespace(
         hass=hass,
         data={
-            "input_49": {"value": 1000, },
-            "input_40": {"value": 4500, },
-            "input_42": {"value": 4000, },
+            "input_49": {
+                "value": 1000,
+            },
+            "input_40": {
+                "value": 4500,
+            },
+            "input_42": {
+                "value": 4000,
+            },
         },
     )
 
@@ -505,9 +524,15 @@ def test_cop_sensor_with_legacy_entry_data(monkeypatch):
     coordinator = SimpleNamespace(
         hass=hass,
         data={
-            "input_49": {"value": 1000, },
-            "input_40": {"value": 4500, },
-            "input_42": {"value": 4000, },
+            "input_49": {
+                "value": 1000,
+            },
+            "input_40": {
+                "value": 4500,
+            },
+            "input_42": {
+                "value": 4000,
+            },
         },
     )
 

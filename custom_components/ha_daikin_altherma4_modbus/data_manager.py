@@ -9,9 +9,9 @@ from .const import (
     COIL_REGISTERS,
     DISCRETE_INPUT_SENSORS,
     HOLDING_REGISTERS,
+    HOLDING_SELECT_REGISTERS,
     HOLDING_SWITCHES,
     INPUT_REGISTERS,
-    HOLDING_SELECT_REGISTERS,
 )
 from .data_types import StateData
 from .mapping_transform import ModbusMappingTransform
@@ -257,7 +257,9 @@ class ModbusDataManager:
 
         result = await self._repository.read_coils()
         if result is not None:
-            data.update(self._mapping.process_bit_sensors(result, COIL_REGISTERS, "coil"))
+            data.update(
+                self._mapping.process_bit_sensors(result, COIL_REGISTERS, "coil")
+            )
 
         _LOGGER.debug("Coils fully read in %.3fs", time.time() - start_time)
         return data
@@ -266,7 +268,9 @@ class ModbusDataManager:
         """Fetch all holding/select/switch registers in configured blocks."""
         start_time = time.time()
         data = {}
-        all_holding_registers = HOLDING_REGISTERS + HOLDING_SELECT_REGISTERS + HOLDING_SWITCHES
+        all_holding_registers = (
+            HOLDING_REGISTERS + HOLDING_SELECT_REGISTERS + HOLDING_SWITCHES
+        )
 
         for (
             result,

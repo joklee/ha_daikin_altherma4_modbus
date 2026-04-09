@@ -3,14 +3,19 @@
 import sys
 import types
 
-# Setup homeassistant stubs immediately at import time
+import pytest
+
+# Import after stubs are set up
+from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
+
+
 def _ensure_homeassistant_stubs():
     """Ensure homeassistant stubs are available and correctly configured."""
     # Remove any existing homeassistant modules to avoid conflicts
-    modules_to_remove = [k for k in sys.modules.keys() if k.startswith('homeassistant')]
+    modules_to_remove = [k for k in sys.modules.keys() if k.startswith("homeassistant")]
     for module in modules_to_remove:
         del sys.modules[module]
-    
+
     # Setup fresh stubs
     homeassistant = types.ModuleType("homeassistant")
     homeassistant.__path__ = []
@@ -29,7 +34,9 @@ def _ensure_homeassistant_stubs():
     helpers_module.__path__ = []
     sys.modules["homeassistant.helpers"] = helpers_module
 
-    update_coordinator_module = types.ModuleType("homeassistant.helpers.update_coordinator")
+    update_coordinator_module = types.ModuleType(
+        "homeassistant.helpers.update_coordinator"
+    )
     update_coordinator_module.DataUpdateCoordinator = object
     update_coordinator_module.CoordinatorEntity = object
     update_coordinator_module.UpdateFailed = Exception
@@ -39,16 +46,9 @@ def _ensure_homeassistant_stubs():
     helpers_typing_module.ConfigType = dict
     sys.modules["homeassistant.helpers.typing"] = helpers_typing_module
 
+
 # Setup stubs immediately
 _ensure_homeassistant_stubs()
-
-import pytest
-
-# Re-ensure stubs before import to handle any interference
-_ensure_homeassistant_stubs()
-
-# Import after stubs are set up
-from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
 
 
 @pytest.mark.asyncio
