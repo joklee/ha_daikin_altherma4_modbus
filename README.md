@@ -47,14 +47,29 @@ Examples:
 - Combination of both, e.g. 1x 502 and 2x 802
 
 ### Prerequisites
-- Daikin Altherma 4 heat pump (EPSX series)
-- MMI Version 2.2.0 or higher
-- Access to the heat pump's controller interface
-- Network connection over Ethernet/RJ45 to the heat pump
+
+1. **Daikin Altherma 4 heat pump** (EPSX series) with Modbus TCP support
+2. **MMI Version 2.2.0 or higher** (check on your heat pump's display)
+3. **Ethernet network access** to the heat pump (WiFi is not supported)
+4. **Network cable (RJ45)** connected between your heat pump and network
+5. **Modbus TCP enabled** on your heat pump (see activation instructions below)
 
 ### Step-by-Step Activation
 
-This custom integration allows you to monitor and control your Daikin Altherma 4 heat pump via Modbus TCP.
+To enable Modbus TCP communication on your Daikin Altherma 4 heat pump:
+
+1. **Access the heat pump controller** - Navigate to the main control unit (outdoor unit or hydrobox)
+2. **Enter installer mode** - Press and hold the installer button (may require installer password)
+3. **Navigate to network settings** - Go to: **Settings** → **Network** → **Modbus**
+4. **Enable Modbus TCP/IP** - Set Modbus TCP to **Enabled**
+5. **Configure network parameters**:
+   - **Port**: Set to `502` (standard Modbus TCP port)
+   - **IP Address**: Note the IP address assigned to your heat pump
+6. **Save settings** and exit installer mode
+7. **Verify network connectivity** - Ensure the heat pump is reachable from your Home Assistant network
+8. **Test the connection** using telnet: `telnet <heat-pump-ip> 502`
+
+Once Modbus TCP is enabled, proceed with the installation instructions below.
 
 ## Features
 
@@ -188,19 +203,58 @@ The integration supports multiple languages with full translation support:
 ## Installation
 
 ### HACS Installation (Recommended)
-1. Open Home Assistant
-2. Go to **HACS** → **Integrations**
-3. Click the three dots menu → **Custom repositories**
-4. Add this repository URL: `https://github.com/joklee/ha_daikin_altherma4_modbus`
-5. Restart Home Assistant
-6. Go to **Settings** → **Devices & Services** → **Integrations**
-7. Click **+ Add Integration** → search for "Daikin Altherma 4 Modbus"
-8. Configure the integration with your heat pump's IP address and port
+
+1. Open Home Assistant and navigate to **HACS** → **Integrations**
+2. Click the three dots menu (⋮) and select **Custom repositories**
+3. Add repository URL: `https://github.com/joklee/ha_daikin_altherma4_modbus`
+4. Select category: **Integration**
+5. Click **Download** to install the integration
+6. Restart Home Assistant
+7. Go to **Settings** → **Devices & Services** → **Integrations**
+8. Click **+ Add Integration** and search for "Daikin Altherma 4 Modbus"
+9. Enter your heat pump's IP address and port (default: 502) when prompted
+10. Complete the configuration with your preferred scan intervals
 
 ### Manual Installation
-1. Copy the `custom_components/ha_daikin_altherma4_modbus` folder to your `config/custom_components` directory
+
+1. Download the latest release from GitHub
+2. Copy the `custom_components/ha_daikin_altherma4_modbus` folder to your Home Assistant `config/custom_components` directory
+3. Restart Home Assistant
+4. Go to **Settings** → **Devices & Services** → **Integrations**
+5. Click **+ Add Integration** and search for "Daikin Altherma 4 Modbus"
+6. Enter your heat pump's IP address and port (default: 502) when prompted
+7. Complete the configuration with your preferred scan intervals
+
+## Removal
+
+To remove the Daikin Altherma 4 Modbus integration from Home Assistant:
+
+### Remove Integration Entry
+
+1. Go to **Settings** → **Devices & Services** → **Integrations**
+2. Find your **Daikin Altherma 4 Modbus** integration entry
+3. Click the three dots menu (⋮) and select **Delete**
+4. Confirm the deletion
+
+### Clean Up Configuration (Optional)
+
+If you installed via HACS:
+1. Go to **HACS** → **Integrations**
+2. Find **Daikin Altherma 4 Modbus**
+3. Click the three dots menu (⋮) and select **Uninstall**
+4. Restart Home Assistant
+
+If you installed manually:
+1. Remove the `custom_components/ha_daikin_altherma4_modbus` folder from your Home Assistant configuration directory
 2. Restart Home Assistant
-3. Follow steps 6-8 from HACS installation above
+
+### Remove Configuration from YAML (if applicable)
+
+If you added any manual YAML configuration for this integration, remove it from your `configuration.yaml` and restart Home Assistant.
+
+### Heat Pump Settings
+
+Removing this integration does not modify any settings on your Daikin Altherma 4 heat pump. The heat pump will continue operating with its current configuration using its internal controls or other connected interfaces.
 
 ## Configuration
 
@@ -561,6 +615,166 @@ This integration supports Daikin Altherma 4 heat pumps with Modbus TCP communica
 - Control functions via holding registers and coils
 - Comprehensive error monitoring and diagnostics
 - Multi-language support (English, German)
+
+## Services
+
+The integration provides the following Home Assistant services for controlling your Daikin Altherma 4 heat pump:
+
+### Basic Control Services
+| Service | Description | Parameter | Possible Values |
+|---------|-------------|-----------|-----------------|
+| `set_operation_mode` | Set heat pump operation mode | `operation_mode` | `off`, `heat`, `cool` |
+| `set_dhw_state` | Enable/disable Domestic Hot Water | `state` | `true`, `false` |
+| `set_main_zone_state` | Enable/disable main heating/cooling zone | `state` | `true`, `false` |
+| `set_additional_zone_state` | Enable/disable additional heating/cooling zone | `state` | `true`, `false` |
+| `set_smart_grid_mode` | Set Smart Grid energy management mode | `smart_grid_mode` | `free running`, `forced off`, `recommended on`, `forced on` |
+
+### Advanced Control Services
+| Service | Description | Parameter | Possible Values |
+|---------|-------------|-----------|-----------------|
+| `set_quiet_mode` | Set quiet mode operation | `quiet_mode` | `off`, `on (automatic)`, `on (manual)` |
+| `set_dhw_booster_mode` | Enable/disable DHW booster (Powerful) | `booster_mode` | `true`, `false` |
+| `set_dhw_single_heatup` | Enable DHW single heat-up with optional setpoint | `single_heatup`, `setpoint` | `true`, `false`; 30-85°C (optional) |
+| `set_power_limit` | Set imposed power limit | `power_limit` | 0-20 kW |
+| `set_heating_offset` | Set weather-dependent heating offset | `offset` | -10 to +10 K |
+| `set_cooling_offset` | Set weather-dependent cooling offset | `offset` | -10 to +10 K |
+| `set_room_heating_setpoint` | Set room thermostat heating setpoint | `setpoint` | 12-30°C |
+| `set_room_cooling_setpoint` | Set room thermostat cooling setpoint | `setpoint` | 12-35°C |
+| `set_additional_zone_setpoint` | Set additional zone setpoint | `setpoint` | 3-85°C |
+| `refresh_connection` | Refresh Modbus connection | - | - |
+
+### Common Parameters
+- `config_entry_id` (required): The config entry ID of your Daikin Altherma 4 heat pump
+
+### Service Descriptions
+**Quiet Mode:**
+- `off`: Normal fan operation
+- `on (automatic)`: Quiet mode with automatic fan control
+- `on (manual)`: Quiet mode with manual fan control
+
+**Power Limit:**
+- Limits the heat pump's power consumption (0-20 kW)
+- Useful for energy cost optimization or grid support
+
+**Setpoint Offsets:**
+- Adjusts the weather-dependent temperature curves
+- Positive values increase setpoints, negative values decrease them
+
+**Room Thermostat Setpoints:**
+- Direct control of room temperature targets
+- Overrides automatic weather-dependent control
+
+**Smart Grid Mode Descriptions:**
+- `free running`: Normal operation without grid constraints
+- `forced off`: Force heat pump off (e.g., during peak pricing periods)
+- `recommended on`: Recommend heat pump operation (e.g., during low pricing periods)
+- `forced on`: Force heat pump on (e.g., when excess solar power is available)
+
+### Usage in Automations
+
+These services can be used in Home Assistant automations for advanced control:
+
+```yaml
+# Example: Enable DHW when electricity prices are low
+automation:
+  - alias: "Heat water when cheap"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.electricity_price
+        below: 0.20
+    action:
+      - service: ha_daikin_altherma4_modbus.set_dhw_state
+        data:
+          config_entry_id: "abc123def456"
+          state: true
+
+# Example: Use Smart Grid with dynamic pricing
+automation:
+  - alias: "Smart Grid Control"
+    trigger:
+      - platform: time_pattern
+        minutes: "/30"
+    action:
+      - choose:
+          - conditions:
+              - condition: numeric_state
+                entity_id: sensor.electricity_price
+                below: 0.15
+            sequence:
+              - service: ha_daikin_altherma4_modbus.set_smart_grid_mode
+                data:
+                  config_entry_id: "abc123def456"
+                  smart_grid_mode: "forced on"
+          - conditions:
+              - condition: numeric_state
+                entity_id: sensor.electricity_price
+                above: 0.35
+            sequence:
+              - service: ha_daikin_altherma4_modbus.set_smart_grid_mode
+                data:
+                  config_entry_id: "abc123def456"
+                  smart_grid_mode: "forced off"
+
+# Example: Enable quiet mode at night
+automation:
+  - alias: "Night quiet mode"
+    trigger:
+      - platform: time
+        at: "22:00:00"
+    action:
+      - service: ha_daikin_altherma4_modbus.set_quiet_mode
+        data:
+          config_entry_id: "abc123def456"
+          quiet_mode: "on (automatic)"
+
+# Example: Power limit during peak hours
+automation:
+  - alias: "Peak hour power limit"
+    trigger:
+      - platform: time_pattern
+        hours: "18-20"
+    action:
+      - service: ha_daikin_altherma4_modbus.set_power_limit
+        data:
+          config_entry_id: "abc123def456"
+          power_limit: 3.5
+
+# Example: DHW booster for morning shower
+automation:
+  - alias: "Morning DHW boost"
+    trigger:
+      - platform: time
+        at: "06:30:00"
+    action:
+      - service: ha_daikin_altherma4_modbus.set_dhw_booster_mode
+        data:
+          config_entry_id: "abc123def456"
+          booster_mode: true
+
+# Example: Adjust room temperature based on occupancy
+automation:
+  - alias: "Comfort temperature when home"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_occupied
+        to: "on"
+    action:
+      - service: ha_daikin_altherma4_modbus.set_room_heating_setpoint
+        data:
+          config_entry_id: "abc123def456"
+          setpoint: 21
+
+# Example: Refresh connection periodically
+automation:
+  - alias: "Daily connection refresh"
+    trigger:
+      - platform: time
+        at: "03:00:00"
+    action:
+      - service: ha_daikin_altherma4_modbus.refresh_connection
+        data:
+          config_entry_id: "abc123def456"
+```
 
 ## Contributing
 

@@ -297,6 +297,19 @@ class ModbusDataManager:
             self._update_coordinator_data(register_name, value)
         return result
 
+    async def refresh_connection(self) -> None:
+        """Refresh the Modbus connection by reconnecting the transport session."""
+        _LOGGER.debug("Refreshing Modbus connection in data manager")
+        try:
+            # Reconnect the transport session
+            await self._session.reconnect_with_new_client()
+            _LOGGER.debug("Successfully refreshed Modbus connection in data manager")
+        except Exception as err:
+            _LOGGER.error(
+                "Failed to refresh Modbus connection in data manager: %s", err
+            )
+            raise
+
     def _update_last_triggered(self, data: StateData):
         """Update last-triggered calculated sensors."""
         self._mapping.update_last_triggered(data)

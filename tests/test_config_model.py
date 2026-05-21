@@ -209,7 +209,21 @@ def _load_config_flow_module(monkeypatch):
 
     module_name = f"{package_name}.config_flow"
     _reset_modules(module_name)
-    return importlib.import_module(module_name)
+    config_flow_module = importlib.import_module(module_name)
+
+    # Add mock methods for unique ID handling to ConfigFlow class
+    async def mock_async_set_unique_id(self, unique_id):
+        pass
+
+    def mock_abort_if_unique_id_configured(self):
+        pass
+
+    config_flow_module.ConfigFlow.async_set_unique_id = mock_async_set_unique_id
+    config_flow_module.ConfigFlow._abort_if_unique_id_configured = (
+        mock_abort_if_unique_id_configured
+    )
+
+    return config_flow_module
 
 
 def _load_integration_module(monkeypatch):

@@ -7,6 +7,7 @@ from .const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
 from .coordinator_manager import CoordinatorManager, UnifiedCoordinator
 from .modbus_client import RealModbusTcpClient
 from .runtime_data import RuntimeData
+from .services import register_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -93,6 +94,10 @@ async def async_setup_entry(hass, entry):
         stored_entry = True
 
         await hass.config_entries.async_forward_entry_setups(entry, platforms)
+
+        # Register integration services
+        register_services(hass)
+
         return True
     except Exception as err:
         _LOGGER.error("Failed to set up entry %s: %s", entry.entry_id, err)
