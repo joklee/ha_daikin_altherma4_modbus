@@ -83,19 +83,28 @@
         "name": "Additional zone"
       },
       "holding_4": {
-        "name": "Space heating/cooling"
+        "name": "Space heating/cooling",
+        "state": {
+          "off": "Off",
+          "on": "On"
+        }
       },
       "holding_13": {
-        "name": "DHW booster mode (Powerful)"
+        "name": "DHW booster mode (Powerful)",
+        "state": {
+          "off": "Off",
+          "on_powerful": "On (Powerful)"
+        }
       },
       "holding_15": {
-        "name": "DHW Single heat-up (Manual)"
+        "name": "DHW Single heat-up (Manual)",
+        "state": {
+          "off": "Off",
+          "on": "On"
+        }
       }
     },
     "binary_sensor": {
-      "input_29": {
-        "name": "Circulation pump running"
-      },
       "input_30": {
         "name": "Compressor run"
       },
@@ -314,9 +323,6 @@
           "error_99": "Error 99"
         }
       },
-      "input_29": {
-        "name": "Circulation pump running"
-      },
       "input_30": {
         "name": "Compressor run"
       },
@@ -339,10 +345,19 @@
         "name": "Hot start"
       },
       "input_37": {
-        "name": "3-way valve"
+        "name": "3-way valve",
+        "state": {
+          "space_heating": "Space heating",
+          "dhw": "DHW"
+        }
       },
       "input_38": {
-        "name": "Operation mode"
+        "name": "Operation mode",
+        "state": {
+          "none": "None",
+          "heating": "Heating",
+          "cooling": "Cooling"
+        }
       },
       "input_40": {
         "name": "Leaving water temperature PHE"
@@ -372,10 +387,18 @@
         "name": "Heat pump power consumption"
       },
       "input_52": {
-        "name": "DHW normal operation"
+        "name": "DHW normal operation",
+        "state": {
+          "idle_buffering": "Idle/Buffering",
+          "operation": "Operation"
+        }
       },
       "input_53": {
-        "name": "Space heating/cooling normal operation"
+        "name": "Space heating/cooling normal operation",
+        "state": {
+          "idle_buffering": "Idle/Buffering",
+          "operation": "Operation"
+        }
       },
       "input_54": {
         "name": "Leaving water Main Heating setpoint lower limit"
@@ -402,10 +425,23 @@
         "name": "Additional cooling setpoint upper limit"
       },
       "input_63": {
-        "name": "Disinfection status"
+        "name": "Disinfection status",
+        "state": {
+          "unsuccessful": "Unsuccessful",
+          "successful": "Successful",
+          "maintain": "Maintain",
+          "heat_up": "Heat Up"
+        }
       },
       "input_65": {
-        "name": "Demand request mode"
+        "name": "Demand request mode",
+        "state": {
+          "free": "Free",
+          "forced_off": "Forced Off",
+          "forced_on": "Forced On",
+          "recommended_on": "Recommended On",
+          "reduced": "Reduced"
+        }
       },
       "input_66": {
         "name": "Bypass valve position"
@@ -563,28 +599,68 @@
     },
     "select": {
       "holding_3": {
-        "name": "Operation mode"
+        "name": "Operation mode",
+        "state": {
+          "auto": "Auto",
+          "heating": "Heating",
+          "cooling": "Cooling"
+        }
       },
       "holding_9": {
-        "name": "Quiet mode operation"
+        "name": "Quiet mode operation",
+        "state": {
+          "off": "Off",
+          "on_automatic": "On (Automatic)",
+          "on_manual": "On (Manual)"
+        }
       },
       "holding_56": {
-        "name": "Smart grid operation mode"
+        "name": "Smart grid operation mode",
+        "state": {
+          "free_running": "Free running",
+          "forced_off": "Forced off",
+          "recommended_on": "Recommended on",
+          "forced_on": "Forced on"
+        }
       },
       "holding_68": {
-        "name": "Weather-dependent mode heating main"
+        "name": "Weather-dependent mode heating main",
+        "state": {
+          "fixed": "Fixed",
+          "weather_dependent": "Weather dependent"
+        }
       },
       "holding_69": {
-        "name": "Weather-dependent mode cooling main"
+        "name": "Weather-dependent mode cooling main",
+        "state": {
+          "fixed": "Fixed",
+          "weather_dependent": "Weather dependent"
+        }
       },
       "holding_74": {
-        "name": "Thermostat request main"
+        "name": "Thermostat request main",
+        "state": {
+          "none": "None",
+          "heating": "Heating",
+          "cooling": "Cooling"
+        }
       },
       "holding_75": {
-        "name": "Thermostat request additional"
+        "name": "Thermostat request additional",
+        "state": {
+          "none": "None",
+          "heating": "Heating",
+          "cooling": "Cooling"
+        }
       },
       "holding_80": {
-        "name": "DHW mode setting"
+        "name": "DHW mode setting",
+        "state": {
+          "reheat": "Reheat",
+          "schedule_and_reheat": "Schedule and reheat",
+          "scheduled": "Scheduled",
+          "off": "Off"
+        }
       }
     }
   }
