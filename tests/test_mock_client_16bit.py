@@ -52,7 +52,7 @@ def _ensure_homeassistant_stubs():
 _ensure_homeassistant_stubs()
 
 # Import after stubs are set up
-from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
+from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient  # noqa: E402
 
 
 @pytest.mark.asyncio

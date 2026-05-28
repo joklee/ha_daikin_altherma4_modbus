@@ -43,12 +43,6 @@
       }
     }
   },
-  "error": {
-    "invalid_host": "Ungültiger Host",
-    "invalid_port": "Ungültiger Port",
-    "cannot_connect": "Verbindung fehlgeschlagen",
-    "invalid_auth": "Ungültige Authentifizierung"
-  },
   "device": {
     "daikin_altherma_modbus_input_registers": {
       "name": "Daikin Altherma 4 - Eingaberegister"
@@ -341,16 +335,16 @@
       "input_37": {
         "name": "3-Wege-Ventil",
         "state": {
-          "Space heating": "Raumheizung",
-          "DHW": "Warmwasser"
+          "space_heating": "Raumheizung",
+          "dhw": "Warmwasser"
         }
       },
       "input_38": {
         "name": "Betriebsart",
         "state": {
-          "None": "Keine",
-          "Heating": "Heizen",
-          "Cooling": "Kühlen"
+          "none": "Keine",
+          "heating": "Heizen",
+          "cooling": "Kühlen"
         }
       },
       "input_40": {
@@ -383,15 +377,15 @@
       "input_52": {
         "name": "Brauchwasser-Normalbetrieb",
         "state": {
-          "Idle/Buffering": "Leerlauf/Pufferung",
-          "Operation": "Betrieb"
+          "idle_buffering": "Leerlauf/Pufferung",
+          "operation": "Betrieb"
         }
       },
       "input_53": {
         "name": "Raumheizen/-kühlen Normalbetrieb",
         "state": {
-          "Idle/Buffering": "Leerlauf/Pufferung",
-          "Operation": "Betrieb"
+          "idle_buffering": "Leerlauf/Pufferung",
+          "operation": "Betrieb"
         }
       },
       "input_54": {
@@ -421,20 +415,20 @@
       "input_63": {
         "name": "Desinfektionsstatus",
         "state": {
-          "Unsuccessful": "Erfolglos",
-          "Successful": "Erfolgreich",
-          "Maintain": "Wartung",
-          "Heat Up": "Aufheizen"
+          "unsuccessful": "Erfolglos",
+          "successful": "Erfolgreich",
+          "maintain": "Wartung",
+          "heat_up": "Aufheizen"
         }
       },
       "input_65": {
         "name": "Modus der Bedarfsanforderung",
         "state": {
-          "Free": "Frei",
-          "Forced Off": "Erzwungen Aus",
-          "Forced On": "Erzwungen Ein",
-          "Recommended On": "Empfohlen Ein",
-          "Reduced": "Reduziert"
+          "free": "Frei",
+          "forced_off": "Erzwungen Aus",
+          "forced_on": "Erzwungen Ein",
+          "recommended_on": "Empfehlung ein",
+          "reduced": "Reduziert"
         }
       },
       "input_66": {
@@ -595,65 +589,65 @@
       "holding_3": {
         "name": "Betriebsart",
         "state": {
-          "Auto": "Auto",
-          "Heating": "Heizen",
-          "Cooling": "Kühlen"
+          "auto": "Auto",
+          "heating": "Heizen",
+          "cooling": "Kühlen"
         }
       },
       "holding_9": {
         "name": "Geräuscharmer Betrieb",
         "state": {
-          "Off": "Aus",
-          "On (Automatic)": "Ein (Automatisch)",
-          "On (Manual)": "Ein (Manuell)"
+          "off": "Aus",
+          "on_automatic": "Ein (Automatisch)",
+          "on_manual": "Ein (Manuell)"
         }
       },
       "holding_56": {
         "name": "Smart Grid-Betriebsart",
         "state": {
-          "Free running": "Freier Betrieb",
-          "Forced off": " Zwangsabschaltung",
-          "Recommended on": "Empfehlung ein",
-          "Forced on": "Erzwungen ein"
+          "free_running": "Freier Betrieb",
+          "forced_off": "Erzwungen Aus",
+          "recommended_on": "Empfehlung ein",
+          "forced_on": "Erzwungen Ein"
         }
       },
       "holding_68": {
         "name": "Witterungsgeführter Modus Heizen Haupt",
         "state": {
-          "Fixed": "Fest",
-          "Weather dependent": "Wetterabhängig"
+          "fixed": "Fest",
+          "weather_dependent": "Wetterabhängig"
         }
       },
       "holding_69": {
         "name": "Witterungsgeführter Modus Kühlen Haupt",
         "state": {
-          "Fixed": "Fest",
-          "Weather dependent": "Wetterabhängig"
+          "fixed": "Fest",
+          "weather_dependent": "Wetterabhängig"
         }
       },
       "holding_74": {
         "name": "Thermostat Anforderung Haupt",
         "state": {
-          "None": "Keine",
-          "Heating": "Heizen",
-          "Cooling": "Kühlen"
+          "none": "Keine",
+          "heating": "Heizen",
+          "cooling": "Kühlen"
         }
       },
       "holding_75": {
         "name": "Thermostat Anforderung Zusatz",
         "state": {
-          "None": "Keine",
-          "Heating": "Heizen",
-          "Cooling": "Kühlen"
+          "none": "Keine",
+          "heating": "Heizen",
+          "cooling": "Kühlen"
         }
       },
       "holding_80": {
         "name": "Brauchwassermodus-Einstellung",
         "state": {
-          "Reheat": "Warmhalten",
-          "Schedule and reheat": "Programm und Warmhalten",
-          "Scheduled": "Geplant",
-          "Off": "Aus"
+          "reheat": "Warmhalten",
+          "schedule_and_reheat": "Programm und Warmhalten",
+          "scheduled": "Geplant",
+          "off": "Aus"
         }
       }
     }

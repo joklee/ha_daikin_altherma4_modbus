@@ -6,5 +6,9 @@ show_missing = true
 skip_covered = true
 
 [tool.ruff.lint]
+
+[tool.ruff.lint.per-file-ignores]
 # Ignore E402 (module level import not at top of file) for const.py due to circular dependencies
-per-file-ignores = {"custom_components/ha_daikin_altherma4_modbus/const.py" = ["E402"]}
+"custom_components/ha_daikin_altherma4_modbus/const.py" = ["E402"]
+# Ignore E402/I001 for test file with late import after stub setup
+"tests/test_mock_client_16bit.py" = ["E402", "I001"]
