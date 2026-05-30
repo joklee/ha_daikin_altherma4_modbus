@@ -5,10 +5,12 @@ import sys
 import types
 
 # Mock homeassistant modules
-if "homeassistant.exceptions" not in sys.modules:
-    exceptions_module = types.ModuleType("homeassistant.exceptions")
-    exceptions_module.ServiceValidationError = Exception
-    sys.modules["homeassistant.exceptions"] = exceptions_module
+# Always force-set exceptions module to ensure both attributes are present,
+# even if another test file already populated sys.modules with incomplete attrs
+exceptions_module = types.ModuleType("homeassistant.exceptions")
+exceptions_module.ServiceValidationError = Exception
+exceptions_module.ConfigEntryNotReady = Exception
+sys.modules["homeassistant.exceptions"] = exceptions_module
 
 if "homeassistant.config_entries" not in sys.modules:
     config_entries_module = types.ModuleType("homeassistant.config_entries")
@@ -104,6 +106,16 @@ if "custom_components.ha_daikin_altherma4_modbus.const" not in sys.modules:
     const_module.SERVICE_SET_MAIN_ZONE_STATE = "set_main_zone_state"
     const_module.SERVICE_SET_ADDITIONAL_ZONE_STATE = "set_additional_zone_state"
     const_module.SERVICE_SET_SMART_GRID_MODE = "set_smart_grid_mode"
+    const_module.SERVICE_SET_QUIET_MODE = "set_quiet_mode"
+    const_module.SERVICE_SET_DHW_BOOSTER_MODE = "set_dhw_booster_mode"
+    const_module.SERVICE_SET_DHW_SINGLE_HEATUP = "set_dhw_single_heatup"
+    const_module.SERVICE_SET_POWER_LIMIT = "set_power_limit"
+    const_module.SERVICE_SET_HEATING_OFFSET = "set_heating_offset"
+    const_module.SERVICE_SET_COOLING_OFFSET = "set_cooling_offset"
+    const_module.SERVICE_SET_ROOM_HEATING_SETPOINT = "set_room_heating_setpoint"
+    const_module.SERVICE_SET_ROOM_COOLING_SETPOINT = "set_room_cooling_setpoint"
+    const_module.SERVICE_SET_ADDITIONAL_ZONE_SETPOINT = "set_additional_zone_setpoint"
+    const_module.SERVICE_REFRESH_CONNECTION = "refresh_connection"
     sys.modules["custom_components.ha_daikin_altherma4_modbus.const"] = const_module
 
 # Mock voluptuous for schema validation tests
@@ -154,57 +166,60 @@ except ImportError:
     vol_module.In = MockVol.In
     sys.modules["voluptuous"] = vol_module
 
-# Mock register constants
-if "custom_components.ha_daikin_altherma4_modbus.register_constants" not in sys.modules:
-    register_constants_module = types.ModuleType(
-        "custom_components.ha_daikin_altherma4_modbus.register_constants"
-    )
+# Mock register constants - always force-set to ensure mock data is used
+# even if another test file already populated sys.modules with real data
+register_constants_module = types.ModuleType(
+    "custom_components.ha_daikin_altherma4_modbus.register_constants"
+)
 
-    class MockRegister:
-        def __init__(self, register_name, enum_map=None):
-            self.register_name = register_name
-            self.enum_map = enum_map or {}
 
-    class MockCalculatedRegister:
-        def __init__(self, name, address, calc_type):
-            self.name = name
-            self.address = address
-            self.calc_type = calc_type
-            self.trigger_register_name = None
+class MockRegister:
+    def __init__(self, register_name, enum_map=None):
+        self.register_name = register_name
+        self.enum_map = enum_map or {}
 
-    # Create mock holding registers with operation mode and Smart Grid registers
-    mock_operation_register = MockRegister(
-        "holding_3", {0: "off", 1: "heat", 2: "cool"}
-    )
-    mock_smart_grid_register = MockRegister(
-        "holding_56",
-        {
-            0: "Free running",
-            1: "Forced off",
-            2: "Recommended on",
-            3: "Forced on",
-        },
-    )
-    register_constants_module.HOLDING_REGISTERS = [
-        mock_operation_register,
-        mock_smart_grid_register,
-    ]
-    register_constants_module.COIL_REGISTERS = []
-    register_constants_module.CALCULATED_SENSORS = [
-        MockCalculatedRegister("test", 0, "simple")
-    ]
-    register_constants_module.CALCULATED_DEVICE_INFO = {
-        "identifiers": {("daikin_altherma_modbus", "calculated_sensors")}
-    }
-    register_constants_module.INPUT_DEVICE_INFO = {
-        "identifiers": {("daikin_altherma_modbus", "input")}
-    }
-    register_constants_module.INPUT_REGISTERS = []
-    register_constants_module.DISCRETE_REGISTERS = []
 
-    sys.modules["custom_components.ha_daikin_altherma4_modbus.register_constants"] = (
-        register_constants_module
-    )
+class MockCalculatedRegister:
+    def __init__(self, name, address, calc_type):
+        self.name = name
+        self.address = address
+        self.calc_type = calc_type
+        self.trigger_register_name = None
+
+
+# Create mock holding registers with operation mode and Smart Grid registers
+mock_operation_register = MockRegister(
+    "holding_3", {0: "off", 1: "heat", 2: "cool"}
+)
+mock_smart_grid_register = MockRegister(
+    "holding_56",
+    {
+        0: "Free running",
+        1: "Forced off",
+        2: "Recommended on",
+        3: "Forced on",
+    },
+)
+register_constants_module.HOLDING_REGISTERS = [
+    mock_operation_register,
+    mock_smart_grid_register,
+]
+register_constants_module.COIL_REGISTERS = []
+register_constants_module.CALCULATED_SENSORS = [
+    MockCalculatedRegister("test", 0, "simple")
+]
+register_constants_module.CALCULATED_DEVICE_INFO = {
+    "identifiers": {("daikin_altherma_modbus", "calculated_sensors")}
+}
+register_constants_module.INPUT_DEVICE_INFO = {
+    "identifiers": {("daikin_altherma_modbus", "input")}
+}
+register_constants_module.INPUT_REGISTERS = []
+register_constants_module.DISCRETE_REGISTERS = []
+
+sys.modules["custom_components.ha_daikin_altherma4_modbus.register_constants"] = (
+    register_constants_module
+)
 
 import importlib
 from unittest.mock import AsyncMock, MagicMock, patch
