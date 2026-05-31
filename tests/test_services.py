@@ -188,9 +188,7 @@ class MockCalculatedRegister:
 
 
 # Create mock holding registers with operation mode and Smart Grid registers
-mock_operation_register = MockRegister(
-    "holding_3", {0: "off", 1: "heat", 2: "cool"}
-)
+mock_operation_register = MockRegister("holding_3", {0: "off", 1: "heat", 2: "cool"})
 mock_smart_grid_register = MockRegister(
     "holding_56",
     {
