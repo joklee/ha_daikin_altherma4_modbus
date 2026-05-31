@@ -204,6 +204,19 @@ def _load_config_flow_module(monkeypatch, connection_success=True):
         # Load the module
         spec.loader.exec_module(config_flow_module)
 
+        # Add mock methods for unique ID handling to ConfigFlow class
+        # so all instances automatically have these methods
+        async def mock_async_set_unique_id(self, unique_id):
+            pass
+
+        def mock_abort_if_unique_id_configured(self):
+            pass
+
+        config_flow_module.ConfigFlow.async_set_unique_id = mock_async_set_unique_id
+        config_flow_module.ConfigFlow._abort_if_unique_id_configured = (
+            mock_abort_if_unique_id_configured
+        )
+
         return config_flow_module
     finally:
         # Clean up temporary file
@@ -750,6 +763,296 @@ async def test_async_get_options_flow(monkeypatch):
     assert options_flow._config_entry == config_entry
 
 
+@pytest.mark.asyncio
+async def test_config_flow_connection_read_register_exception(monkeypatch):
+    """Test config flow when read_input_registers raises but connection succeeds."""
+    # Load module with a mock that raises on read_input_registers but connects successfully
+    _install_common_homeassistant_stubs(monkeypatch)
+    package_name = _install_fake_package(monkeypatch)
+
+    # Mock const module
+    const_name = f"{package_name}.const"
+    const_module = types.ModuleType(const_name)
+    const_module.DOMAIN = "ha_daikin_altherma4_modbus"
+    const_module.SLOW_SCAN_INTERVAL = 600
+    monkeypatch.setitem(sys.modules, const_name, const_module)
+
+    # Mock init module
+    init_module = types.ModuleType(package_name)
+    init_module.NORMAL_SCAN_INTERVAL = 10
+    monkeypatch.setitem(sys.modules, package_name, init_module)
+
+    # Mock config entry utils
+    config_entry_utils_name = f"{package_name}.config_entry_utils"
+    config_entry_utils_module = types.ModuleType(config_entry_utils_name)
+    config_entry_utils_module.entry_value = lambda entry, key, default=None: (
+        entry.options.get(key, default)
+    )
+    monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
+
+    # Mock modbus_client with read_input_registers that raises exception
+    modbus_client_name = f"{package_name}.modbus_client"
+    modbus_client_module = types.ModuleType(modbus_client_name)
+
+    class FakeModbusClientWithReadError:
+        def __init__(self, host, port, timeout=10):
+            self.host = host
+            self.port = port
+            self._connected = False
+
+        @classmethod
+        async def create(cls, host, port, timeout=10):
+            return cls(host, port, timeout)
+
+        async def connect(self):
+            self._connected = True
+
+        async def disconnect(self):
+            self._connected = False
+
+        @property
+        def connected(self):
+            return self._connected
+
+        async def read_input_registers(self, address, count):
+            raise Exception("Read failed but connection is valid")
+
+    modbus_client_module.RealModbusTcpClient = FakeModbusClientWithReadError
+    monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
+
+    # Load config flow module
+    config_flow_path = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "ha_daikin_altherma4_modbus"
+        / "config_flow.py"
+    )
+    with open(config_flow_path, "r") as f:
+        content = f.read()
+
+    content = content.replace(
+        "from . import NORMAL_SCAN_INTERVAL",
+        f"from {package_name} import NORMAL_SCAN_INTERVAL",
+    )
+    content = content.replace(
+        "from .config_entry_utils import entry_value",
+        f"from {config_entry_utils_name} import entry_value",
+    )
+    content = content.replace(
+        "from .const import DOMAIN, SLOW_SCAN_INTERVAL",
+        f"from {const_name} import DOMAIN, SLOW_SCAN_INTERVAL",
+    )
+    content = content.replace(
+        "from .modbus_client import RealModbusTcpClient",
+        f"from {modbus_client_name} import RealModbusTcpClient",
+    )
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp_file:
+        tmp_file.write(content)
+        tmp_file_path = tmp_file.name
+
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "config_flow_read_error", tmp_file_path
+        )
+        config_flow_module = importlib.util.module_from_spec(spec)
+        module_name = f"{package_name}.config_flow_read_error"
+        sys.modules[module_name] = config_flow_module
+        spec.loader.exec_module(config_flow_module)
+
+        # Add mock methods for unique ID handling
+        async def mock_async_set_unique_id(self, unique_id):
+            pass
+
+        def mock_abort_if_unique_id_configured(self):
+            pass
+
+        config_flow_module.ConfigFlow.async_set_unique_id = mock_async_set_unique_id
+        config_flow_module.ConfigFlow._abort_if_unique_id_configured = (
+            mock_abort_if_unique_id_configured
+        )
+
+        flow = config_flow_module.ConfigFlow()
+        result = await flow.async_step_user(
+            {
+                "host": "192.168.1.100",
+                "port": 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "demo_mode": False,
+            }
+        )
+
+        # Should still create entry even if read_input_registers raises
+        assert result["type"] == "create_entry"
+        assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
+    finally:
+        os.unlink(tmp_file_path)
+
+
+@pytest.mark.asyncio
+async def test_config_flow_connection_client_create_exception(monkeypatch):
+    """Test config flow when RealModbusTcpClient.create raises exception."""
+    _install_common_homeassistant_stubs(monkeypatch)
+    package_name = _install_fake_package(monkeypatch)
+
+    const_name = f"{package_name}.const"
+    const_module = types.ModuleType(const_name)
+    const_module.DOMAIN = "ha_daikin_altherma4_modbus"
+    const_module.SLOW_SCAN_INTERVAL = 600
+    monkeypatch.setitem(sys.modules, const_name, const_module)
+
+    init_module = types.ModuleType(package_name)
+    init_module.NORMAL_SCAN_INTERVAL = 10
+    monkeypatch.setitem(sys.modules, package_name, init_module)
+
+    config_entry_utils_name = f"{package_name}.config_entry_utils"
+    config_entry_utils_module = types.ModuleType(config_entry_utils_name)
+    config_entry_utils_module.entry_value = lambda entry, key, default=None: (
+        entry.options.get(key, default)
+    )
+    monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
+
+    modbus_client_name = f"{package_name}.modbus_client"
+    modbus_client_module = types.ModuleType(modbus_client_name)
+
+    class FakeModbusClientCreateError:
+        @classmethod
+        async def create(cls, host, port, timeout=10):
+            raise ConnectionError("Failed to create client")
+
+    modbus_client_module.RealModbusTcpClient = FakeModbusClientCreateError
+    monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
+
+    config_flow_path = (
+        Path(__file__).resolve().parents[1]
+        / "custom_components"
+        / "ha_daikin_altherma4_modbus"
+        / "config_flow.py"
+    )
+    with open(config_flow_path, "r") as f:
+        content = f.read()
+
+    content = content.replace(
+        "from . import NORMAL_SCAN_INTERVAL",
+        f"from {package_name} import NORMAL_SCAN_INTERVAL",
+    )
+    content = content.replace(
+        "from .config_entry_utils import entry_value",
+        f"from {config_entry_utils_name} import entry_value",
+    )
+    content = content.replace(
+        "from .const import DOMAIN, SLOW_SCAN_INTERVAL",
+        f"from {const_name} import DOMAIN, SLOW_SCAN_INTERVAL",
+    )
+    content = content.replace(
+        "from .modbus_client import RealModbusTcpClient",
+        f"from {modbus_client_name} import RealModbusTcpClient",
+    )
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp_file:
+        tmp_file.write(content)
+        tmp_file_path = tmp_file.name
+
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "config_flow_create_error", tmp_file_path
+        )
+        config_flow_module = importlib.util.module_from_spec(spec)
+        module_name = f"{package_name}.config_flow_create_error"
+        sys.modules[module_name] = config_flow_module
+        spec.loader.exec_module(config_flow_module)
+
+        flow = config_flow_module.ConfigFlow()
+        result = await flow.async_step_user(
+            {
+                "host": "192.168.1.100",
+                "port": 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "demo_mode": False,
+            }
+        )
+
+        # Should show form with cannot_connect error
+        assert result["type"] == "form"
+        assert result["errors"]["host"] == "cannot_connect"
+    finally:
+        os.unlink(tmp_file_path)
+
+
+@pytest.mark.asyncio
+async def test_config_flow_single_label_hostname(monkeypatch):
+    """Test config flow with single label hostname (no dots)."""
+    config_flow_module = _load_config_flow_module(monkeypatch)
+    flow = config_flow_module.ConfigFlow()
+
+    result = await flow.async_step_user(
+        {
+            "host": "localhost",  # Single label hostname
+            "port": 502,
+            "scan_interval": 15,
+            "slow_scan_interval": 300,
+            "demo_mode": True,
+        }
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["data"]["host"] == "localhost"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_hostname_with_only_numbers(monkeypatch):
+    """Test config flow with hostname containing only numbers (valid DNS label)."""
+    config_flow_module = _load_config_flow_module(monkeypatch)
+    flow = config_flow_module.ConfigFlow()
+
+    result = await flow.async_step_user(
+        {
+            "host": "1921681100",  # Numeric-only hostname (not an IP)
+            "port": 502,
+            "scan_interval": 15,
+            "slow_scan_interval": 300,
+            "demo_mode": True,
+        }
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["data"]["host"] == "1921681100"
+
+
+@pytest.mark.asyncio
+async def test_options_flow_missing_keys_in_input(monkeypatch):
+    """Test options flow with missing optional keys in user input."""
+    config_flow_module = _load_config_flow_module(monkeypatch)
+
+    config_entry = SimpleNamespace(
+        entry_id="test_entry_1",
+        options={
+            "scan_interval": 15,
+            "slow_scan_interval": 300,
+            "demo_mode": False,
+        },
+    )
+
+    options_flow = config_flow_module.OptionsFlow(config_entry)
+
+    # Provide partial input - missing electric_power_sensor and demo_mode
+    user_input = {
+        "scan_interval": 20,
+        "slow_scan_interval": 400,
+        # Missing: electric_power_sensor, demo_mode
+    }
+
+    result = await options_flow.async_step_init(user_input)
+
+    # Should use defaults for missing keys
+    assert result["type"] == "create_entry"
+    assert result["data"]["scan_interval"] == 20
+    assert result["data"]["slow_scan_interval"] == 400
+    assert result["data"]["demo_mode"] is False  # Default value
+
+
 def test_config_flow_import_fallback(monkeypatch):
     """Test that CONF_HOST/CONF_PORT fallback works when homeassistant not available."""
     # Remove homeassistant.const from modules to trigger fallback
@@ -881,3 +1184,68 @@ def test_config_flow_import_fallback(monkeypatch):
         assert config_flow_module.CONF_PORT == "port"
     finally:
         os.unlink(tmp_file_path)
+
+
+@pytest.mark.asyncio
+async def test_config_flow_unique_id_prevents_duplicates(monkeypatch):
+    """Test that same host:port cannot be configured twice."""
+    config_flow_module = _load_config_flow_module(monkeypatch)
+    flow = config_flow_module.ConfigFlow()
+
+    # Track unique IDs that have been set
+    configured_unique_ids = set()
+
+    async def mock_async_set_unique_id(unique_id):
+        if unique_id in configured_unique_ids:
+            raise Exception("already_configured")
+        configured_unique_ids.add(unique_id)
+
+    def mock_abort_if_unique_id_configured():
+        pass  # Success case - no duplicates
+
+    flow.async_set_unique_id = mock_async_set_unique_id
+    flow._abort_if_unique_id_configured = mock_abort_if_unique_id_configured
+
+    # First configuration should succeed
+    result = await flow.async_step_user(
+        {
+            "host": "192.168.1.100",
+            "port": 502,
+            "scan_interval": 15,
+            "slow_scan_interval": 300,
+            "demo_mode": True,  # Skip connection test
+        }
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
+
+    # Second flow with same host:port
+    flow2 = config_flow_module.ConfigFlow()
+
+    async def mock_async_set_unique_id2(unique_id):
+        if unique_id in configured_unique_ids:
+            raise Exception("already_configured")
+        configured_unique_ids.add(unique_id)
+
+    def mock_abort_if_unique_id_configured2():
+        if "192.168.1.100:502" in configured_unique_ids:
+            raise Exception("already_configured")
+
+    flow2.async_set_unique_id = mock_async_set_unique_id2
+    flow2._abort_if_unique_id_configured = mock_abort_if_unique_id_configured2
+
+    # Second configuration with same host:port should be prevented
+    try:
+        await flow2.async_step_user(
+            {
+                "host": "192.168.1.100",
+                "port": 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "demo_mode": True,
+            }
+        )
+        assert False, "Should have raised exception for duplicate"
+    except Exception as e:
+        assert "already_configured" in str(e)

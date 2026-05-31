@@ -90,6 +90,22 @@ class CoordinatorManager:
         for coordinator in self.coordinators.values():
             await coordinator.async_request_refresh()
 
+    async def refresh_connection(self) -> None:
+        """Refresh the Modbus connection by reconnecting all coordinators."""
+        _LOGGER.debug("Refreshing Modbus connection for all coordinators")
+        try:
+            # Refresh both coordinators' connections
+            await self.normal_coordinator.data_manager.refresh_connection()
+            await self.slow_coordinator.data_manager.refresh_connection()
+
+            # Trigger data refresh after reconnection
+            await self.async_request_refresh_all()
+
+            _LOGGER.debug("Successfully refreshed Modbus connection")
+        except Exception as err:
+            _LOGGER.error("Failed to refresh Modbus connection: %s", err)
+            raise
+
 
 class UnifiedWriteProxy:
     """Write operations routed through source coordinators plus refresh."""

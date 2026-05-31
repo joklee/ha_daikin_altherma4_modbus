@@ -165,6 +165,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         last_step=True,
                     )
 
+            # Set unique ID to prevent duplicate entries for the same device
+            await self.async_set_unique_id(f"{host}:{port}")
+            self._abort_if_unique_id_configured()
+
             data = {
                 CONF_HOST: host,
                 CONF_PORT: port,

@@ -64,3 +64,20 @@ HVAC_COOL = 2
 # DHW constants
 DHW_OFF = False
 DHW_ON = True
+
+# Service names
+SERVICE_SET_OPERATION_MODE = "set_operation_mode"
+SERVICE_SET_DHW_STATE = "set_dhw_state"
+SERVICE_SET_MAIN_ZONE_STATE = "set_main_zone_state"
+SERVICE_SET_ADDITIONAL_ZONE_STATE = "set_additional_zone_state"
+SERVICE_SET_SMART_GRID_MODE = "set_smart_grid_mode"
+SERVICE_SET_QUIET_MODE = "set_quiet_mode"
+SERVICE_SET_DHW_BOOSTER_MODE = "set_dhw_booster_mode"
+SERVICE_SET_DHW_SINGLE_HEATUP = "set_dhw_single_heatup"
+SERVICE_SET_POWER_LIMIT = "set_power_limit"
+SERVICE_SET_HEATING_OFFSET = "set_heating_offset"
+SERVICE_SET_COOLING_OFFSET = "set_cooling_offset"
+SERVICE_SET_ROOM_HEATING_SETPOINT = "set_room_heating_setpoint"
+SERVICE_SET_ROOM_COOLING_SETPOINT = "set_room_cooling_setpoint"
+SERVICE_SET_ADDITIONAL_ZONE_SETPOINT = "set_additional_zone_setpoint"
+SERVICE_REFRESH_CONNECTION = "refresh_connection"

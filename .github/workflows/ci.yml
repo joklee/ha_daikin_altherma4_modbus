@@ -129,6 +129,10 @@ jobs:
       # 🐳 Test against multiple HA versions
       - name: Test integration load in Home Assistant ${{ matrix.ha-version }}
         run: |
+          # Create minimal configuration.yaml if not present
+          if [ ! -f configuration.yaml ]; then
+            echo "homeassistant:" > configuration.yaml
+          fi
           docker run --rm \
             -v ${{ github.workspace }}/custom_components:/config/custom_components \
             -v ${{ github.workspace }}/configuration.yaml:/config/configuration.yaml \

@@ -1,0 +1,118 @@
+set_operation_mode:
+  name: Set operation mode
+  description: Set the heat pump operation mode (Off, Heating, Cooling).
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: select
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    operation_mode:
+      name: Operation mode
+      description: The operation mode to set.
+      required: true
+      selector:
+        select:
+          options:
+            - "off"
+            - "heat"
+            - "cool"
+
+set_dhw_state:
+  name: Set DHW state
+  description: Enable or disable Domestic Hot Water.
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: switch
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    state:
+      name: State
+      description: True to enable, False to disable.
+      required: true
+      selector:
+        boolean:
+
+set_main_zone_state:
+  name: Set main zone state
+  description: Enable or disable the main zone.
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: switch
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    state:
+      name: State
+      description: True to enable, False to disable.
+      required: true
+      selector:
+        boolean:
+
+set_additional_zone_state:
+  name: Set additional zone state
+  description: Enable or disable the additional zone.
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: switch
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    state:
+      name: State
+      description: True to enable, False to disable.
+      required: true
+      selector:
+        boolean:
+
+set_smart_grid_mode:
+  name: Set Smart Grid mode
+  description: Set the Smart Grid operation mode for energy management.
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: select
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    smart_grid_mode:
+      name: Smart Grid mode
+      description: The Smart Grid mode to set.
+      required: true
+      selector:
+        select:
+          options:
+            - "free running"
+            - "forced off"
+            - "recommended on"
+            - "forced on"

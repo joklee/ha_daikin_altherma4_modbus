@@ -12,3 +12,5 @@ skip_covered = true
 "custom_components/ha_daikin_altherma4_modbus/const.py" = ["E402"]
 # Ignore E402/I001 for test file with late import after stub setup
 "tests/test_mock_client_16bit.py" = ["E402", "I001"]
+# Ignore E402 for test file with late import after HA mock setup
+"tests/test_services.py" = ["E402"]
