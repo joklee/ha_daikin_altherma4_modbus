@@ -287,7 +287,11 @@ def calculate_thermal_heat_output(coordinator):
     temp_rl = temp_rl_raw  # °C
 
     delta_t = temp_vl - temp_rl
-    thermal_heat_output = flow * delta_t * 70  # Berechnung thermische Leistung in W
+    # Use absolute value to correctly calculate thermal power in both heating
+    # (vl > rl) and cooling (vl < rl) mode
+    thermal_heat_output = (
+        flow * abs(delta_t) * 70
+    )  # Berechnung thermische Leistung in W
     _LOGGER.debug(f"flow: {flow} L/min")
     _LOGGER.debug(f"delta_t: {delta_t} K")
     _LOGGER.debug(f"thermal_heat_output: {thermal_heat_output} W")
@@ -400,8 +404,9 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
             # Convert kW to W for consistent calculation
             electric_power = electric_power * 1000
 
-        if electric_power and electric_power > 0 and heat_power > 0:
+        if electric_power is not None and electric_power >= 150 and heat_power > 0:
             # Beide Leistungen in W, direkte Berechnung
+            # Minimum power threshold of 150 W ensures pump is actively running
             cop = heat_power / electric_power
             return round(cop, 2)
         else:
