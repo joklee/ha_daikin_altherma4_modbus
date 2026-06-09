@@ -208,6 +208,10 @@ def _load_sensor_module(monkeypatch):
     const_module.REGISTER_LEAVING_WATER_TEMP = "input_40"
     const_module.REGISTER_RETURN_WATER_TEMP = "input_42"
     const_module.REGISTER_HEAT_PUMP_POWER = "input_51"
+    const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
+    const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
+    const_module.SPECIAL_REGISTER_WAITING = 32765
+    const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
     const_module.INPUT_REGISTERS = [
         SensorRegister(
             name="Flow rate",

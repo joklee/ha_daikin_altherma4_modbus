@@ -82,10 +82,23 @@ def _load_mapping_module(monkeypatch):
         return MockPayload({"value": raw_value, "register_name": unique_id})
 
     common_module.update_value_if_changed = mock_update_value_if_changed
+    common_module.is_unavailable_value = lambda v: (
+        v in {32765, 32766, 32767} or v is None
+    )
 
     # Also need to set in sys.modules before importing mapping_transform
     sys.modules[common_name] = common_module
     monkeypatch.setitem(sys.modules, common_name, common_module)
+
+    # Create const module mock with SPECIAL_REGISTER_VALUES
+    const_name = f"{package_name}.const"
+    const_module = types.ModuleType(const_name)
+    const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
+    const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
+    const_module.SPECIAL_REGISTER_WAITING = 32765
+    const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
+    sys.modules[const_name] = const_module
+    monkeypatch.setitem(sys.modules, const_name, const_module)
 
     # Remove mapping_transform from cache if already loaded
     mod_to_remove = f"{package_name}.mapping_transform"

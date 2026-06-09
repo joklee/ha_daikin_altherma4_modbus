@@ -3,7 +3,8 @@
 import logging
 from typing import Dict, List
 
-from .common import get_register_value, update_value_if_changed
+from .common import get_register_value, is_unavailable_value, update_value_if_changed
+from .const import SPECIAL_REGISTER_NOT_SUPPORTED, SPECIAL_REGISTER_VALUES
 from .data_types import (
     LastTriggeredData,
     ProcessedRegisterItem,
@@ -91,7 +92,7 @@ class ModbusMappingTransform:
             scale = getattr(item.data_type, "scaling", 1)
 
         if scale is not None and scale != 1:
-            if raw_value == 32765 or raw_value == 32766:
+            if raw_value in SPECIAL_REGISTER_VALUES:
                 return update_value_if_changed(
                     register_name,
                     raw_value,
@@ -151,8 +152,17 @@ class ModbusMappingTransform:
             address = processed_item.address
             description = processed_item.description
 
+            # Skip registers that are not supported by the device (32767)
+            if raw_value == SPECIAL_REGISTER_NOT_SUPPORTED:
+                _LOGGER.debug(
+                    "Skipping register %s (address %d): not supported by device (32767)",
+                    register_name,
+                    address,
+                )
+                continue
+
             if item.enum_map:
-                if raw_value == 32766 and len(item.enum_map) <= 2:
+                if is_unavailable_value(raw_value) and len(item.enum_map) <= 2:
                     continue
                 data[register_name] = update_value_if_changed(
                     register_name,
@@ -193,6 +203,14 @@ class ModbusMappingTransform:
 
         data: StateData = {}
         for register_name, processed_item in processed_data.items():
+            # Skip registers that are not supported by the device (32767)
+            if processed_item.raw_value == SPECIAL_REGISTER_NOT_SUPPORTED:
+                _LOGGER.debug(
+                    "Skipping register %s (address %d): not supported by device (32767)",
+                    register_name,
+                    processed_item.address,
+                )
+                continue
             data[register_name] = self.apply_register_processing(
                 register_name, processed_item, self.previous_data
             )

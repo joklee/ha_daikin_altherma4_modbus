@@ -175,6 +175,10 @@ def _load_config_flow_module(monkeypatch):
     const_module = types.ModuleType(const_module_name)
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.SLOW_SCAN_INTERVAL = 600
+    const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
+    const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
+    const_module.SPECIAL_REGISTER_WAITING = 32765
+    const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
     monkeypatch.setitem(sys.modules, const_module_name, const_module)
 
     # Mock modbus_client module for connection testing
@@ -248,6 +252,10 @@ def _load_integration_module(monkeypatch):
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.SLOW_SCAN_INTERVAL = 600
     const_module.NORMAL_SCAN_INTERVAL = 10
+    const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
+    const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
+    const_module.SPECIAL_REGISTER_WAITING = 32765
+    const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
     coordinator_manager_module = types.ModuleType(coordinator_manager_name)
@@ -340,6 +348,10 @@ def _load_sensor_module(monkeypatch):
     const_module.CALCULATED_DEVICE_INFO = {}
     const_module.INPUT_REGISTERS = []
     const_module.CALCULATED_SENSORS = []
+    const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
+    const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
+    const_module.SPECIAL_REGISTER_WAITING = 32765
+    const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
     monkeypatch.setitem(sys.modules, const_module_name, const_module)
 
     return importlib.import_module(sensor_module_name)
