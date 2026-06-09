@@ -257,11 +257,13 @@ class MockModbusTcpClient(ModbusClientInterface):
             if register_def:
                 # Check if it's an enum register (SELECT_REGISTERS)
                 if getattr(register_def, "enum_map", None):
-                    # Filter out unavailable values (32765, 32766) from enum selection
+                    # Filter out special unavailable values (32765, 32766, 32767) from enum selection
+                    from .const import SPECIAL_REGISTER_VALUES
+
                     enum_keys = [
                         k
                         for k in register_def.enum_map.keys()
-                        if isinstance(k, int) and k not in [32765, 32766]
+                        if isinstance(k, int) and k not in SPECIAL_REGISTER_VALUES
                     ]
                     if enum_keys:
                         value = random.choice(enum_keys)

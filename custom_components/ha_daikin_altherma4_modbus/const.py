@@ -65,6 +65,23 @@ HVAC_COOL = 2
 DHW_OFF = False
 DHW_ON = True
 
+# Special Modbus register return values (Daikin HomeHub)
+# These values are returned when reading a register as signed or unsigned 16-bit.
+SPECIAL_REGISTER_NOT_SUPPORTED = 32767  # Device does not support the requested register
+SPECIAL_REGISTER_NOT_AVAILABLE = (
+    32766  # Register not available in current configuration
+)
+SPECIAL_REGISTER_WAITING = 32765  # Register value not yet loaded
+
+# Set of all special/unavailable register values
+SPECIAL_REGISTER_VALUES = frozenset(
+    {
+        SPECIAL_REGISTER_NOT_SUPPORTED,
+        SPECIAL_REGISTER_NOT_AVAILABLE,
+        SPECIAL_REGISTER_WAITING,
+    }
+)
+
 # Service names
 SERVICE_SET_OPERATION_MODE = "set_operation_mode"
 SERVICE_SET_DHW_STATE = "set_dhw_state"

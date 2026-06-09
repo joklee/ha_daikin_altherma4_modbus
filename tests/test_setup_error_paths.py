@@ -55,6 +55,7 @@ def _load_integration_module(
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.SLOW_SCAN_INTERVAL = 600
     const_module.NORMAL_SCAN_INTERVAL = 10
+    const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
     coordinator_manager_module = types.ModuleType(coordinator_manager_name)
@@ -201,12 +202,14 @@ def _load_switch_module(monkeypatch):
     package_name = _install_fake_package(monkeypatch)
     module_name = f"{package_name}.switch"
     const_name = f"{package_name}.const"
+    common_name = f"{package_name}.common"
 
     register_constants_name = f"{package_name}.register_constants"
 
     _reset_modules(
         module_name,
         const_name,
+        common_name,
         register_constants_name,
         "homeassistant.components.switch",
         "homeassistant.helpers.update_coordinator",
@@ -244,6 +247,7 @@ def _load_switch_module(monkeypatch):
 
     const_module = types.ModuleType(const_name)
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
+    const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
     # Mock register_constants module
@@ -347,11 +351,13 @@ def _load_select_module(monkeypatch):
     package_name = _install_fake_package(monkeypatch)
     module_name = f"{package_name}.select"
     const_name = f"{package_name}.const"
+    common_name = f"{package_name}.common"
     register_constants_name = f"{package_name}.register_constants"
 
     _reset_modules(
         module_name,
         const_name,
+        common_name,
         register_constants_name,
         "homeassistant.components.select",
         "homeassistant.helpers.update_coordinator",
@@ -389,6 +395,7 @@ def _load_select_module(monkeypatch):
 
     const_module = types.ModuleType(const_name)
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
+    const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
     # Mock register_constants module

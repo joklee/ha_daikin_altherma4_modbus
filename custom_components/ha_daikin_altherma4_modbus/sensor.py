@@ -12,7 +12,7 @@ from .common import (
     is_unavailable_value,
 )
 from .config_entry_utils import entry_value
-from .const import DOMAIN
+from .const import DOMAIN, SPECIAL_REGISTER_NOT_SUPPORTED
 from .register_constants import (
     CALCULATED_DEVICE_INFO,
     CALCULATED_SENSORS,
@@ -41,6 +41,18 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
         address = item.address
         register_name = item.register_name
+
+        # Skip registers that returned 32767 (not supported by device)
+        reg_data = unified_coordinator.data.get(register_name)
+        if reg_data is not None:
+            val = get_register_value(reg_data)
+            if val is not None and val == SPECIAL_REGISTER_NOT_SUPPORTED:
+                _LOGGER.debug(
+                    "Skipping sensor %s (address %d): register not supported (32767)",
+                    register_name,
+                    address,
+                )
+                continue
         unit = item.unit or ""
         count = item.count or 1
         icon = item.icon or "mdi:information"

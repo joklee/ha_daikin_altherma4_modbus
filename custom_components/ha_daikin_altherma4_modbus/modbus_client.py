@@ -12,6 +12,7 @@ except ImportError:
     AsyncModbusTcpClient = None
 
 from .client_interface import ModbusClientInterface
+from .const import SPECIAL_REGISTER_VALUES
 from .exceptions import (
     ModbusDeviceException,
     ModbusReadException,
@@ -55,12 +56,17 @@ class OneBasedModbusResponse:
             # Place returned registers at the correct positions
             for i, value in enumerate(self.original_response.registers):
                 result[self.start_address + i] = value
-                # Log unavailable values (32765 or 32766) at debug level, but only once per address
-                if value in [32765, 32766]:
+                # Log special Daikin MOdbus return values at debug level, only once per address
+                # 32767: Register not supported
+                # 32766: Register not available in current configuration
+                # 32765: Waiting for value (not yet loaded)
+                if value in SPECIAL_REGISTER_VALUES:
                     address_key = f"{value}_{self.start_address + i}"
                     if address_key not in self._logged_unavailable:
                         _LOGGER.debug(
-                            f"Modbus client returned unavailable value {value} at address {self.start_address + i}"
+                            "Modbus client returned special value %d at address %d",
+                            value,
+                            self.start_address + i,
                         )
                         self._logged_unavailable.add(address_key)
 

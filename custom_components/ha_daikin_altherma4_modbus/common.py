@@ -8,7 +8,7 @@ from typing import Any, Dict, Union
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import DOMAIN, SPECIAL_REGISTER_VALUES
 from .data_types import EntityStatePayload, StateMapping
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,7 +27,13 @@ def get_coordinator_from_entry(hass: HomeAssistant, entry: ConfigType) -> Any:
 
 
 def validate_register_value(value: Any) -> bool:
-    """Validate that a register value is available (not 32765 or 32766)."""
+    """Validate that a register value is available.
+
+    Returns False for None or any special Daikin HomeHub return value:
+      - 32767: Register not supported
+      - 32766: Register not available in current configuration
+      - 32765: Waiting for value (not yet loaded)
+    """
     if value is None:
         return False
 
@@ -36,12 +42,17 @@ def validate_register_value(value: Any) -> bool:
     except (ValueError, TypeError):
         return False
 
-    # Sensor is unavailable if value is 32765 or 32766
-    return val not in [32765, 32766]
+    return val not in SPECIAL_REGISTER_VALUES
 
 
 def is_unavailable_value(value: Any) -> bool:
-    """Check if a register value indicates unavailability (32765 or 32766)."""
+    """Check if a register value indicates unavailability.
+
+    Returns True for None or any special Daikin HomeHub return value:
+      - 32767: Register not supported
+      - 32766: Register not available in current configuration
+      - 32765: Waiting for value (not yet loaded)
+    """
     if value is None:
         return True
 
@@ -50,7 +61,7 @@ def is_unavailable_value(value: Any) -> bool:
     except (ValueError, TypeError):
         return True
 
-    return val in [32765, 32766]
+    return val in SPECIAL_REGISTER_VALUES
 
 
 class BaseEntityMixin:
