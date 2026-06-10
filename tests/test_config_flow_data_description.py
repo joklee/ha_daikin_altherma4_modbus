@@ -115,6 +115,7 @@ def _load_config_flow_module(monkeypatch):
         return entry.options.get(key, default)
 
     config_entry_utils_module.entry_value = entry_value
+    config_entry_utils_module.entry_data_value = entry_value
     monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
 
     # Create the actual config_flow module by loading the real file
@@ -133,6 +134,10 @@ def _load_config_flow_module(monkeypatch):
     content = content.replace(
         "from . import NORMAL_SCAN_INTERVAL",
         f"from {package_name} import NORMAL_SCAN_INTERVAL",
+    )
+    content = content.replace(
+        "from .config_entry_utils import entry_data_value, entry_value",
+        f"from {config_entry_utils_name} import entry_data_value, entry_value",
     )
     content = content.replace(
         "from .config_entry_utils import entry_value",

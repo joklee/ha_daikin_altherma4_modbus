@@ -13,7 +13,7 @@ except ImportError:
     CONF_PORT = "port"
 
 from . import NORMAL_SCAN_INTERVAL
-from .config_entry_utils import entry_value
+from .config_entry_utils import entry_data_value, entry_value
 from .const import DOMAIN, SLOW_SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
@@ -85,6 +85,20 @@ def _is_valid_host(host: str) -> bool:
             return False
 
     return True
+
+
+def _build_reauth_schema(host: str, port: int) -> vol.Schema:
+    """Build the schema for the reauth step."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_HOST, default=host): str,
+            vol.Optional(CONF_PORT, default=port): int,
+            vol.Optional("scan_interval", default=NORMAL_SCAN_INTERVAL): int,
+            vol.Optional("slow_scan_interval", default=SLOW_SCAN_INTERVAL): int,
+            vol.Optional("electric_power_sensor"): str,
+            vol.Optional("demo_mode", default=False): bool,
+        }
+    )
 
 
 def _validate_common_values(
@@ -192,6 +206,81 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=data_schema,
             errors=errors,
             last_step=True,
+        )
+
+    async def async_step_reauth(self, user_input=None):
+        """Handle reauthentication when the heat pump connection changes.
+
+        This is triggered when the heat pump is no longer reachable at the
+        configured host/port, allowing the user to update the connection details.
+        """
+        config_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        assert config_entry is not None
+
+        host = entry_data_value(config_entry, "host", "")
+        port = entry_data_value(config_entry, "port", 502)
+
+        if user_input is not None:
+            host = user_input.get(CONF_HOST, "").strip()
+            port = user_input.get(CONF_PORT, DEFAULT_PORT)
+            scan_interval = user_input.get("scan_interval", NORMAL_SCAN_INTERVAL)
+            slow_scan_interval = user_input.get(
+                "slow_scan_interval", SLOW_SCAN_INTERVAL
+            )
+            demo_mode = user_input.get("demo_mode", False)
+
+            errors = _validate_common_values(
+                host=host,
+                port=port,
+                scan_interval=scan_interval,
+                slow_scan_interval=slow_scan_interval,
+            )
+            if errors:
+                return self.async_show_form(
+                    step_id="reauth",
+                    data_schema=_build_reauth_schema(host, port),
+                    errors=errors,
+                )
+
+            # Test connection (unless in demo mode)
+            if not demo_mode:
+                connection_ok, error_key = await _test_connection(host, port)
+                if not connection_ok:
+                    return self.async_show_form(
+                        step_id="reauth",
+                        data_schema=_build_reauth_schema(host, port),
+                        errors={CONF_HOST: error_key},
+                    )
+
+            # Update the config entry data and options
+            new_data = {
+                CONF_HOST: host,
+                CONF_PORT: port,
+            }
+            new_options = {
+                "scan_interval": scan_interval,
+                "slow_scan_interval": slow_scan_interval,
+                "demo_mode": demo_mode,
+            }
+            electric_power_sensor = user_input.get("electric_power_sensor", "").strip()
+            if electric_power_sensor:
+                new_options["electric_power_sensor"] = electric_power_sensor
+
+            self.hass.config_entries.async_update_entry(
+                config_entry,
+                unique_id=f"{host}:{port}",
+                data=new_data,
+                options=new_options,
+            )
+            await self.hass.config_entries.async_reload(config_entry.entry_id)
+            return self.async_abort(reason="reauth_successful")
+
+        return self.async_show_form(
+            step_id="reauth",
+            data_schema=_build_reauth_schema(host, port),
+            errors={},
         )
 
     @staticmethod
