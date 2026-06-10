@@ -65,7 +65,11 @@ class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Ein Binary Sensor für Modbus-Register."""
 
     _attr_has_entity_name = True
+<<<<<<< HEAD
     _attr_log_when_unavailable = False
+=======
+    _attr_log_when_unavailable = True
+>>>>>>> 2498b53 (feat: add reauth flow, entity logging, and improved test coverage)
 
     def __init__(
         self,
@@ -106,7 +110,11 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
     """A Binary Sensor for Discrete Input Register."""
 
     _attr_has_entity_name = True
+<<<<<<< HEAD
     _attr_log_when_unavailable = False
+=======
+    _attr_log_when_unavailable = True
+>>>>>>> 2498b53 (feat: add reauth flow, entity logging, and improved test coverage)
 
     def __init__(
         self,
