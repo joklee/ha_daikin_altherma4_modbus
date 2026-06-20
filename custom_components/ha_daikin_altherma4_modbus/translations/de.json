@@ -108,30 +108,38 @@
         "name": "Heizungs-Thermostatsteuerung"
       },
       "daikin_dhw_manual_thermostat": {
-        "name": "Warmwasser-Einzelaufheizungs-Thermostatsteuerung"
+        "name": "Warmwasser-Einzelaufheizungs-Thermostatsteuerung",
+        "icon": "mdi:water-boiler"
       },
       "daikin_dhw_booster_thermostat": {
-        "name": "Warmwasser-Booster-Thermostatsteuerung"
+        "name": "Warmwasser-Booster-Thermostatsteuerung",
+        "icon": "mdi:water-boiler-alert"
       }
     },
     "switch": {
       "coil_1": {
-        "name": "Brauchwasser"
+        "name": "Brauchwasser",
+        "icon": "mdi:power"
       },
       "coil_2": {
-        "name": "Hauptzone"
+        "name": "Hauptzone",
+        "icon": "mdi:power"
       },
       "coil_3": {
-        "name": "Zusatzzone"
+        "name": "Zusatzzone",
+        "icon": "mdi:power"
       },
       "holding_4": {
-        "name": "Raumheizen/-kühlen"
+        "name": "Raumheizen/-kühlen",
+        "icon": "mdi:power"
       },
       "holding_13": {
-        "name": "Brauchwasser Zusatzheizungsmodus (leistungsstark)"
+        "name": "Brauchwasser Zusatzheizungsmodus (leistungsstark)",
+        "icon": "mdi:power"
       },
       "holding_15": {
-        "name": "Brauchwasser Einzelaufheizung (manuell)"
+        "name": "Brauchwasser Einzelaufheizung (manuell)",
+        "icon": "mdi:power"
       }
     },
     "binary_sensor": {
@@ -241,6 +249,7 @@
     "sensor": {
       "input_21": {
         "name": "Unregelmäßigkeit bei der Einheit",
+        "icon": "mdi:alert-circle",
         "state": {
           "no_error": "Kein Fehler",
           "fault": "Störung",
@@ -248,10 +257,12 @@
         }
       },
       "input_22": {
-        "name": "Code für die Unregelmäßigkeit bei nder Einheit"
+        "name": "Code für die Unregelmäßigkeit bei nder Einheit",
+        "icon": "mdi:alert-circle"
       },
       "input_23": {
         "name": "Untercode für die Unregelmäßigkeit bei der Einheit",
+        "icon": "mdi:alert-circle",
         "state": {
           "no_error": "Kein Fehler",
           "error_0": "Fehler 0",
@@ -357,25 +368,32 @@
         }
       },
       "input_30": {
-        "name": "Umwälzpumpe läuft"
+        "name": "Umwälzpumpe läuft",
+        "icon": "mdi:pump"
       },
       "input_31": {
-        "name": "Verdichter läuft"
+        "name": "Verdichter läuft",
+        "icon": "mdi:compressor"
       },
       "input_32": {
-        "name": "Zusatzheizung läuft"
+        "name": "Zusatzheizung läuft",
+        "icon": "mdi:heater"
       },
       "input_33": {
-        "name": "Desinfektionsbetrieb"
+        "name": "Desinfektionsbetrieb",
+        "icon": "mdi:water-boiler"
       },
       "input_35": {
-        "name": "Abtauen/Neustart"
+        "name": "Abtauen/Neustart",
+        "icon": "mdi:snowflake-melt"
       },
       "input_36": {
-        "name": "Warmstart"
+        "name": "Warmstart",
+        "icon": "mdi:fire"
       },
       "input_37": {
         "name": "3-Wege-Ventil",
+        "icon": "mdi:pipe-valve",
         "state": {
           "space_heating": "Raumheizung",
           "dhw": "Warmwasser"
@@ -383,6 +401,7 @@
       },
       "input_38": {
         "name": "Betriebsart",
+        "icon": "mdi:thermostat",
         "state": {
           "none": "Keine",
           "heating": "Heizen",
@@ -390,34 +409,44 @@
         }
       },
       "input_40": {
-        "name": "Vorlauftemperatur PHE (Plattenwärmetauscher)"
+        "name": "Vorlauftemperatur PHE (Plattenwärmetauscher)",
+        "icon": "mdi:thermometer"
       },
       "input_41": {
-        "name": "Vorlauftemperatur BUH (Reserveheizung)"
+        "name": "Vorlauftemperatur BUH (Reserveheizung)",
+        "icon": "mdi:thermometer"
       },
       "input_42": {
-        "name": "Rücklauftemperatur des Wassers"
+        "name": "Rücklauftemperatur des Wassers",
+        "icon": "mdi:thermometer"
       },
       "input_43": {
-        "name": "Brauchwassertemperatur"
+        "name": "Brauchwassertemperatur",
+        "icon": "mdi:thermometer"
       },
       "input_44": {
-        "name": "Außenlufttemperatur"
+        "name": "Außenlufttemperatur",
+        "icon": "mdi:thermometer"
       },
       "input_45": {
-        "name": "Temperatur der Kältemittel-Flüssigkeit"
+        "name": "Temperatur der Kältemittel-Flüssigkeit",
+        "icon": "mdi:thermometer"
       },
       "input_49": {
-        "name": "Durchflussmenge"
+        "name": "Durchflussmenge",
+        "icon": "mdi:water"
       },
       "input_50": {
-        "name": "Fernbedienung Raumtemperatur (Haupt)"
+        "name": "Fernbedienung Raumtemperatur (Haupt)",
+        "icon": "mdi:thermometer"
       },
       "input_51": {
-        "name": "Stromverbrauch Wärmepumpe"
+        "name": "Stromverbrauch Wärmepumpe",
+        "icon": "mdi:flash"
       },
       "input_52": {
         "name": "Brauchwasser-Normalbetrieb",
+        "icon": "mdi:information",
         "state": {
           "idle_buffering": "Leerlauf/Pufferung",
           "operation": "Betrieb"
@@ -425,37 +454,47 @@
       },
       "input_53": {
         "name": "Raumheizen/-kühlen Normalbetrieb",
+        "icon": "mdi:information",
         "state": {
           "idle_buffering": "Leerlauf/Pufferung",
           "operation": "Betrieb"
         }
       },
       "input_54": {
-        "name": "Vorlauf Haupt Heizen-Sollwert unterer Grenzwert"
+        "name": "Vorlauf Haupt Heizen-Sollwert unterer Grenzwert",
+        "icon": "mdi:thermometer"
       },
       "input_55": {
-        "name": "Vorlauf Haupt Heizen-Sollwert oberer Grenzwert"
+        "name": "Vorlauf Haupt Heizen-Sollwert oberer Grenzwert",
+        "icon": "mdi:thermometer"
       },
       "input_56": {
-        "name": "Vorlauf Haupt Kühlen-Sollwert unterer Grenzwert"
+        "name": "Vorlauf Haupt Kühlen-Sollwert unterer Grenzwert",
+        "icon": "mdi:thermometer"
       },
       "input_57": {
-        "name": "Vorlauf Haupt Kühlen-Sollwert oberer Grenzwert"
+        "name": "Vorlauf Haupt Kühlen-Sollwert oberer Grenzwert",
+        "icon": "mdi:thermometer"
       },
       "input_58": {
-        "name": "Vorlauf Zusatz Heizen-Sollwert unterer Grenzwert"
+        "name": "Vorlauf Zusatz Heizen-Sollwert unterer Grenzwert",
+        "icon": "mdi:thermometer"
       },
       "input_59": {
-        "name": "Vorlauf Zusatz Heizen-Sollwert oberer Grenzwert"
+        "name": "Vorlauf Zusatz Heizen-Sollwert oberer Grenzwert",
+        "icon": "mdi:thermometer"
       },
       "input_60": {
-        "name": "Vorlauf Zusatz Kühlen-Sollwert unterer Grenzwert"
+        "name": "Vorlauf Zusatz Kühlen-Sollwert unterer Grenzwert",
+        "icon": "mdi:thermometer"
       },
       "input_61": {
-        "name": "Vorlauf Zusatz Kühlen-Sollwert oberer Grenzwert"
+        "name": "Vorlauf Zusatz Kühlen-Sollwert oberer Grenzwert",
+        "icon": "mdi:thermometer"
       },
       "input_63": {
         "name": "Desinfektionsstatus",
+        "icon": "mdi:water-pump",
         "state": {
           "unsuccessful": "Erfolglos",
           "successful": "Erfolgreich",
@@ -465,6 +504,7 @@
       },
       "input_65": {
         "name": "Modus der Bedarfsanforderung",
+        "icon": "mdi:lightning-bolt",
         "state": {
           "free": "Frei",
           "forced_off": "Erzwungen Aus",
@@ -474,58 +514,76 @@
         }
       },
       "input_66": {
-        "name": "Bypass-Ventil Stellung"
+        "name": "Bypass-Ventil Stellung",
+        "icon": "mdi:valve"
       },
       "input_67": {
-        "name": "Speicherventil-Stellung"
+        "name": "Speicherventil-Stellung",
+        "icon": "mdi:valve"
       },
       "input_68": {
-        "name": "Drehzahl Umwälzpumpe"
+        "name": "Drehzahl Umwälzpumpe",
+        "icon": "mdi:water-pump"
       },
       "input_69": {
-        "name": "Gemischte Pumpe PWM im Mischsatz"
+        "name": "Gemischte Pumpe PWM im Mischsatz",
+        "icon": "mdi:fan"
       },
       "input_70": {
-        "name": "Direkte Pumpe PWM im Mischsatz"
+        "name": "Direkte Pumpe PWM im Mischsatz",
+        "icon": "mdi:fan"
       },
       "input_71": {
-        "name": "Stellung des Mischventils im Mischsatz"
+        "name": "Stellung des Mischventils im Mischsatz",
+        "icon": "mdi:valve"
       },
       "input_72": {
-        "name": "Misch-Vorlauftemperatur im Mischsatz"
+        "name": "Misch-Vorlauftemperatur im Mischsatz",
+        "icon": "mdi:thermometer"
       },
       "input_73": {
-        "name": "Raumheiz-/-kühlziel für die Hauptzone im Mischsatz"
+        "name": "Raumheiz-/-kühlziel für die Hauptzone im Mischsatz",
+        "icon": "mdi:thermometer"
       },
       "input_74": {
-        "name": "Vorlauftemperatur Vor-PHE außen"
+        "name": "Vorlauftemperatur Vor-PHE außen",
+        "icon": "mdi:thermometer"
       },
       "input_75": {
-        "name": "Vorlauftemperatur Speicherventil"
+        "name": "Vorlauftemperatur Speicherventil",
+        "icon": "mdi:thermometer"
       },
       "input_76": {
-        "name": "Brauchwasser obere Temperatur"
+        "name": "Brauchwasser obere Temperatur",
+        "icon": "mdi:thermometer"
       },
       "input_77": {
-        "name": "Brauchwasser untere Temperatur"
+        "name": "Brauchwasser untere Temperatur",
+        "icon": "mdi:thermometer"
       },
       "input_78": {
-        "name": "Fernbedienung Raumtemperatur (Zusatz)"
+        "name": "Fernbedienung Raumtemperatur (Zusatz)",
+        "icon": "mdi:thermometer"
       },
       "input_79": {
-        "name": "Wasserdruck"
+        "name": "Wasserdruck",
+        "icon": "mdi:gauge"
       },
       "input_80": {
-        "name": "Raumheiz-/-kühlziel für die Hauptzone"
+        "name": "Raumheiz-/-kühlziel für die Hauptzone",
+        "icon": "mdi:thermometer"
       },
       "input_81": {
-        "name": "Raumheiz-/-kühlziel für die Zusatzzone"
+        "name": "Raumheiz-/-kühlziel für die Zusatzzone",
+        "icon": "mdi:thermometer"
       },
       "input_82": {
-        "name": "Zähler Unregelmäßigkeit (Benutzer)"
+        "name": "Zähler Unregelmäßigkeit (Benutzer)",
+        "icon": "mdi:counter"
       },
       "input_83": {
         "name": "Gerätebetriebsart",
+        "icon": "mdi:cog",
         "state": {
           "stop": "Stopp",
           "tank_heat_up": "Aufheizen des Speichers",
@@ -535,25 +593,32 @@
         }
       },
       "input_84": {
-        "name": "Heizen-Sollwert Raum unterer Grenzwert"
+        "name": "Heizen-Sollwert Raum unterer Grenzwert",
+        "icon": "mdi:thermometer-low"
       },
       "input_85": {
-        "name": "Heizen-Sollwert Raum oberer Grenzwert"
+        "name": "Heizen-Sollwert Raum oberer Grenzwert",
+        "icon": "mdi:thermometer-high"
       },
       "input_86": {
-        "name": "Kühlen-Sollwert Raum unterer Grenzwert"
+        "name": "Kühlen-Sollwert Raum unterer Grenzwert",
+        "icon": "mdi:thermometer-low"
       },
       "input_87": {
-        "name": "Kühlen-Sollwert Raum oberer Grenzwert"
+        "name": "Kühlen-Sollwert Raum oberer Grenzwert",
+        "icon": "mdi:thermometer-high"
       },
       "thermal_heat_output": {
-        "name": "Thermische Leistung"
+        "name": "Thermische Leistung",
+        "icon": "mdi:fire"
       },
       "cop": {
-        "name": "Leistungszahl (CoP)"
+        "name": "Leistungszahl (CoP)",
+        "icon": "mdi:gauge"
       },
       "delta_t": {
-        "name": "Delta-T"
+        "name": "Delta-T",
+        "icon": "mdi:thermometer-lines"
       },
       "last_compressor_run": {
         "name": "Letzter Verdichterlauf"
@@ -568,7 +633,8 @@
         "name": "Letzte Brauchwasserbereitung"
       },
       "external_electric_power": {
-        "name": "Externe elektrische Leistung"
+        "name": "Externe elektrische Leistung",
+        "icon": "mdi:flash"
       }
     },
     "number": {

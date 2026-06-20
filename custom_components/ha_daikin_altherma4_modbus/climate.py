@@ -398,7 +398,6 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
             self._temp_register = REGISTER_DHW_BOOSTER_TEMP
             self._setpoint_register = REGISTER_DHW_BOOSTER_SETPOINT
             self._unique_id_suffix = "dhw_booster_thermostat"
-            self._icon = "mdi:water-boiler-alert"
             self._translation_key = "daikin_dhw_booster_thermostat"
             self._write_register_func = (
                 self.coordinator.data_manager.write_holding_register
@@ -409,7 +408,6 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
             self._temp_register = REGISTER_DHW_TEMP
             self._setpoint_register = REGISTER_DHW_SETPOINT
             self._unique_id_suffix = "dhw_manual_thermostat"
-            self._icon = "mdi:water-boiler"
             self._translation_key = "daikin_dhw_manual_thermostat"
             self._write_register_func = (
                 self.coordinator.data_manager.write_coil_register
@@ -422,7 +420,6 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
         self._attr_min_temp = 30
         self._attr_max_temp = 85
         self._attr_target_temperature_step = 1
-        self._attr_icon = self._icon
         self._attr_device_info = CALCULATED_DEVICE_INFO
         self._attr_translation_key = self._translation_key
 

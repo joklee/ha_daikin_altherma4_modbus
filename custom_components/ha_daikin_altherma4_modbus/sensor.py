@@ -57,7 +57,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 continue
         unit = item.unit or ""
         count = item.count or 1
-        icon = item.icon or "mdi:information"
         enum_map = item.enum_map
         entity_category = item.entity_category
         unique_id = item.unique_id or f"{DOMAIN}_{register_name}"
@@ -73,7 +72,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 unit=unit,
                 data_type=data_type,
                 count=count,
-                icon=icon,
                 enum_map=enum_map,
                 entity_category=entity_category,
                 register_name=register_name,
@@ -175,7 +173,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         unit,
         data_type,
         count,
-        icon,
         enum_map,
         register_name,
         entity_category=None,
@@ -190,7 +187,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         # Scale only from register_types (data_type.scaling)
         self._scale = getattr(data_type, "scaling", 1) if data_type else 1
         self._count = count
-        self._icon = icon
         self._enum_map = enum_map
         self._attr_register_name = register_name
         self._attr_unique_id = unique_id
@@ -198,7 +194,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._attr_entity_category = entity_category
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
-        self._attr_icon = icon
 
         # Enum sensors: special configuration
         if enum_map:
@@ -323,7 +318,6 @@ class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
-        self._attr_icon = "mdi:fire"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
@@ -362,7 +356,6 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_state_class = "measurement"
-        self._attr_icon = "mdi:gauge"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
@@ -522,7 +515,6 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_state_class = "measurement"
-        self._attr_icon = "mdi:flash"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
@@ -593,7 +585,6 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_state_class = "measurement"
-        self._attr_icon = "mdi:thermometer-lines"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
 

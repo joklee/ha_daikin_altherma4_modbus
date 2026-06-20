@@ -84,7 +84,6 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
         self._register_name = register_name
         self._attr_unique_id = f"{DOMAIN}_{register_name}"
         self._attr_device_info = COIL_DEVICE_INFO
-        self._attr_icon = "mdi:power"
         self._attr_translation_key = translation_key
 
     @property
@@ -143,7 +142,6 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
         self._register_name = register_name
         self._attr_unique_id = f"{DOMAIN}_{register_name}"
         self._attr_device_info = HOLDING_DEVICE_INFO
-        self._attr_icon = "mdi:power"
         self._attr_translation_key = translation_key
         self._enum_map = enum_map or {}
         self._on_value = self._resolve_enum_value(default=1, state_name="on")

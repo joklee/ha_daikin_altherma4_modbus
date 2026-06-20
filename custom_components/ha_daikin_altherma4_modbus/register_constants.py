@@ -70,7 +70,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_21",
         data_type=INT16,
-        icon="mdi:alert-circle",
         entity_category=EntityCategory.DIAGNOSTIC,
         enum_map={0: "no_error", 1: "fault", 2: "warning"},
         translation_key="input_21",
@@ -81,7 +80,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_22",
         data_type=TEXT16,
-        icon="mdi:alert-circle",
         entity_category=EntityCategory.DIAGNOSTIC,
         count=1,
         translation_key="input_22",
@@ -92,7 +90,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_23",
         data_type=INT16,
-        icon="mdi:alert-circle",
         entity_category=EntityCategory.DIAGNOSTIC,
         enum_map={**{i: f"error_{i}" for i in range(100)}, 32766: "no_error"},
         translation_key="input_23",
@@ -105,7 +102,6 @@ INPUT_REGISTERS = [
         register_name="input_30",
         data_type=INT16,
         device_class="running",
-        icon="mdi:pump",
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_30",
     ),
@@ -116,7 +112,6 @@ INPUT_REGISTERS = [
         register_name="input_31",
         data_type=INT16,
         device_class="running",
-        icon="mdi:compressor",
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_31",
     ),
@@ -127,7 +122,6 @@ INPUT_REGISTERS = [
         register_name="input_32",
         data_type=INT16,
         device_class="running",
-        icon="mdi:heater",
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_32",
     ),
@@ -138,7 +132,6 @@ INPUT_REGISTERS = [
         register_name="input_33",
         data_type=INT16,
         device_class="running",
-        icon="mdi:water-boiler",
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_33",
     ),
@@ -149,7 +142,6 @@ INPUT_REGISTERS = [
         register_name="input_35",
         data_type=INT16,
         device_class="running",
-        icon="mdi:snowflake-melt",
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_35",
     ),
@@ -160,7 +152,6 @@ INPUT_REGISTERS = [
         register_name="input_36",
         data_type=INT16,
         device_class="running",
-        icon="mdi:fire",
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_36",
     ),
@@ -170,7 +161,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_37",
         data_type=INT16,
-        icon="mdi:pipe-valve",
         enum_map={0: "space_heating", 1: "dhw"},
         translation_key="input_37",
     ),
@@ -180,7 +170,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_38",
         data_type=INT16,
-        icon="mdi:thermostat",
         enum_map={0: "none", 1: "heating", 2: "cooling"},
         translation_key="input_38",
     ),
@@ -193,7 +182,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_40",
     ),
     SensorRegister(
@@ -204,7 +192,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_41",
     ),
     SensorRegister(
@@ -215,7 +202,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_42",
     ),
     SensorRegister(
@@ -226,7 +212,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_43",
     ),
     SensorRegister(
@@ -237,7 +222,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_44",
     ),
     SensorRegister(
@@ -248,7 +232,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_45",
     ),
     # Flow und Leistung (49-53)
@@ -259,7 +242,6 @@ INPUT_REGISTERS = [
         register_name="input_49",
         data_type=INT16S100,
         unit="L/min",
-        icon="mdi:water",
         translation_key="input_49",
     ),
     SensorRegister(
@@ -270,7 +252,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_50",
     ),
     SensorRegister(
@@ -280,7 +261,6 @@ INPUT_REGISTERS = [
         register_name="input_51",
         data_type=POW16,
         unit="kW",
-        icon="mdi:flash",
         translation_key="input_51",
     ),
     SensorRegister(
@@ -289,7 +269,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_52",
         data_type=INT16,
-        icon="mdi:information",
         enum_map={0: "idle_buffering", 1: "operation"},
         translation_key="input_52",
     ),
@@ -299,7 +278,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_53",
         data_type=INT16,
-        icon="mdi:information",
         enum_map={0: "idle_buffering", 1: "operation"},
         translation_key="input_53",
     ),
@@ -312,7 +290,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_54",
     ),
     SensorRegister(
@@ -323,7 +300,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_55",
     ),
     SensorRegister(
@@ -334,7 +310,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_56",
     ),
     SensorRegister(
@@ -345,7 +320,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_57",
     ),
     # Setpoints Add (58-61)
@@ -357,7 +331,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_58",
     ),
     SensorRegister(
@@ -368,7 +341,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_59",
     ),
     SensorRegister(
@@ -379,7 +351,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_60",
     ),
     SensorRegister(
@@ -390,7 +361,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_61",
     ),
     # Status (63-70)
@@ -400,7 +370,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_63",
         data_type=INT16,
-        icon="mdi:water-pump",
         enum_map={0: "unsuccessful", 1: "successful", 2: "maintain", 3: "heat_up"},
         translation_key="input_63",
     ),
@@ -411,7 +380,6 @@ INPUT_REGISTERS = [
         register_name="input_64",
         data_type=INT16,
         device_class="running",
-        icon="mdi:beach",
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_64",
     ),
@@ -421,7 +389,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_65",
         data_type=INT16,
-        icon="mdi:lightning-bolt",
         enum_map={
             0: "free",
             1: "forced_off",
@@ -438,7 +405,6 @@ INPUT_REGISTERS = [
         register_name="input_66",
         data_type=INT16,
         unit="%",
-        icon="mdi:valve",
         translation_key="input_66",
     ),
     SensorRegister(
@@ -448,7 +414,6 @@ INPUT_REGISTERS = [
         register_name="input_67",
         data_type=INT16,
         unit="%",
-        icon="mdi:valve",
         translation_key="input_67",
     ),
     SensorRegister(
@@ -458,7 +423,6 @@ INPUT_REGISTERS = [
         register_name="input_68",
         data_type=INT16,
         unit="%",
-        icon="mdi:water-pump",
         translation_key="input_68",
     ),
     SensorRegister(
@@ -468,7 +432,6 @@ INPUT_REGISTERS = [
         register_name="input_69",
         data_type=INT16,
         unit="%",
-        icon="mdi:fan",
         translation_key="input_69",
     ),
     SensorRegister(
@@ -478,7 +441,6 @@ INPUT_REGISTERS = [
         register_name="input_70",
         data_type=INT16,
         unit="%",
-        icon="mdi:fan",
         translation_key="input_70",
     ),
     # Mixing kit (71-75)
@@ -489,7 +451,6 @@ INPUT_REGISTERS = [
         register_name="input_71",
         data_type=INT16,
         unit="%",
-        icon="mdi:valve",
         translation_key="input_71",
     ),
     SensorRegister(
@@ -500,7 +461,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_72",
     ),
     SensorRegister(
@@ -511,7 +471,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_73",
     ),
     SensorRegister(
@@ -522,7 +481,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_74",
     ),
     SensorRegister(
@@ -533,7 +491,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_75",
     ),
     # DHW Temperaturen (76-79)
@@ -545,7 +502,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_76",
     ),
     SensorRegister(
@@ -556,7 +512,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_77",
     ),
     SensorRegister(
@@ -567,7 +522,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_78",
     ),
     SensorRegister(
@@ -577,7 +531,6 @@ INPUT_REGISTERS = [
         register_name="input_79",
         data_type=INT16S100,
         unit="bar",
-        icon="mdi:gauge",
         translation_key="input_79",
     ),
     # Targets und Limits (80-87)
@@ -589,7 +542,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_80",
     ),
     SensorRegister(
@@ -600,7 +552,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer",
         translation_key="input_81",
     ),
     SensorRegister(
@@ -609,7 +560,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_82",
         data_type=INT16,
-        icon="mdi:counter",
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_82",
     ),
@@ -619,7 +569,6 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_83",
         data_type=INT16,
-        icon="mdi:cog",
         enum_map={
             0: "stop",
             1: "tank_heat_up",
@@ -637,7 +586,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer-low",
         translation_key="input_84",
     ),
     SensorRegister(
@@ -648,7 +596,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer-high",
         translation_key="input_85",
     ),
     SensorRegister(
@@ -659,7 +606,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer-low",
         translation_key="input_86",
     ),
     SensorRegister(
@@ -670,7 +616,6 @@ INPUT_REGISTERS = [
         data_type=TEMP16,
         unit="°C",
         step=1,
-        icon="mdi:thermometer-high",
         translation_key="input_87",
     ),
 ]
