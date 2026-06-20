@@ -41,6 +41,26 @@
         "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
         "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren"
       }
+    },
+    "reconfigure": {
+      "title": "Daikin Altherma 4 Modbus neu konfigurieren",
+      "description": "Aktualisiere die Verbindungsdaten für deine Daikin Altherma 4 Wärmepumpe.",
+      "data": {
+        "host": "Host",
+        "port": "Port",
+        "scan_interval": "Scan-Intervall",
+        "slow_scan_interval": "Langsames Scan-Intervall",
+        "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID",
+        "demo_mode": "Demo-Modus"
+      },
+      "data_description": {
+        "host": "IP-Adresse oder Hostname der Daikin Wärmepumpe",
+        "port": "Modbus TCP Port (Standard: 502)",
+        "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
+        "slow_scan_interval": "Abfrageintervall in Sekunden für langsame Daten",
+        "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
+        "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren"
+      }
     }
   },
   "options": {
@@ -62,7 +82,8 @@
         }
       }
     },
-    "reauth_successful": "Verbindungsdaten erfolgreich aktualisiert. Integration wird neu geladen."
+    "reauth_successful": "Verbindungsdaten erfolgreich aktualisiert. Integration wird neu geladen.",
+    "reconfigure_successful": "Verbindungsdaten erfolgreich aktualisiert. Integration wird neu geladen."
   },
   "device": {
     "daikin_altherma_modbus_input_registers": {
