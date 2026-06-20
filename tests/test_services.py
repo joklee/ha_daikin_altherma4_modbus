@@ -649,10 +649,6 @@ class TestSetDHWStateService:
         # Execute and expect error
         with pytest.raises(
             ServiceValidationError,
-<<<<<<< HEAD
-=======
-            
->>>>>>> a276cba (refactor: move exception messages to translation files)
         ):
             await async_set_dhw_state(hass, call)
 
@@ -975,10 +971,6 @@ class TestSetSmartGridModeService:
         # Execute and expect error
         with pytest.raises(
             ServiceValidationError,
-<<<<<<< HEAD
-=======
-            
->>>>>>> a276cba (refactor: move exception messages to translation files)
         ):
             await async_set_smart_grid_mode(hass, call)
 
@@ -1006,11 +998,7 @@ class TestSetSmartGridModeService:
 
         # Execute and expect error
         with pytest.raises(
-<<<<<<< HEAD
             ServiceValidationError,
-=======
-            ServiceValidationError, 
->>>>>>> a276cba (refactor: move exception messages to translation files)
         ):
             await async_set_smart_grid_mode(hass, call)
 
