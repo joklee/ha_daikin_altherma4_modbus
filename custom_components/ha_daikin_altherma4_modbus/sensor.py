@@ -20,6 +20,10 @@ from .register_constants import (
     INPUT_REGISTERS,
 )
 from .register_types import TEXT16
+from .repair import (
+    async_create_abnormality_issue,
+    async_delete_abnormality_issue,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -157,6 +161,40 @@ async def async_setup_entry(hass, entry, async_add_entities):
             )
 
     async_add_entities(entities)
+
+    # Set up abnormality monitoring callback
+    _abnormality_state = {"issue_created": False}
+
+    def _check_abnormality():
+        """Check input_21 (Unit abnormality) and create/delete repair issue."""
+        data = unified_coordinator.data.get("input_21")
+        if data is None:
+            return
+        val = get_register_value(data)
+        if val is None:
+            return
+
+        # Get abnormality code and sub code for the issue message
+        code_data = unified_coordinator.data.get("input_22")
+        code_val = get_register_value(code_data) if code_data else None
+        sub_code_data = unified_coordinator.data.get("input_23")
+        sub_code_val = get_register_value(sub_code_data) if sub_code_data else None
+
+        if val in (1, 2) and not _abnormality_state["issue_created"]:
+            # fault=1 or warning=2
+            async_create_abnormality_issue(
+                hass,
+                entry,
+                abnormality_code=str(code_val) if code_val is not None else "unknown",
+                abnormality_sub_code=int(sub_code_val) if sub_code_val is not None else 0,
+            )
+            _abnormality_state["issue_created"] = True
+        elif val == 0 and _abnormality_state["issue_created"]:
+            # no_error=0 - delete the issue
+            async_delete_abnormality_issue(hass, entry)
+            _abnormality_state["issue_created"] = False
+
+    unified_coordinator.async_add_listener(_check_abnormality)
 
 
 class DaikinInputSensor(CoordinatorEntity, SensorEntity):
