@@ -18,6 +18,8 @@ from .register_types import SwitchRegister
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup switch entities over Config Entry."""

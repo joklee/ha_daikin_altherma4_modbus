@@ -17,6 +17,7 @@ from .register_types import NumberRegister
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
 
 async def async_setup_entry(hass, entry, async_add_entities):
     runtime_data = entry.runtime_data
