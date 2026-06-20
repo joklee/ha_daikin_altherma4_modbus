@@ -842,5 +842,39 @@
       "message": "Nicht unterstützte Option '{option}' für {register_name}"
 >>>>>>> a276cba (refactor: move exception messages to translation files)
     }
+  },
+  "issues": {
+    "connection_lost": {
+      "title": "Verbindung zur Daikin Altherma 4 verloren",
+      "description": "Die Verbindung zu Ihrer Daikin Altherma 4 Wärmepumpe ({entry_name}) wurde unterbrochen.\n\nFehler: {error_message}\n\nBitte überprüfen Sie, ob das Gerät eingeschaltet und im Netzwerk erreichbar ist. Sie können versuchen, die Verbindungseinstellungen neu zu konfigurieren.",
+      "fix_flow": {
+        "step": {
+          "fix_connection": {
+            "title": "Verbindung neu konfigurieren",
+            "description": "Aktualisieren Sie die Verbindungsdaten für Ihre Daikin Altherma 4 Wärmepumpe.",
+            "data": {
+              "host": "Host",
+              "port": "Port"
+            },
+            "data_description": {
+              "host": "IP-Adresse oder Hostname der Daikin Wärmepumpe",
+              "port": "Modbus TCP Port (Standard: 502)"
+            }
+          }
+        },
+        "error": {
+          "cannot_connect": "Verbindung zum Gerät fehlgeschlagen. Bitte überprüfen Sie Host und Port.",
+          "unknown": "Ein unerwarteter Fehler ist aufgetreten."
+        },
+        "abort": {
+          "fix_successful": "Verbindung erfolgreich neu konfiguriert. Integration wird neu geladen.",
+          "entry_not_found": "Konfigurationseintrag nicht gefunden."
+        }
+      }
+    },
+    "device_abnormality": {
+      "title": "Daikin Altherma 4 meldet einen Fehler",
+      "description": "Ihre Daikin Altherma 4 Wärmepumpe ({entry_name}) meldet einen Fehler.\n\nFehlercode: {abnormality_code}\nUntercode: {abnormality_sub_code}\n\nBitte überprüfen Sie die Gerätedokumentation oder kontaktieren Sie den Daikin-Support für Details zu diesem Fehlercode."
+    }
   }
 }

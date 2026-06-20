@@ -45,9 +45,13 @@ async def async_setup_entry(hass, entry):
             if not client.connected:
                 _LOGGER.error(f"Cannot connect to {host}:{port} during setup")
                 await RealModbusTcpClient.async_close_cached_client(host, port)
+<<<<<<< HEAD
                 async_create_connection_issue(
                     hass, entry, f"Cannot connect to {host}:{port}"
                 )
+=======
+                async_create_connection_issue(hass, entry, f"Cannot connect to {host}:{port}")
+>>>>>>> 9cb8ea4 (feat: add HA repair issues for connection loss and device abnormality)
                 raise ConfigEntryNotReady(f"Cannot connect to {host}:{port}")
             # Disconnect after test - coordinators will create their own connections
             await client.disconnect()
@@ -57,9 +61,13 @@ async def async_setup_entry(hass, entry):
                 f"Connection test failed during setup to {host}:{port}: {err}"
             )
             await RealModbusTcpClient.async_close_cached_client(host, port)
+<<<<<<< HEAD
             async_create_connection_issue(
                 hass, entry, f"Connection failed to {host}:{port}"
             )
+=======
+            async_create_connection_issue(hass, entry, f"Connection failed to {host}:{port}")
+>>>>>>> 9cb8ea4 (feat: add HA repair issues for connection loss and device abnormality)
             raise ConfigEntryNotReady(f"Connection failed to {host}:{port}") from err
     manager = CoordinatorManager(
         hass, host, port, scan_interval, slow_scan_interval, demo_mode

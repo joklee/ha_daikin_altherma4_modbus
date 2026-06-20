@@ -1,7 +1,7 @@
 """Repair flows for Daikin Altherma 4 Modbus integration."""
 
 import logging
-
+import voluptuous as vol
 from homeassistant import config_entries
 
 try:

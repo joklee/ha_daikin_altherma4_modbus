@@ -272,3 +272,18 @@ for name, module in [
     ("homeassistant.util.dt", dt_module),
 ]:
     sys.modules[name] = module
+=======
+    helpers_typing_module = types.ModuleType("homeassistant.helpers.typing")
+    helpers_typing_module.ConfigType = dict
+    sys.modules["homeassistant.helpers.typing"] = helpers_typing_module
+
+    # Issue registry stub for repair issues
+    issue_registry_module = types.ModuleType("homeassistant.helpers.issue_registry")
+    issue_registry_module.IssueSeverity = types.SimpleNamespace(
+        ERROR="error", WARNING="warning"
+    )
+    issue_registry_module.async_create_issue = lambda *a, **kw: None
+    issue_registry_module.async_delete_issue = lambda *a, **kw: None
+    issue_registry_module.async_get = lambda hass: types.SimpleNamespace(issues={})
+    sys.modules["homeassistant.helpers.issue_registry"] = issue_registry_module
+>>>>>>> 9cb8ea4 (feat: add HA repair issues for connection loss and device abnormality)
