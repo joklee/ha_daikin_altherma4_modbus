@@ -268,7 +268,10 @@ INPUT_REGISTERS = [
         register_name="input_51",
         data_type=POW16,
         unit="kW",
+<<<<<<< HEAD
         device_class="power",
+=======
+>>>>>>> 94fa1f1 (refactor: move icon definitions from Python to translation files)
         translation_key="input_51",
     ),
     SensorRegister(
@@ -554,7 +557,10 @@ INPUT_REGISTERS = [
         register_name="input_79",
         data_type=INT16S100,
         unit="bar",
+<<<<<<< HEAD
         device_class="pressure",
+=======
+>>>>>>> 94fa1f1 (refactor: move icon definitions from Python to translation files)
         translation_key="input_79",
     ),
     # Targets und Limits (80-87)
