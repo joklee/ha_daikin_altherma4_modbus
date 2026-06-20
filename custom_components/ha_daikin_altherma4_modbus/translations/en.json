@@ -842,13 +842,3 @@
     }
   },
   "issues": {
-    "connection_lost": {
-      "title": "Connection lost to Daikin Altherma 4",
-      "description": "The connection to your Daikin Altherma 4 heat pump ({entry_name}) has been lost.\n\nError: {error_message}\n\nPlease check that the device is powered on and accessible on the network. You can try to fix this by reconfiguring the connection settings."
-    },
-    "device_abnormality": {
-      "title": "Daikin Altherma 4 reports abnormality",
-      "description": "Your Daikin Altherma 4 heat pump ({entry_name}) is reporting an abnormality.\n\nAbnormality code: {abnormality_code}\nSub code: {abnormality_sub_code}\n\nPlease check the device documentation or contact Daikin support for details on this error code."
-    }
-  }
-}

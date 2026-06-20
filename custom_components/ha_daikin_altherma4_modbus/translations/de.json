@@ -826,6 +826,7 @@
       "message": "Koordinator hat kein data_manager-Attribut"
     },
     "unsupported_option": {
+<<<<<<< HEAD
       "message": "Nicht unterstützte Option {option} für {register_name}"
     }
   },
@@ -837,6 +838,9 @@
     "device_abnormality": {
       "title": "Daikin Altherma 4 meldet einen Fehler",
       "description": "Ihre Daikin Altherma 4 Wärmepumpe ({entry_name}) meldet einen Fehler.\n\nFehlercode: {abnormality_code}\nUntercode: {abnormality_sub_code}\n\nBitte überprüfen Sie die Gerätedokumentation oder kontaktieren Sie den Daikin-Support für Details zu diesem Fehlercode."
+=======
+      "message": "Nicht unterstützte Option '{option}' für {register_name}"
+>>>>>>> a276cba (refactor: move exception messages to translation files)
     }
   }
 }
