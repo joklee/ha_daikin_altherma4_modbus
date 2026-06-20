@@ -218,7 +218,14 @@ async def safe_write_register(
             except Exception as refresh_err:
                 _LOGGER.debug(f"Failed to refresh after write error: {refresh_err}")
         raise HomeAssistantError(
-            f"Failed to {operation_name} {register_type} {register_name}: {e}"
+            translation_domain=DOMAIN,
+            translation_key="write_failed",
+            translation_placeholders={
+                "operation_name": operation_name,
+                "register_type": register_type,
+                "register_name": register_name,
+                "error": str(e),
+            },
         ) from e
     except Exception as e:
         _LOGGER.error(f"Error {operation_name} {register_type} {register_name}: {e}")
@@ -234,7 +241,13 @@ async def safe_write_register(
             except Exception as refresh_err:
                 _LOGGER.debug(f"Failed to refresh after write error: {refresh_err}")
         raise HomeAssistantError(
-            f"Failed to {operation_name} {register_type} {register_name}"
+            translation_domain=DOMAIN,
+            translation_key="write_failed_no_detail",
+            translation_placeholders={
+                "operation_name": operation_name,
+                "register_type": register_type,
+                "register_name": register_name,
+            },
         ) from e
 
 

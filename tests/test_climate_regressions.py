@@ -83,7 +83,9 @@ def _load_climate_module(monkeypatch):
     exceptions_module = types.ModuleType("homeassistant.exceptions")
 
     class HomeAssistantError(Exception):
-        pass
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args)
+            self.kwargs = kwargs
 
     exceptions_module.HomeAssistantError = HomeAssistantError
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)

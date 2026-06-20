@@ -143,10 +143,16 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
                     )
                 else:
                     raise HomeAssistantError(
-                        "Coordinator does not have data_manager attribute"
+                        translation_domain=DOMAIN,
+                        translation_key="coordinator_no_data_manager",
                     )
                 return
 
         raise HomeAssistantError(
-            f"Unsupported option '{option}' for {self._register_name}"
+            translation_domain=DOMAIN,
+            translation_key="unsupported_option",
+            translation_placeholders={
+                "option": option,
+                "register_name": self._register_name,
+            },
         )

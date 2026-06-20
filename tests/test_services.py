@@ -414,7 +414,7 @@ class TestSetOperationModeService:
         # Execute and expect error
         with pytest.raises(
             ServiceValidationError,
-            match="Configuration entry invalid_entry_id not found",
+            
         ):
             await async_set_operation_mode(hass, call)
 
@@ -441,7 +441,7 @@ class TestSetOperationModeService:
         # Execute and expect error
         with pytest.raises(
             ServiceValidationError,
-            match="Configuration entry test_entry_id is not loaded",
+            
         ):
             await async_set_operation_mode(hass, call)
 
@@ -469,7 +469,7 @@ class TestSetOperationModeService:
 
         # Execute and expect error
         with pytest.raises(
-            ServiceValidationError, match="Invalid operation mode: invalid_mode"
+            ServiceValidationError, 
         ):
             await async_set_operation_mode(hass, call)
 
@@ -575,7 +575,7 @@ class TestSetDHWStateService:
         # Execute and expect error
         with pytest.raises(
             ServiceValidationError,
-            match="Configuration entry invalid_entry_id not found",
+            
         ):
             await async_set_dhw_state(hass, call)
 
@@ -898,7 +898,7 @@ class TestSetSmartGridModeService:
         # Execute and expect error
         with pytest.raises(
             ServiceValidationError,
-            match="Configuration entry invalid_entry_id not found",
+            
         ):
             await async_set_smart_grid_mode(hass, call)
 
@@ -926,7 +926,7 @@ class TestSetSmartGridModeService:
 
         # Execute and expect error
         with pytest.raises(
-            ServiceValidationError, match="Invalid Smart Grid mode: invalid_mode"
+            ServiceValidationError, 
         ):
             await async_set_smart_grid_mode(hass, call)
 

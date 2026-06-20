@@ -771,5 +771,34 @@
         }
       }
     }
+  },
+  "exceptions": {
+    "config_entry_not_found": {
+      "message": "Configuration entry {config_entry_id} not found"
+    },
+    "config_entry_not_loaded": {
+      "message": "Configuration entry {config_entry_id} is not loaded"
+    },
+    "invalid_operation_mode": {
+      "message": "Invalid operation mode: {operation_mode}"
+    },
+    "invalid_smart_grid_mode": {
+      "message": "Invalid Smart Grid mode: {smart_grid_mode}"
+    },
+    "invalid_quiet_mode": {
+      "message": "Invalid Quiet mode: {quiet_mode}"
+    },
+    "write_failed": {
+      "message": "Failed to {operation_name} {register_type} {register_name}: {error}"
+    },
+    "write_failed_no_detail": {
+      "message": "Failed to {operation_name} {register_type} {register_name}"
+    },
+    "coordinator_no_data_manager": {
+      "message": "Coordinator does not have data_manager attribute"
+    },
+    "unsupported_option": {
+      "message": "Unsupported option '{option}' for {register_name}"
+    }
   }
 }
