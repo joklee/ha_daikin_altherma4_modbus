@@ -10,12 +10,12 @@ except ImportError:
     CONF_HOST = "host"
     CONF_PORT = "port"
 
+from .config_entry_utils import entry_data_value
 from .config_flow import (
     _build_fix_schema,
     _is_valid_host,
     _test_connection,
 )
-from .config_entry_utils import entry_data_value
 
 _LOGGER = logging.getLogger(__name__)
 
