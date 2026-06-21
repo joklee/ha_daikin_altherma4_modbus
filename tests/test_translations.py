@@ -359,3 +359,63 @@ class TestTranslations:
         assert not missing, (
             "enum_map values missing as state keys in de.json:\n" + "\n".join(missing)
         )
+
+    def test_config_flow_translation_structure(self, component_dir):
+        """Verify config flow translations follow HA schema.
+
+        config.step.<step_id> must have: title, description, data, data_description
+        config.reauth and config.reconfigure must use step sub-key structure,
+        not have data/data_description directly.
+        """
+        valid_step_keys = {"title", "description", "data", "data_description"}
+        # Keys allowed at config.reauth / config.reconfigure level (no data/data_description)
+        valid_section_keys = {"step"}
+
+        for lang in ["en", "de"]:
+            filepath = component_dir / "translations" / f"{lang}.json"
+            with open(filepath, encoding="utf-8") as f:
+                data = json.load(f)
+
+            config = data.get("config", {})
+
+            # Validate config.step
+            steps = config.get("step", {})
+            for step_id, step_data in steps.items():
+                if isinstance(step_data, dict):
+                    extra = set(step_data.keys()) - valid_step_keys
+                    assert not extra, (
+                        f"{lang}.json: config.step.{step_id} has extra keys: {extra}"
+                    )
+
+            # Validate config.reauth — must use step sub-key, not direct data
+            reauth = config.get("reauth", {})
+            if reauth:
+                extra = set(reauth.keys()) - valid_section_keys
+                assert not extra, (
+                    f"{lang}.json: config.reauth has extra keys {extra} at top level. "
+                    f"Use config.reauth.step.<step_id> structure instead."
+                )
+                # Validate nested steps
+                for step_id, step_data in reauth.get("step", {}).items():
+                    if isinstance(step_data, dict):
+                        step_extra = set(step_data.keys()) - valid_step_keys
+                        assert not step_extra, (
+                            f"{lang}.json: config.reauth.step.{step_id} has extra "
+                            f"keys: {step_extra}"
+                        )
+
+            # Validate config.reconfigure — must use step sub-key, not direct data
+            reconfigure = config.get("reconfigure", {})
+            if reconfigure:
+                extra = set(reconfigure.keys()) - valid_section_keys
+                assert not extra, (
+                    f"{lang}.json: config.reconfigure has extra keys {extra} at top "
+                    f"level. Use config.reconfigure.step.<step_id> structure instead."
+                )
+                for step_id, step_data in reconfigure.get("step", {}).items():
+                    if isinstance(step_data, dict):
+                        step_extra = set(step_data.keys()) - valid_step_keys
+                        assert not step_extra, (
+                            f"{lang}.json: config.reconfigure.step.{step_id} has "
+                            f"extra keys: {step_extra}"
+                        )
