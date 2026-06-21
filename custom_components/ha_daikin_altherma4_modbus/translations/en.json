@@ -20,53 +20,45 @@
           "electric_power_sensor": "Optional entity ID for external electric power sensor",
           "demo_mode": "Enable demo mode without real connection"
         }
-      }
-    },
-    "reauth": {
-      "step": {
-        "reauth": {
-          "title": "Re-authenticate Daikin Altherma 4 Modbus",
-          "description": "Update the connection details for your Daikin Altherma 4 heat pump.",
-          "data": {
-            "host": "Host",
-            "port": "Port",
-            "scan_interval": "Scan Interval",
-            "slow_scan_interval": "Slow Scan Interval",
-            "electric_power_sensor": "External Electric Power Sensor Entity ID",
-            "demo_mode": "Demo Mode"
-          },
-          "data_description": {
-            "host": "IP address or hostname of the Daikin Altherma heat pump",
-            "port": "Modbus TCP port (default: 502)",
-            "scan_interval": "Scan interval in seconds for normal data",
-            "slow_scan_interval": "Scan interval in seconds for slow data",
-            "electric_power_sensor": "Optional entity ID for external electric power sensor",
-            "demo_mode": "Enable demo mode without real connection"
-          }
+      },
+      "reauth": {
+        "title": "Re-authenticate Daikin Altherma 4 Modbus",
+        "description": "Update the connection details for your Daikin Altherma 4 heat pump.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Scan Interval",
+          "slow_scan_interval": "Slow Scan Interval",
+          "electric_power_sensor": "External Electric Power Sensor Entity ID",
+          "demo_mode": "Demo Mode"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the Daikin Altherma heat pump",
+          "port": "Modbus TCP port (default: 502)",
+          "scan_interval": "Scan interval in seconds for normal data",
+          "slow_scan_interval": "Scan interval in seconds for slow data",
+          "electric_power_sensor": "Optional entity ID for external electric power sensor",
+          "demo_mode": "Enable demo mode without real connection"
         }
-      }
-    },
-    "reconfigure": {
-      "step": {
-        "reconfigure": {
-          "title": "Reconfigure Daikin Altherma 4 Modbus",
-          "description": "Update the connection details for your Daikin Altherma 4 heat pump.",
-          "data": {
-            "host": "Host",
-            "port": "Port",
-            "scan_interval": "Scan Interval",
-            "slow_scan_interval": "Slow Scan Interval",
-            "electric_power_sensor": "External Electric Power Sensor Entity ID",
-            "demo_mode": "Demo Mode"
-          },
-          "data_description": {
-            "host": "IP address or hostname of the Daikin Altherma heat pump",
-            "port": "Modbus TCP port (default: 502)",
-            "scan_interval": "Scan interval in seconds for normal data",
-            "slow_scan_interval": "Scan interval in seconds for slow data",
-            "electric_power_sensor": "Optional entity ID for external electric power sensor",
-            "demo_mode": "Enable demo mode without real connection"
-          }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Daikin Altherma 4 Modbus",
+        "description": "Update the connection details for your Daikin Altherma 4 heat pump.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Scan Interval",
+          "slow_scan_interval": "Slow Scan Interval",
+          "electric_power_sensor": "External Electric Power Sensor Entity ID",
+          "demo_mode": "Demo Mode"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the Daikin Altherma heat pump",
+          "port": "Modbus TCP port (default: 502)",
+          "scan_interval": "Scan interval in seconds for normal data",
+          "slow_scan_interval": "Scan interval in seconds for slow data",
+          "electric_power_sensor": "Optional entity ID for external electric power sensor",
+          "demo_mode": "Enable demo mode without real connection"
         }
       }
     }
@@ -89,9 +81,7 @@
           "demo_mode": "Enable demo mode without real connection"
         }
       }
-    },
-    "reauth_successful": "Connection details updated successfully. Reloading integration.",
-    "reconfigure_successful": "Connection details updated successfully. Reloading integration."
+    }
   },
   "device": {
     "daikin_altherma_modbus_input_registers": {
@@ -740,37 +730,13 @@
       "message": "Coordinator does not have data_manager attribute"
     },
     "unsupported_option": {
-      "message": "Unsupported option '{option}' for {register_name}"
+      "message": "Unsupported option {option} for {register_name}"
     }
   },
   "issues": {
     "connection_lost": {
       "title": "Connection lost to Daikin Altherma 4",
-      "description": "The connection to your Daikin Altherma 4 heat pump ({entry_name}) has been lost.\n\nError: {error_message}\n\nPlease check that the device is powered on and accessible on the network. You can try to fix this by reconfiguring the connection settings.",
-      "fix_flow": {
-        "step": {
-          "fix_connection": {
-            "title": "Reconfigure connection",
-            "description": "Update the connection settings for your Daikin Altherma 4 heat pump.",
-            "data": {
-              "host": "Host",
-              "port": "Port"
-            },
-            "data_description": {
-              "host": "IP address or hostname of the Daikin Altherma heat pump",
-              "port": "Modbus TCP port (default: 502)"
-            }
-          }
-        },
-        "error": {
-          "cannot_connect": "Failed to connect to the device. Please verify the host and port are correct.",
-          "unknown": "An unexpected error occurred."
-        },
-        "abort": {
-          "fix_successful": "Connection reconfigured successfully. The integration will reload.",
-          "entry_not_found": "Configuration entry not found."
-        }
-      }
+      "description": "The connection to your Daikin Altherma 4 heat pump ({entry_name}) has been lost.\n\nError: {error_message}\n\nPlease check that the device is powered on and accessible on the network. You can try to fix this by reconfiguring the connection settings."
     },
     "device_abnormality": {
       "title": "Daikin Altherma 4 reports abnormality",
