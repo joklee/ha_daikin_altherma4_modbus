@@ -1,0 +1,128 @@
+{
+  "climate": {
+    "daikin_dhw_manual_thermostat": {
+      "icon": "mdi:water-boiler"
+    },
+    "daikin_dhw_booster_thermostat": {
+      "icon": "mdi:water-boiler-alert"
+    }
+  },
+  "switch": {
+    "coil_1": {
+      "icon": "mdi:power"
+    },
+    "coil_2": {
+      "icon": "mdi:power"
+    },
+    "coil_3": {
+      "icon": "mdi:power"
+    },
+    "holding_4": {
+      "icon": "mdi:power"
+    },
+    "holding_13": {
+      "icon": "mdi:power"
+    },
+    "holding_15": {
+      "icon": "mdi:power"
+    }
+  },
+  "sensor": {
+    "input_21": {
+      "icon": "mdi:alert-circle"
+    },
+    "input_22": {
+      "icon": "mdi:alert-circle"
+    },
+    "input_23": {
+      "icon": "mdi:alert-circle"
+    },
+    "input_30": {
+      "icon": "mdi:pump"
+    },
+    "input_31": {
+      "icon": "mdi:compressor"
+    },
+    "input_32": {
+      "icon": "mdi:heater"
+    },
+    "input_33": {
+      "icon": "mdi:water-boiler"
+    },
+    "input_35": {
+      "icon": "mdi:snowflake-melt"
+    },
+    "input_36": {
+      "icon": "mdi:fire"
+    },
+    "input_37": {
+      "icon": "mdi:pipe-valve"
+    },
+    "input_38": {
+      "icon": "mdi:thermostat"
+    },
+    "input_49": {
+      "icon": "mdi:water"
+    },
+    "input_52": {
+      "icon": "mdi:information"
+    },
+    "input_53": {
+      "icon": "mdi:information"
+    },
+    "input_63": {
+      "icon": "mdi:water-pump"
+    },
+    "input_65": {
+      "icon": "mdi:lightning-bolt"
+    },
+    "input_66": {
+      "icon": "mdi:valve"
+    },
+    "input_67": {
+      "icon": "mdi:valve"
+    },
+    "input_68": {
+      "icon": "mdi:water-pump"
+    },
+    "input_69": {
+      "icon": "mdi:fan"
+    },
+    "input_70": {
+      "icon": "mdi:fan"
+    },
+    "input_71": {
+      "icon": "mdi:valve"
+    },
+    "input_82": {
+      "icon": "mdi:counter"
+    },
+    "input_83": {
+      "icon": "mdi:cog"
+    },
+    "input_84": {
+      "icon": "mdi:thermometer-low"
+    },
+    "input_85": {
+      "icon": "mdi:thermometer-high"
+    },
+    "input_86": {
+      "icon": "mdi:thermometer-low"
+    },
+    "input_87": {
+      "icon": "mdi:thermometer-high"
+    },
+    "thermal_heat_output": {
+      "icon": "mdi:fire"
+    },
+    "cop": {
+      "icon": "mdi:gauge"
+    },
+    "delta_t": {
+      "icon": "mdi:thermometer-lines"
+    },
+    "external_electric_power": {
+      "icon": "mdi:flash"
+    }
+  }
+}
