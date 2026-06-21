@@ -5,7 +5,6 @@ import logging
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .config_entry_utils import entry_data_value
 from .const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
 from .data_manager import ModbusDataManager
 from .exceptions import (

@@ -2,7 +2,6 @@
 
 import logging
 
-import voluptuous as vol
 from homeassistant import config_entries
 
 try:
