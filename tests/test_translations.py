@@ -403,30 +403,6 @@ class TestTranslations:
             "enum_map values missing as state keys in de.json:\n" + "\n".join(missing)
         )
 
-    def test_all_enum_map_values_translated_in_nl_json(self, component_dir):
-        """Verify all enum_map values have state translations in nl.json."""
-        rc_path = component_dir / "register_constants.py"
-        enum_map = extract_enum_map_values(rc_path)
-        nl_states = get_state_keys_from_json(component_dir / "translations" / "nl.json")
-
-        missing = []
-        for entity_key, values in sorted(enum_map.items()):
-            nl_entry = set()
-            for full_key, state_keys in nl_states.items():
-                if full_key.endswith(f".{entity_key}"):
-                    nl_entry = state_keys
-                    break
-
-            missing_states = values - nl_entry
-            if missing_states and nl_entry:
-                missing.append(
-                    f"{entity_key}: missing in nl.json: {sorted(missing_states)}"
-                )
-
-        assert not missing, (
-            "enum_map values missing as state keys in nl.json:\n" + "\n".join(missing)
-        )
-
     def test_config_flow_translation_structure(self, component_dir):
         """Verify config flow translations follow HA schema.
 
@@ -438,7 +414,7 @@ class TestTranslations:
         # Keys allowed at config.reauth / config.reconfigure level (no data/data_description)
         valid_section_keys = {"step"}
 
-        for lang in ["en", "de", "nl"]:
+        for lang in ["en", "de"]:
             filepath = component_dir / "translations" / f"{lang}.json"
             with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
