@@ -66,10 +66,14 @@ class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     _attr_has_entity_name = True
 <<<<<<< HEAD
+<<<<<<< HEAD
     _attr_log_when_unavailable = False
 =======
     _attr_log_when_unavailable = True
 >>>>>>> 2498b53 (feat: add reauth flow, entity logging, and improved test coverage)
+=======
+    _attr_log_when_unavailable = False
+>>>>>>> 1d5e7f1 (Reduce log noise during connection loss)
 
     def __init__(
         self,
@@ -111,10 +115,14 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
 
     _attr_has_entity_name = True
 <<<<<<< HEAD
+<<<<<<< HEAD
     _attr_log_when_unavailable = False
 =======
     _attr_log_when_unavailable = True
 >>>>>>> 2498b53 (feat: add reauth flow, entity logging, and improved test coverage)
+=======
+    _attr_log_when_unavailable = False
+>>>>>>> 1d5e7f1 (Reduce log noise during connection loss)
 
     def __init__(
         self,
