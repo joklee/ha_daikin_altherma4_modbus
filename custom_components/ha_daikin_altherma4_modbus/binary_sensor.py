@@ -65,7 +65,7 @@ class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Ein Binary Sensor für Modbus-Register."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
@@ -106,7 +106,7 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
     """A Binary Sensor for Discrete Input Register."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
