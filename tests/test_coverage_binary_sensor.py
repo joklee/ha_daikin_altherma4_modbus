@@ -1,6 +1,7 @@
 """Tests for binary_sensor.py - target >95% coverage."""
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -25,17 +26,18 @@ def _mock_coordinator(data=None):
 def _mock_entry():
     coordinator = _mock_coordinator()
     runtime_data = SimpleNamespace(coordinator=coordinator)
-    return SimpleNamespace(
-        entry_id="test", data={}, options={}, runtime_data=runtime_data
-    )
+    return SimpleNamespace(entry_id="test", data={}, options={}, runtime_data=runtime_data)
 
 
 @pytest.mark.asyncio
 async def test_async_setup_entry_creates_binary_sensors():
     """Test that async_setup_entry creates DaikinBinarySensor for running/problem device_class."""
+    coordinator = _mock_coordinator()
     entry = _mock_entry()
     hass = SimpleNamespace()
-    hass.config_entries = SimpleNamespace(async_entries=lambda domain: [])
+    hass.config_entries = SimpleNamespace(
+        async_entries=lambda domain: []
+    )
 
     added = []
 
@@ -56,13 +58,15 @@ async def test_async_setup_entry_creates_binary_sensors():
 @pytest.mark.asyncio
 async def test_async_setup_entry_returns_on_no_coordinator():
     """Test that async_setup_entry returns early if coordinator is None."""
+    coordinator = _mock_coordinator()
     entry = _mock_entry()
     hass = SimpleNamespace()
-    hass.config_entries = SimpleNamespace(async_entries=lambda domain: [])
+    hass.config_entries = SimpleNamespace(
+        async_entries=lambda domain: []
+    )
 
     # Patch get_coordinator_from_entry to return None
     import custom_components.ha_daikin_altherma4_modbus.binary_sensor as bs_mod
-
     original = bs_mod.get_coordinator_from_entry
     bs_mod.get_coordinator_from_entry = lambda *a: None
 
