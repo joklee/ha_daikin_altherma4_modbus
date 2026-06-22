@@ -11,29 +11,26 @@ def _stub_config_flow():
     """Stub config_flow module imports needed by repair_flow."""
     import sys
     from types import ModuleType
-
+    
     # Ensure config_entry_utils is stubbed
     mod_name = "custom_components.ha_daikin_altherma4_modbus.config_entry_utils"
-    utils_mod = ModuleType(mod_name)
-    utils_mod.entry_data_value = lambda entry, key, default: default
-    utils_mod.entry_value = lambda entry, key: (
-        entry.data.get(key) if hasattr(entry, "data") else None
-    )
-    sys.modules[mod_name] = utils_mod
-
-    # Always force-set config_flow stub to ensure _build_fix_schema is available
-    cf_mod = ModuleType("custom_components.ha_daikin_altherma4_modbus.config_flow")
-    cf_mod._build_fix_schema = lambda host="", port=502: {
-        "host": host,
-        "port": port,
-    }
-    cf_mod._is_valid_host = lambda host: bool(host)
-    cf_mod._test_connection = AsyncMock(return_value=(True, None))
-    sys.modules["custom_components.ha_daikin_altherma4_modbus.config_flow"] = cf_mod
-
-    # Also force-set repair_flow to ensure it picks up the stubbed config_flow
-    if "custom_components.ha_daikin_altherma4_modbus.repair_flow" in sys.modules:
-        del sys.modules["custom_components.ha_daikin_altherma4_modbus.repair_flow"]
+    if mod_name not in sys.modules:
+        utils_mod = ModuleType(mod_name)
+        utils_mod.entry_data_value = lambda entry, key, default: default
+        utils_mod.entry_value = lambda entry, key: entry.data.get(key) if hasattr(entry, "data") else None
+        sys.modules[mod_name] = utils_mod
+    
+    # Ensure config_flow is stubbed
+    if "custom_components.ha_daikin_altherma4_modbus.config_flow" not in sys.modules:
+        cf_mod = ModuleType(
+            "custom_components.ha_daikin_altherma4_modbus.config_flow"
+        )
+        cf_mod._build_fix_schema = lambda host="", port=502: {"host": host, "port": port}
+        cf_mod._is_valid_host = lambda host: bool(host)
+        cf_mod._test_connection = AsyncMock(return_value=(True, None))
+        sys.modules[
+            "custom_components.ha_daikin_altherma4_modbus.config_flow"
+        ] = cf_mod
 
 
 @pytest.mark.asyncio
@@ -105,11 +102,9 @@ async def test_repair_flow_updates_entry_on_valid_input():
         )
     )
 
-    result = await flow.async_step_fix_connection(
-        {
-            "host": "192.168.1.200",
-            "port": 502,
-        }
-    )
+    result = await flow.async_step_fix_connection({
+        "host": "192.168.1.200",
+        "port": 502,
+    })
     assert result["reason"] == "fix_successful"
     assert reload_called

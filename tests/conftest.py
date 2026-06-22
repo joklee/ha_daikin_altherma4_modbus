@@ -16,6 +16,7 @@ homeassistant = types.ModuleType("homeassistant")
 homeassistant.__path__ = []
 sys.modules["homeassistant"] = homeassistant
 
+<<<<<<< HEAD
 const_module = types.ModuleType("homeassistant.const")
 const_module.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
 const_module.CONF_HOST = "host"
@@ -23,6 +24,14 @@ const_module.CONF_PORT = "port"
 const_module.UnitOfTemperature = types.SimpleNamespace(CELSIUS="°C")
 sys.modules["homeassistant.const"] = const_module
 homeassistant.const = const_module
+=======
+    const_module = types.ModuleType("homeassistant.const")
+    const_module.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
+    const_module.CONF_HOST = "host"
+    const_module.CONF_PORT = "port"
+    const_module.UnitOfTemperature = types.SimpleNamespace(CELSIUS="°C")
+    sys.modules["homeassistant.const"] = const_module
+>>>>>>> d7cf257 (Add coverage tests for diagnostics.py and repair_flow.py)
 
 # Create entity base class with ABCMeta to avoid metaclass conflicts
 # when using multiple inheritance (e.g. CoordinatorEntity + BinarySensorEntity)
@@ -367,6 +376,24 @@ for name, module in [
     )
     sys.modules["homeassistant.components.climate"] = climate_module
     sys.modules["homeassistant.components.climate.const"] = climate_const_module
+
+    # Config entries stub
+    config_entries_module = types.ModuleType("homeassistant.config_entries")
+    class MockConfigFlow:
+        def async_abort(self, reason=None):
+            return {"reason": reason}
+        def async_show_form(self, **kwargs):
+            return kwargs
+    config_entries_module.ConfigFlow = MockConfigFlow
+    config_entries_module.ConfigEntry = type("ConfigEntry", (), {})
+    sys.modules["homeassistant.config_entries"] = config_entries_module
+
+    # Components diagnostics stub
+    diagnostics_module = types.ModuleType("homeassistant.components.diagnostics")
+    diagnostics_module.async_redact_data = lambda data, to_redact: {
+        k: "**REDACTED**" if k in to_redact else v for k, v in data.items()
+    }
+    sys.modules["homeassistant.components.diagnostics"] = diagnostics_module
 
     # Unit of temperature stub
     const_module.UnitOfTemperature = types.SimpleNamespace(CELSIUS="°C")
