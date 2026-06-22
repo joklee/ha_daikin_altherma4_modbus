@@ -325,45 +325,45 @@ for name, module in [
     issue_registry_module.async_get = lambda hass: types.SimpleNamespace(issues={})
     sys.modules["homeassistant.helpers.issue_registry"] = issue_registry_module
 
-    # All entity stubs use type() to avoid metaclass conflicts
-    def _make_entity(name):
-        """Create a base entity class using type() for consistent metaclass."""
-        return type(name, (), {"__init__": lambda self, **kwargs: None})
+    # Single base class for all entity stubs to avoid metaclass conflicts
+    class _EntityBase:
+        def __init__(self, **kwargs):
+            pass
 
     # Restore state stub
     restore_state_module = types.ModuleType("homeassistant.helpers.restore_state")
-    restore_state_module.RestoreEntity = _make_entity("RestoreEntity")
+    restore_state_module.RestoreEntity = _EntityBase
     sys.modules["homeassistant.helpers.restore_state"] = restore_state_module
 
     # Binary sensor stub
     binary_sensor_module = types.ModuleType("homeassistant.components.binary_sensor")
-    binary_sensor_module.BinarySensorEntity = _make_entity("BinarySensorEntity")
+    binary_sensor_module.BinarySensorEntity = _EntityBase
     sys.modules["homeassistant.components.binary_sensor"] = binary_sensor_module
 
     # Sensor stub
     sensor_module = types.ModuleType("homeassistant.components.sensor")
-    sensor_module.SensorEntity = _make_entity("SensorEntity")
+    sensor_module.SensorEntity = _EntityBase
     sensor_module.SensorStateClass = types.SimpleNamespace(MEASUREMENT="measurement")
     sys.modules["homeassistant.components.sensor"] = sensor_module
 
     # Switch stub
     switch_module = types.ModuleType("homeassistant.components.switch")
-    switch_module.SwitchEntity = _make_entity("SwitchEntity")
+    switch_module.SwitchEntity = _EntityBase
     sys.modules["homeassistant.components.switch"] = switch_module
 
     # Number stub
     number_module = types.ModuleType("homeassistant.components.number")
-    number_module.NumberEntity = _make_entity("NumberEntity")
+    number_module.NumberEntity = _EntityBase
     sys.modules["homeassistant.components.number"] = number_module
 
     # Select stub
     select_module = types.ModuleType("homeassistant.components.select")
-    select_module.SelectEntity = _make_entity("SelectEntity")
+    select_module.SelectEntity = _EntityBase
     sys.modules["homeassistant.components.select"] = select_module
 
     # Climate stub
     climate_module = types.ModuleType("homeassistant.components.climate")
-    climate_module.ClimateEntity = _make_entity("ClimateEntity")
+    climate_module.ClimateEntity = _EntityBase
     climate_const_module = types.ModuleType("homeassistant.components.climate.const")
     climate_const_module.ClimateEntityFeature = types.SimpleNamespace(
         TARGET_TEMPERATURE=1, FAN_MODE=2
