@@ -33,22 +33,21 @@ if "homeassistant" not in sys.modules:
     update_coordinator_module = types.ModuleType(
         "homeassistant.helpers.update_coordinator"
     )
-    # Use type() for all stubs to avoid metaclass conflicts
-    MockCoordinatorEntity = type(
-        "MockCoordinatorEntity",
-        (),
-        {"__init__": lambda self, coordinator=None: setattr(self, "coordinator", coordinator)},
-    )
-    MockDataUpdateCoordinator = type(
-        "MockDataUpdateCoordinator",
-        (),
-        {"__init__": lambda self, hass=None, logger=None, name=None, update_interval=None: (setattr(self, "hass", hass), setattr(self, "data", {}))},
-    )
-    MockCoordinatorEntity.__module__ = "homeassistant.helpers.update_coordinator"
-    MockDataUpdateCoordinator.__module__ = "homeassistant.helpers.update_coordinator"
+    # Single base class for all HA entity stubs to avoid metaclass conflicts
+    class _HAEntityBase:
+        def __init__(self, coordinator=None, **kwargs):
+            self.coordinator = coordinator
 
-    update_coordinator_module.DataUpdateCoordinator = MockDataUpdateCoordinator
-    update_coordinator_module.CoordinatorEntity = MockCoordinatorEntity
+    class _HADataUpdateCoordinator:
+        def __init__(self, hass=None, logger=None, name=None, update_interval=None):
+            self.hass = hass
+            self.data = {}
+
+    _HAEntityBase.__module__ = "homeassistant.helpers.update_coordinator"
+    _HADataUpdateCoordinator.__module__ = "homeassistant.helpers.update_coordinator"
+
+    update_coordinator_module.DataUpdateCoordinator = _HADataUpdateCoordinator
+    update_coordinator_module.CoordinatorEntity = _HAEntityBase
     update_coordinator_module.UpdateFailed = Exception
     sys.modules["homeassistant.helpers.update_coordinator"] = update_coordinator_module
 
@@ -77,10 +76,8 @@ if "homeassistant" not in sys.modules:
     issue_registry_module.async_get = lambda hass: types.SimpleNamespace(issues={})
     sys.modules["homeassistant.helpers.issue_registry"] = issue_registry_module
 
-    # Single base class for all entity stubs to avoid metaclass conflicts
-    class _EntityBase:
-        def __init__(self, **kwargs):
-            pass
+    # All entity stubs use the same base class to avoid metaclass conflicts
+    _EntityBase = _HAEntityBase
 
     # Restore state stub
     restore_state_module = types.ModuleType("homeassistant.helpers.restore_state")
