@@ -7,14 +7,17 @@ import pytest
 from custom_components.ha_daikin_altherma4_modbus.mapping_transform import (
     ModbusMappingTransform,
 )
+from custom_components.ha_daikin_altherma4_modbus.const import (
+    SPECIAL_REGISTER_NOT_SUPPORTED,
+    SPECIAL_REGISTER_VALUES,
+)
 from custom_components.ha_daikin_altherma4_modbus.register_types import (
     INT16,
+    SensorRegister,
 )
 
 
-def _make_register_item(
-    address, register_name, enum_map=None, data_type=INT16, input_type="input"
-):
+def _make_register_item(address, register_name, enum_map=None, data_type=INT16, input_type="input"):
     item = SimpleNamespace(
         address=address,
         register_name=register_name,
@@ -25,13 +28,10 @@ def _make_register_item(
     return item
 
 
-def _make_processed_item(
-    raw_value, register_name, input_type="input", address=1, item=None
-):
+def _make_processed_item(raw_value, register_name, input_type="input", address=1, item=None):
     from custom_components.ha_daikin_altherma4_modbus.data_types import (
         ProcessedRegisterItem,
     )
-
     return ProcessedRegisterItem(
         raw_value=raw_value,
         input_type=input_type,
@@ -141,19 +141,18 @@ def test_process_bit_sensors_out_of_range():
 
 def test_update_last_triggered():
     """Test update_last_triggered updates timestamps on 0->1 transition."""
-    # Stub homeassistant.util BEFORE importing mapping_transform
-    import sys
-    from datetime import datetime, timezone
-    from types import ModuleType
-
+    from datetime import datetime
     from custom_components.ha_daikin_altherma4_modbus.register_types import (
         CalculatedRegister,
     )
 
+    # Stub homeassistant.util BEFORE importing mapping_transform
+    import sys
+    from types import ModuleType
     if "homeassistant.util" not in sys.modules:
         util_mod = ModuleType("homeassistant.util")
         dt_mod = ModuleType("homeassistant.util.dt")
-        fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_time = datetime(2024, 1, 1, 12, 0, 0)
         dt_mod.now = lambda: fixed_time
         util_mod.dt = dt_mod
         sys.modules["homeassistant.util"] = util_mod
@@ -173,7 +172,6 @@ def test_update_last_triggered():
     )
     # Patch CALCULATED_SENSORS in the mapping_transform module
     import custom_components.ha_daikin_altherma4_modbus.mapping_transform as mt_mod
-
     original_calc = mt_mod.CALCULATED_SENSORS
     mt_mod.CALCULATED_SENSORS = [calc_item]
 

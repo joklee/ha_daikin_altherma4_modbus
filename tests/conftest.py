@@ -395,6 +395,14 @@ for name, module in [
     }
     sys.modules["homeassistant.components.diagnostics"] = diagnostics_module
 
+    # homeassistant.util stub (needed by mapping_transform.py)
+    util_module = types.ModuleType("homeassistant.util")
+    dt_module = types.ModuleType("homeassistant.util.dt")
+    dt_module.now = lambda: None
+    util_module.dt = dt_module
+    sys.modules["homeassistant.util"] = util_module
+    sys.modules["homeassistant.util.dt"] = dt_module
+
     # Unit of temperature stub
     const_module.UnitOfTemperature = types.SimpleNamespace(CELSIUS="°C")
 >>>>>>> d14e933 (Add binary_sensor coverage tests and improve conftest stubs)
