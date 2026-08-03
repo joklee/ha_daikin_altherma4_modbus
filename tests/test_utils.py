@@ -36,7 +36,6 @@ class UpdateFailed(Exception):
     """Mock UpdateFailed exception."""
 
 
-
 class MockSensorEntity:
     """Mock SensorEntity for testing."""
 

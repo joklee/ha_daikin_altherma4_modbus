@@ -741,7 +741,10 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
     # Verify initial state
     assert entity.native_value == 20, "Initial value should be 20"
 
-    with caplog.at_level(logging.ERROR, logger=common_name), pytest.raises(Exception) as exc_info:
+    with (
+        caplog.at_level(logging.ERROR, logger=common_name),
+        pytest.raises(Exception) as exc_info,
+    ):
         await entity.async_set_native_value(25.0)
 
     # Verify the exception was raised with expected message

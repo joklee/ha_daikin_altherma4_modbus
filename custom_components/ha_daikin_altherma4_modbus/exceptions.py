@@ -21,27 +21,21 @@ class ModbusConnectionException(DaikinModbusException):
     """Exception raised when Modbus connection fails."""
 
 
-
 class ModbusReadException(DaikinModbusException):
     """Exception raised when Modbus read operation fails."""
-
 
 
 class ModbusWriteException(DaikinModbusException):
     """Exception raised when Modbus write operation fails."""
 
 
-
 class ModbusTimeoutException(DaikinModbusException):
     """Exception raised when Modbus operation times out."""
-
 
 
 class ModbusInvalidAddressException(DaikinModbusException):
     """Exception raised when invalid Modbus address is used."""
 
 
-
 class ModbusDeviceException(DaikinModbusException):
     """Exception raised when Modbus device reports an error."""
-

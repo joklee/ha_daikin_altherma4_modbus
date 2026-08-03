@@ -149,7 +149,9 @@ class MockModbusTcpClient(ModbusClientInterface):
                     11,
                 ]:  # Compressor, Circulation pump, Booster heater
                     value = random.choice([1])
-                elif address == 12 or address == 13 or address == 14:  # Disinfection operation
+                elif (
+                    address == 12 or address == 13 or address == 14
+                ):  # Disinfection operation
                     value = 0
                 elif address == 15:  # Fernbedienung Raumtemperatur(Zusatz)
                     value = 32765
@@ -197,9 +199,7 @@ class MockModbusTcpClient(ModbusClientInterface):
                     value = 3500  # 35.0°C
                 # Check if it's an enum register
                 elif getattr(register_def, "enum_map", None):
-                    enum_keys = [
-                        k for k in register_def.enum_map if isinstance(k, int)
-                    ]
+                    enum_keys = [k for k in register_def.enum_map if isinstance(k, int)]
                     if enum_keys:
                         value = random.choice(enum_keys)
                     else:

@@ -121,3 +121,12 @@ home-assistant_v2.db-wal
 # OS
 .DS_Store
 Thumbs.db
+
+# Test and benchmark artifacts
+benchmark.json
+test-report.html
+test-results.xml
+todo
+
+# Cline rules
+.clinerules/
