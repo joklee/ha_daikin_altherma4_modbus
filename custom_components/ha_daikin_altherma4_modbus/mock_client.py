@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Any, List
+from typing import Any
 
 from .client_interface import ModbusClientInterface
 
@@ -149,11 +149,7 @@ class MockModbusTcpClient(ModbusClientInterface):
                     11,
                 ]:  # Compressor, Circulation pump, Booster heater
                     value = random.choice([1])
-                elif address == 12:  # Disinfection operation
-                    value = 0
-                elif address == 13:  # Defrost/Restart
-                    value = 0
-                elif address == 14:  # Hot start
+                elif address == 12 or address == 13 or address == 14:  # Disinfection operation
                     value = 0
                 elif address == 15:  # Fernbedienung Raumtemperatur(Zusatz)
                     value = 32765
@@ -177,9 +173,7 @@ class MockModbusTcpClient(ModbusClientInterface):
                     value = 45
                 elif address == 52:  # DHW normal operation
                     value = 1  # Operation
-                elif address == 53:
-                    value = 1
-                elif address == 63:
+                elif address == 53 or address == 63:
                     value = 1
                 elif address == 65:
                     value = 0
@@ -204,7 +198,7 @@ class MockModbusTcpClient(ModbusClientInterface):
                 # Check if it's an enum register
                 elif getattr(register_def, "enum_map", None):
                     enum_keys = [
-                        k for k in register_def.enum_map.keys() if isinstance(k, int)
+                        k for k in register_def.enum_map if isinstance(k, int)
                     ]
                     if enum_keys:
                         value = random.choice(enum_keys)
@@ -262,7 +256,7 @@ class MockModbusTcpClient(ModbusClientInterface):
 
                     enum_keys = [
                         k
-                        for k in register_def.enum_map.keys()
+                        for k in register_def.enum_map
                         if isinstance(k, int) and k not in SPECIAL_REGISTER_VALUES
                     ]
                     if enum_keys:
@@ -367,9 +361,7 @@ class MockModbusTcpClient(ModbusClientInterface):
             # Generate realistic coil values
             if i == 0:  # Index 0: Filler for address alignment
                 value = False
-            elif i == 1:  # Address 1
-                value = True
-            elif i == 2:  # Address 2
+            elif i == 1 or i == 2:  # Address 1
                 value = True
             elif i == 3:  # Address 3
                 value = False
@@ -389,7 +381,7 @@ class MockModbusResponse:
     """Mock Modbus response with 1-based indexing."""
 
     def __init__(
-        self, data: List[Any], address: int, count: int, is_bits: bool = False
+        self, data: list[Any], address: int, count: int, is_bits: bool = False
     ):
         self.is_bits = is_bits
         self._error = False

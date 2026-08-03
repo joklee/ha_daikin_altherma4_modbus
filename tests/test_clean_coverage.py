@@ -185,7 +185,7 @@ class TestIntegrationClean:
 
     def test_data_structure(self, demo_data):
         """Test data structure integrity."""
-        for key, values in demo_data.items():
+        for values in demo_data.values():
             assert isinstance(values, list)
             assert len(values) > 0
 

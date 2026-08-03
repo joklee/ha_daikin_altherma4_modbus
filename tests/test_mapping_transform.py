@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 def _ensure_homeassistant_stubs():
     """Ensure homeassistant stubs are available."""
-    modules_to_remove = [k for k in sys.modules.keys() if k.startswith("homeassistant")]
+    modules_to_remove = [k for k in sys.modules if k.startswith("homeassistant")]
     for module in modules_to_remove:
         del sys.modules[module]
 

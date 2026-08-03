@@ -4,7 +4,7 @@ Shared test utilities for Daikin Altherma 4 Modbus integration tests.
 """
 
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -29,13 +29,12 @@ class MockDataUpdateCoordinator:
 
     async def async_config_entry_first_refresh(self):
         """Mock initial refresh used during integration setup."""
-        return None
+        return
 
 
 class UpdateFailed(Exception):
     """Mock UpdateFailed exception."""
 
-    pass
 
 
 class MockSensorEntity:
@@ -146,4 +145,4 @@ def create_mock_coordinator():
 
 def create_test_trigger_time():
     """Create a consistent test trigger time."""
-    return datetime(2024, 3, 2, 20, 30, 0)
+    return datetime(2024, 3, 2, 20, 30, 0, tzinfo=timezone.utc)

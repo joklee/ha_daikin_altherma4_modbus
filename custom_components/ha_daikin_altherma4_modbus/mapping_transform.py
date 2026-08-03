@@ -1,7 +1,6 @@
 """Mapping/transform layer for raw Modbus responses."""
 
 import logging
-from typing import Dict, List
 
 from .common import get_register_value, is_unavailable_value, update_value_if_changed
 from .const import SPECIAL_REGISTER_NOT_SUPPORTED, SPECIAL_REGISTER_VALUES
@@ -27,15 +26,15 @@ class ModbusMappingTransform:
     @staticmethod
     def process_register_block(
         register_data,
-        register_list: List[RegisterDefinition],
+        register_list: list[RegisterDefinition],
         min_address: int,
         max_address: int,
         offset: int,
         default_input_type: str,
         register_description: str,
-    ) -> Dict[str, ProcessedRegisterItem]:
+    ) -> dict[str, ProcessedRegisterItem]:
         """Build raw register map for a configured address range."""
-        data: Dict[str, ProcessedRegisterItem] = {}
+        data: dict[str, ProcessedRegisterItem] = {}
         for item in register_list:
             address = item.address
             input_type = item.input_type or default_input_type
@@ -128,7 +127,7 @@ class ModbusMappingTransform:
     def process_input_register_block(
         self,
         register_data,
-        register_list: List[RegisterDefinition],
+        register_list: list[RegisterDefinition],
         min_address: int,
         max_address: int,
         offset: int,
@@ -185,7 +184,7 @@ class ModbusMappingTransform:
     def process_holding_register_block(
         self,
         register_data,
-        register_list: List[RegisterDefinition],
+        register_list: list[RegisterDefinition],
         min_address: int,
         max_address: int,
         offset: int,
@@ -217,7 +216,7 @@ class ModbusMappingTransform:
         return data
 
     def process_bit_sensors(
-        self, result, sensor_list: List[RegisterDefinition], sensor_type: str
+        self, result, sensor_list: list[RegisterDefinition], sensor_type: str
     ) -> StateData:
         """Process bit-based sensors from Modbus bit response."""
         data: StateData = {}

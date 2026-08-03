@@ -34,7 +34,7 @@ def _validate_modbus_address(address: int, context: str = "address") -> int:
         ValueError: If address is not a valid integer
     """
     if not isinstance(address, int):
-        raise ValueError(
+        raise TypeError(
             f"Invalid {context}: must be integer, got {type(address).__name__}"
         )
 

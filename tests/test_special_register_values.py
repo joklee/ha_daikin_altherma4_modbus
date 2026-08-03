@@ -12,7 +12,7 @@ import types
 
 def _ensure_homeassistant_stubs():
     """Ensure homeassistant stubs are available and correctly configured."""
-    modules_to_remove = [k for k in sys.modules.keys() if k.startswith("homeassistant")]
+    modules_to_remove = [k for k in sys.modules if k.startswith("homeassistant")]
     for module in modules_to_remove:
         del sys.modules[module]
 
@@ -52,22 +52,22 @@ def _ensure_homeassistant_stubs():
 
 _ensure_homeassistant_stubs()
 
-from custom_components.ha_daikin_altherma4_modbus.common import (  # noqa: E402
+from custom_components.ha_daikin_altherma4_modbus.common import (
     is_entity_available,
     is_unavailable_value,
     validate_register_value,
 )
-from custom_components.ha_daikin_altherma4_modbus.const import (  # noqa: E402
+from custom_components.ha_daikin_altherma4_modbus.const import (
     SPECIAL_REGISTER_NOT_AVAILABLE,
     SPECIAL_REGISTER_NOT_SUPPORTED,
     SPECIAL_REGISTER_VALUES,
     SPECIAL_REGISTER_WAITING,
 )
-from custom_components.ha_daikin_altherma4_modbus.data_types import (  # noqa: E402
+from custom_components.ha_daikin_altherma4_modbus.data_types import (
     EntityStatePayload,
     ProcessedRegisterItem,
 )
-from custom_components.ha_daikin_altherma4_modbus.mapping_transform import (  # noqa: E402
+from custom_components.ha_daikin_altherma4_modbus.mapping_transform import (
     ModbusMappingTransform,
 )
 

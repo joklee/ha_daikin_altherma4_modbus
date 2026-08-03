@@ -147,7 +147,7 @@ def _load_integration_module(monkeypatch):
 @pytest.mark.asyncio
 async def test_async_setup_entry_success(monkeypatch):
     """Test successful async_setup_entry execution."""
-    integration, manager_cls, unified_cls, client_cls = _load_integration_module(
+    integration, _manager_cls, _unified_cls, _client_cls = _load_integration_module(
         monkeypatch
     )
 
@@ -171,8 +171,8 @@ async def test_async_setup_entry_success(monkeypatch):
     assert result is True
 
     # Verify coordinators were set up
-    manager = manager_cls.last_instance
-    unified = unified_cls.last_instance
+    manager = _manager_cls.last_instance
+    unified = _unified_cls.last_instance
     manager.async_setup.assert_awaited_once()
     unified.async_setup.assert_awaited_once()
 
@@ -195,7 +195,7 @@ async def test_async_setup_entry_success(monkeypatch):
 @pytest.mark.asyncio
 async def test_async_unload_entry_success(monkeypatch):
     """Test successful async_unload_entry execution."""
-    integration, manager_cls, unified_cls, client_cls = _load_integration_module(
+    integration, _manager_cls, _unified_cls, _client_cls = _load_integration_module(
         monkeypatch
     )
 
@@ -249,7 +249,7 @@ async def test_async_unload_entry_success(monkeypatch):
     manager.async_shutdown.assert_awaited_once_with(disconnect_clients=True)
 
     # Verify client was closed (no shared endpoint)
-    client_cls.async_close_cached_client.assert_awaited_once_with("192.168.1.100", 502)
+    _client_cls.async_close_cached_client.assert_awaited_once_with("192.168.1.100", 502)
 
     # Verify entry data was removed
     assert "test_entry_1" not in hass.data.get("ha_daikin_altherma4_modbus", {})
@@ -308,7 +308,7 @@ async def test_async_setup_entry_unified_coordinator_failure(monkeypatch):
 @pytest.mark.asyncio
 async def test_async_setup_entry_platform_forward_failure(monkeypatch):
     """Test error handling when platform forwarding fails."""
-    integration, manager_cls, unified_cls, client_cls = _load_integration_module(
+    integration, _manager_cls, _unified_cls, _client_cls = _load_integration_module(
         monkeypatch
     )
 
@@ -333,11 +333,11 @@ async def test_async_setup_entry_platform_forward_failure(monkeypatch):
         await integration.async_setup_entry(hass, entry)
 
     # Verify rollback occurred
-    manager = manager_cls.last_instance
-    unified = unified_cls.last_instance
+    manager = _manager_cls.last_instance
+    unified = _unified_cls.last_instance
     unified.async_shutdown.assert_awaited_once()
     manager.async_shutdown.assert_awaited_once_with(disconnect_clients=True)
-    client_cls.async_close_cached_client.assert_awaited_once_with("192.168.1.100", 502)
+    _client_cls.async_close_cached_client.assert_awaited_once_with("192.168.1.100", 502)
 
     # Verify data was cleaned up
     assert "ha_daikin_altherma4_modbus" not in hass.data
@@ -346,18 +346,18 @@ async def test_async_setup_entry_platform_forward_failure(monkeypatch):
 @pytest.mark.asyncio
 async def test_async_setup_entry_manager_setup_failure(monkeypatch):
     """Test error handling when manager setup fails."""
-    integration, manager_cls, unified_cls, client_cls = _load_integration_module(
+    integration, _manager_cls, _unified_cls, _client_cls = _load_integration_module(
         monkeypatch
     )
 
     # Mock manager setup to fail
-    original_init = manager_cls.__init__
+    original_init = _manager_cls.__init__
 
     def failing_init(self, *args, **kwargs):
         original_init(self, *args, **kwargs)
         self.async_setup = AsyncMock(side_effect=RuntimeError("Manager setup failed"))
 
-    manager_cls.__init__ = failing_init
+    _manager_cls.__init__ = failing_init
 
     hass = SimpleNamespace(
         data={},
@@ -377,11 +377,11 @@ async def test_async_setup_entry_manager_setup_failure(monkeypatch):
         await integration.async_setup_entry(hass, entry)
 
     # Verify rollback occurred
-    manager = manager_cls.last_instance
-    unified = unified_cls.last_instance
+    manager = _manager_cls.last_instance
+    unified = _unified_cls.last_instance
     unified.async_shutdown.assert_awaited_once()
     manager.async_shutdown.assert_awaited_once_with(disconnect_clients=True)
-    client_cls.async_close_cached_client.assert_awaited_once_with("192.168.1.100", 502)
+    _client_cls.async_close_cached_client.assert_awaited_once_with("192.168.1.100", 502)
 
     # Verify no data stored
     assert "ha_daikin_altherma4_modbus" not in hass.data

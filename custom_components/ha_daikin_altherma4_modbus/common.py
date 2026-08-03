@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Union
+from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
@@ -134,7 +134,7 @@ def get_register_value(data: Any) -> Any:
         return None
 
 
-def get_register_scale(data: Any) -> Union[int, float]:
+def get_register_scale(data: Any) -> int | float:
     """Get scale from register data, supporting both dataclass and dictionary formats.
 
     Args:
@@ -240,7 +240,7 @@ async def safe_write_register(
 
 def get_coordinator_register_data(
     coordinator: Any, register_name: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get register data from coordinator without DOMAIN prefix.
 
     Args:

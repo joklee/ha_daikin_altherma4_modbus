@@ -51,12 +51,15 @@ class MockAsyncModbusTcpClient:
         return AsyncMock(registers=[0] * count, isError=lambda: False)
 
 
+from typing import ClassVar
+
+
 class MockRealModbusTcpClient:
     """Mock RealModbusTcpClient for testing connection pool functionality."""
 
-    _client_cache = {}
-    _client_locks = {}
-    _cache_lock = None
+    _client_cache: ClassVar[dict] = {}
+    _client_locks: ClassVar[dict] = {}
+    _cache_lock: ClassVar[object] = None
 
     def __init__(self, host: str, port: int):
         self.host = host
@@ -294,7 +297,6 @@ async def test_connection_pool_recovery_concept():
         @classmethod
         async def safe_clear_cache(cls):
             """Clear the connection cache."""
-            pass
 
         async def connect(self):
             """Connect to the device."""

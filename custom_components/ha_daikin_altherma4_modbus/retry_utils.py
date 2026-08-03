@@ -3,9 +3,10 @@
 import asyncio
 import logging
 import random
+from collections.abc import Callable
 from datetime import timedelta
 from functools import wraps
-from typing import Callable, Optional, TypeVar
+from typing import TypeVar
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class RetryConfig:
 
 
 async def retry_async(
-    config: Optional[RetryConfig] = None, exceptions: tuple = (Exception,)
+    config: RetryConfig | None = None, exceptions: tuple = (Exception,)
 ):
     """Decorator for async functions with retry logic.
 

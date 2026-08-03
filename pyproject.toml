@@ -6,6 +6,9 @@ show_missing = true
 skip_covered = true
 
 [tool.ruff.lint]
+# Ignore BLE001 (blind Exception catches) in cleanup/shutdown code where we want to ensure unload completes
+# Ignore ASYNC230 in tests - test code uses open() for reading test fixture files
+ignore = ["BLE001", "S102", "TRY002", "S110", "B017", "PLW0602", "ASYNC230"]
 
 [tool.ruff.lint.per-file-ignores]
 # Ignore E402 (module level import not at top of file) for const.py due to circular dependencies

@@ -9,7 +9,7 @@ import pytest
 def _ensure_homeassistant_stubs():
     """Ensure homeassistant stubs are available and correctly configured."""
     # Remove any existing homeassistant modules to avoid conflicts
-    modules_to_remove = [k for k in sys.modules.keys() if k.startswith("homeassistant")]
+    modules_to_remove = [k for k in sys.modules if k.startswith("homeassistant")]
     for module in modules_to_remove:
         del sys.modules[module]
 
@@ -52,7 +52,7 @@ def _ensure_homeassistant_stubs():
 _ensure_homeassistant_stubs()
 
 # Import after stubs are set up
-from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient  # noqa: E402
+from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
 
 
 @pytest.mark.asyncio

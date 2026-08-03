@@ -1,4 +1,4 @@
-"""Test service actions for ha_daikin_altherma4_modbus integration."""  # noqa: I001
+"""Test service actions for ha_daikin_altherma4_modbus integration."""
 
 # Setup mocks before any imports
 import sys
@@ -252,7 +252,7 @@ from custom_components.ha_daikin_altherma4_modbus.const import (
 )
 
 importlib.reload(services_module)
-from custom_components.ha_daikin_altherma4_modbus.services import (  # noqa: E402
+from custom_components.ha_daikin_altherma4_modbus.services import (
     SERVICE_REFRESH_CONNECTION_SCHEMA,
     SERVICE_SET_ADDITIONAL_ZONE_SETPOINT_SCHEMA,
     SERVICE_SET_ADDITIONAL_ZONE_STATE_SCHEMA,
@@ -311,7 +311,7 @@ class TestServiceSetup:
         """Test that register_services registers services correctly."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             register_services,
-        )  # noqa: I001
+        )
 
         # Register services
         register_services(hass)
@@ -367,7 +367,7 @@ class TestSetOperationModeService:
         """Test successful operation mode setting."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_operation_mode,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
@@ -396,7 +396,7 @@ class TestSetOperationModeService:
         """Test service with invalid config entry."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_operation_mode,
-        )  # noqa: I001
+        )
 
         # Setup
         hass.config_entries.async_get_entry.return_value = None
@@ -422,7 +422,7 @@ class TestSetOperationModeService:
         """Test service with entry not loaded."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_operation_mode,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.state = "not_loaded"
@@ -451,7 +451,7 @@ class TestSetOperationModeService:
         """Test service with invalid operation mode."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_operation_mode,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
@@ -483,7 +483,7 @@ class TestSetDHWStateService:
         """Test successful DHW state set to on."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_dhw_state,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
@@ -521,7 +521,7 @@ class TestSetDHWStateService:
         """Test successful DHW state set to off."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_dhw_state,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
@@ -557,7 +557,7 @@ class TestSetDHWStateService:
         """Test service with invalid config entry."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_dhw_state,
-        )  # noqa: I001
+        )
 
         # Setup
         hass.config_entries.async_get_entry.return_value = None
@@ -589,7 +589,7 @@ class TestSetMainZoneStateService:
         """Test successful main zone state set to on."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_main_zone_state,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
@@ -627,7 +627,7 @@ class TestSetMainZoneStateService:
         """Test successful main zone state set to off."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_main_zone_state,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
@@ -669,7 +669,7 @@ class TestSetAdditionalZoneStateService:
         """Test successful additional zone state set to on."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_additional_zone_state,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
@@ -707,7 +707,7 @@ class TestSetAdditionalZoneStateService:
         """Test successful additional zone state set to off."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_additional_zone_state,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
@@ -851,7 +851,7 @@ class TestSetSmartGridModeService:
         """Test successful Smart Grid mode setting."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_smart_grid_mode,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
@@ -880,7 +880,7 @@ class TestSetSmartGridModeService:
         """Test service with invalid config entry."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_smart_grid_mode,
-        )  # noqa: I001
+        )
 
         # Setup
         hass.config_entries.async_get_entry.return_value = None
@@ -908,7 +908,7 @@ class TestSetSmartGridModeService:
         """Test service with invalid Smart Grid mode."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_smart_grid_mode,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data

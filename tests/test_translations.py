@@ -15,14 +15,14 @@ def get_translation_keys_from_json(filepath: Path) -> set:
     keys = set()
     # Extract from entity section
     entity_section = data.get("entity", {})
-    for platform, entities in entity_section.items():
+    for entities in entity_section.values():
         if isinstance(entities, dict):
-            for key in entities.keys():
+            for key in entities:
                 keys.add(key)
 
     # Extract from device section (device translation keys)
     device_section = data.get("device", {})
-    for key in device_section.keys():
+    for key in device_section:
         keys.add(key)
 
     return keys

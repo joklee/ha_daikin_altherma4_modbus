@@ -1,10 +1,11 @@
 """Typed data models for Modbus register/state payloads."""
 
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Mapping, MutableMapping, Union
+from typing import Any
 
-RegisterValue = Union[int, float, str, datetime, None]
+RegisterValue = int | float | str | datetime | None
 
 
 @dataclass
@@ -16,7 +17,7 @@ class EntityStatePayload:
     address: int = 0
     register_name: str = ""
     description: str = ""
-    scale: Union[int, float] = 1
+    scale: int | float = 1
     last_updated: float = 0.0
 
 
@@ -28,10 +29,10 @@ class ProcessedRegisterItem:
     input_type: str
     address: int
     description: str
-    item: Dict[str, Any] = field(default_factory=dict)
+    item: dict[str, Any] = field(default_factory=dict)
 
 
-StateData = Dict[str, EntityStatePayload]
+StateData = dict[str, EntityStatePayload]
 StateMapping = Mapping[str, EntityStatePayload]
 MutableStateMapping = MutableMapping[str, EntityStatePayload]
-LastTriggeredData = Dict[str, datetime]
+LastTriggeredData = dict[str, datetime]

@@ -1,25 +1,24 @@
 """Register definition dataclasses for type-safe Modbus register handling."""
 
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple, Union
 
 from homeassistant.const import EntityCategory
 
 __all__ = [
-    "RegisterDefinition",
-    "RegisterDataType",
-    "SensorRegister",
-    "SwitchRegister",
-    "NumberRegister",
-    "SelectRegister",
-    "CalculatedRegister",
-    "TEMP16",
+    "BIT",
     "INT16",
     "INT16S100",
-    "TEXT16",
     "POW16",
-    "BIT",
+    "TEMP16",
+    "TEXT16",
     "TIMESTAMP16",
+    "CalculatedRegister",
+    "NumberRegister",
+    "RegisterDataType",
+    "RegisterDefinition",
+    "SelectRegister",
+    "SensorRegister",
+    "SwitchRegister",
 ]
 
 
@@ -30,8 +29,8 @@ class RegisterDataType:
     name: str
     signed: bool
     bits: int
-    scaling: Union[int, float]
-    range: Optional[Tuple[Union[int, float], Union[int, float]]] = None
+    scaling: int | float
+    range: tuple[int | float, int | float] | None = None
 
 
 # Predefined register data types
@@ -69,16 +68,16 @@ class RegisterDefinition:
     input_type: str
     register_name: str
     data_type: RegisterDataType
-    calc_type: Optional[str] = None  # For calculated registers
-    trigger_register_name: Optional[str] = None  # For calculated registers
+    calc_type: str | None = None  # For calculated registers
+    trigger_register_name: str | None = None  # For calculated registers
 
     # Optional fields with defaults
-    unit: Optional[str] = None
-    device_class: Optional[str] = None
-    icon: Optional[str] = None
-    translation_key: Optional[str] = None
-    entity_category: Optional[EntityCategory] = None
-    step: Optional[Union[int, float]] = None
+    unit: str | None = None
+    device_class: str | None = None
+    icon: str | None = None
+    translation_key: str | None = None
+    entity_category: EntityCategory | None = None
+    step: int | float | None = None
 
 
 @dataclass
@@ -86,39 +85,39 @@ class SensorRegister(RegisterDefinition):
     """Register definition for sensor entities."""
 
     count: int = 1
-    enum_map: Optional[Dict[int, str]] = None
-    unique_id: Optional[str] = None
+    enum_map: dict[int, str] | None = None
+    unique_id: str | None = None
 
 
 @dataclass
 class SwitchRegister(RegisterDefinition):
     """Register definition for switch entities."""
 
-    enum_map: Optional[Dict[int, str]] = None
+    enum_map: dict[int, str] | None = None
 
 
 @dataclass
 class NumberRegister(RegisterDefinition):
     """Register definition for number entities."""
 
-    min_value: Union[int, float] = 0
-    max_value: Union[int, float] = 100
-    step: Union[int, float] = 1
-    enum_map: Optional[Dict[int, str]] = None
+    min_value: int | float = 0
+    max_value: int | float = 100
+    step: int | float = 1
+    enum_map: dict[int, str] | None = None
 
 
 @dataclass
 class SelectRegister(RegisterDefinition):
     """Register definition for select entities."""
 
-    enum_map: Dict[int, str] = field(default_factory=dict)
-    min_value: Union[int, float] = 0
-    max_value: Union[int, float] = 100
-    step: Union[int, float] = 1
+    enum_map: dict[int, str] = field(default_factory=dict)
+    min_value: int | float = 0
+    max_value: int | float = 100
+    step: int | float = 1
 
 
 @dataclass
 class CalculatedRegister(RegisterDefinition):
     """Register definition for calculated sensors."""
 
-    pass  # All fields are in base class
+    # All fields are in base class
