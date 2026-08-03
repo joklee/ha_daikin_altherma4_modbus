@@ -67,22 +67,22 @@ def _ensure_homeassistant_stubs():
 
 _ensure_homeassistant_stubs()
 
-from custom_components.ha_daikin_altherma4_modbus.common import (
+from custom_components.ha_daikin_altherma4_modbus.common import (  # noqa: E402
     is_entity_available,
     is_unavailable_value,
     validate_register_value,
 )
-from custom_components.ha_daikin_altherma4_modbus.const import (
+from custom_components.ha_daikin_altherma4_modbus.const import (  # noqa: E402
     SPECIAL_REGISTER_NOT_AVAILABLE,
     SPECIAL_REGISTER_NOT_SUPPORTED,
     SPECIAL_REGISTER_VALUES,
     SPECIAL_REGISTER_WAITING,
 )
-from custom_components.ha_daikin_altherma4_modbus.data_types import (
+from custom_components.ha_daikin_altherma4_modbus.data_types import (  # noqa: E402
     EntityStatePayload,
     ProcessedRegisterItem,
 )
-from custom_components.ha_daikin_altherma4_modbus.mapping_transform import (
+from custom_components.ha_daikin_altherma4_modbus.mapping_transform import (  # noqa: E402
     ModbusMappingTransform,
 )
 

@@ -197,7 +197,7 @@ except ImportError:
                             value = data[field_key]
                             print(f"  Validating {field_key}={value} with {validator}")
                             # Call the validator if it's callable
-                            if callable(validator):
+                            if hasattr(validator, "__call__"):
                                 try:
                                     result = validator(value)
                                     print(f"  Validation passed, result: {result}")
@@ -488,7 +488,9 @@ class TestSetOperationModeService:
         )
 
         # Execute and expect error
-        with pytest.raises(ServiceValidationError):
+        with pytest.raises(
+            ServiceValidationError,
+        ):
             await async_set_operation_mode(hass, call)
 
     async def test_set_operation_mode_entry_not_loaded(self, hass, mock_config_entry):
@@ -512,7 +514,9 @@ class TestSetOperationModeService:
         )
 
         # Execute and expect error
-        with pytest.raises(ServiceValidationError):
+        with pytest.raises(
+            ServiceValidationError,
+        ):
             await async_set_operation_mode(hass, call)
 
     async def test_set_operation_mode_invalid_mode(
@@ -643,7 +647,9 @@ class TestSetDHWStateService:
         )
 
         # Execute and expect error
-        with pytest.raises(ServiceValidationError):
+        with pytest.raises(
+            ServiceValidationError,
+        ):
             await async_set_dhw_state(hass, call)
 
 
@@ -963,7 +969,9 @@ class TestSetSmartGridModeService:
         )
 
         # Execute and expect error
-        with pytest.raises(ServiceValidationError):
+        with pytest.raises(
+            ServiceValidationError,
+        ):
             await async_set_smart_grid_mode(hass, call)
 
     async def test_set_smart_grid_mode_invalid_mode(
@@ -1024,7 +1032,7 @@ class TestServiceSchemasExtended:
         """Test missing required fields in set_smart_grid_mode schema."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_smart_grid_mode,
-        )
+        )  # noqa: I001
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data

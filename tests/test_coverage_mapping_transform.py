@@ -143,7 +143,7 @@ def test_update_last_triggered():
     """Test update_last_triggered updates timestamps on 0->1 transition."""
     # Stub homeassistant.util BEFORE importing mapping_transform
     import sys
-    from datetime import datetime, timezone
+    from datetime import datetime
     from types import ModuleType
 
     from custom_components.ha_daikin_altherma4_modbus.register_types import (
@@ -153,7 +153,7 @@ def test_update_last_triggered():
     if "homeassistant.util" not in sys.modules:
         util_mod = ModuleType("homeassistant.util")
         dt_mod = ModuleType("homeassistant.util.dt")
-        fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        fixed_time = datetime(2024, 1, 1, 12, 0, 0)
         dt_mod.now = lambda: fixed_time
         util_mod.dt = dt_mod
         sys.modules["homeassistant.util"] = util_mod
