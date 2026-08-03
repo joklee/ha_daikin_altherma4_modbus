@@ -20,7 +20,10 @@ def _make_entry(host="192.168.1.100"):
         update_interval=SimpleNamespace(total_seconds=lambda: 10),
     )
     manager = SimpleNamespace(
-        host=host, port=502, demo_mode=False, coordinators={"normal": coord},
+        host=host,
+        port=502,
+        demo_mode=False,
+        coordinators={"normal": coord},
     )
     entry.runtime_data = SimpleNamespace(manager=manager)
     return entry
@@ -59,10 +62,14 @@ async def test_diagnostics_empty_coordinator_data():
     """Test diagnostics with empty coordinator data."""
     entry = SimpleNamespace(data={}, options={})
     coord = SimpleNamespace(
-        data={}, last_update_success=True, update_interval=None,
+        data={},
+        last_update_success=True,
+        update_interval=None,
     )
     manager = SimpleNamespace(
-        host="localhost", port=502, demo_mode=False,
+        host="localhost",
+        port=502,
+        demo_mode=False,
         coordinators={"slow": coord},
     )
     entry.runtime_data = SimpleNamespace(manager=manager)
@@ -82,7 +89,9 @@ async def test_diagnostics_coordinator_data_serialization():
         update_interval=SimpleNamespace(total_seconds=lambda: 30),
     )
     manager = SimpleNamespace(
-        host="localhost", port=502, demo_mode=True,
+        host="localhost",
+        port=502,
+        demo_mode=True,
         coordinators={"main": coord},
     )
     entry.runtime_data = SimpleNamespace(manager=manager)

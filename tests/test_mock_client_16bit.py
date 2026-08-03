@@ -69,20 +69,16 @@ def _ensure_homeassistant_stubs():
         issue_registry_module.async_delete_issue = lambda *a, **kw: None
         sys.modules["homeassistant.helpers.issue_registry"] = issue_registry_module
 
-    issue_registry_module = types.ModuleType("homeassistant.helpers.issue_registry")
-    issue_registry_module.IssueSeverity = types.SimpleNamespace(
-        ERROR="error", WARNING="warning"
-    )
-    issue_registry_module.async_create_issue = lambda *a, **kw: None
-    issue_registry_module.async_delete_issue = lambda *a, **kw: None
-    sys.modules["homeassistant.helpers.issue_registry"] = issue_registry_module
+    if "homeassistant.helpers.restore_state" not in sys.modules:
+        restore_state_module = types.ModuleType("homeassistant.helpers.restore_state")
+        sys.modules["homeassistant.helpers.restore_state"] = restore_state_module
 
 
 # Setup stubs immediately
 _ensure_homeassistant_stubs()
 
 # Import after stubs are set up
-from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
+from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient  # noqa: E402
 
 
 @pytest.mark.asyncio

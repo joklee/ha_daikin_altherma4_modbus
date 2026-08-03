@@ -13,7 +13,6 @@ from custom_components.ha_daikin_altherma4_modbus.retry_utils import (
     RetryConfig,
     add_exponential_jitter,
     add_jitter,
-    retry_async,
 )
 
 
