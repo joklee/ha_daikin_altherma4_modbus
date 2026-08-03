@@ -36,9 +36,6 @@ def _load_climate_module(monkeypatch):
         const_name,
         "homeassistant.components.climate",
         "homeassistant.components.climate.const",
-        "homeassistant.const",
-        "homeassistant.exceptions",
-        "homeassistant.helpers.update_coordinator",
     )
 
     climate_component_module = types.ModuleType("homeassistant.components.climate")

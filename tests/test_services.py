@@ -5,12 +5,30 @@ import sys
 import types
 
 # Mock homeassistant modules
-# Always force-set exceptions module to ensure both attributes are present,
-# even if another test file already populated sys.modules with incomplete attrs
-exceptions_module = types.ModuleType("homeassistant.exceptions")
-exceptions_module.ServiceValidationError = Exception
-exceptions_module.ConfigEntryNotReady = Exception
-sys.modules["homeassistant.exceptions"] = exceptions_module
+# Ensure ServiceValidationError is a class that accepts keyword arguments.
+# Use the existing module if present (from conftest) to avoid breaking
+# other test files that depend on the full set of exception classes.
+
+
+class _ServiceValidationError(Exception):
+    """Mock ServiceValidationError that accepts keyword arguments."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.translation_domain = kwargs.get("translation_domain")
+        self.translation_key = kwargs.get("translation_key")
+        self.translation_placeholders = kwargs.get("translation_placeholders")
+
+
+if "homeassistant.exceptions" in sys.modules:
+    exceptions_module = sys.modules["homeassistant.exceptions"]
+    exceptions_module.ServiceValidationError = _ServiceValidationError
+else:
+    exceptions_module = types.ModuleType("homeassistant.exceptions")
+    exceptions_module.ServiceValidationError = _ServiceValidationError
+    exceptions_module.ConfigEntryNotReady = Exception
+    exceptions_module.HomeAssistantError = Exception
+    sys.modules["homeassistant.exceptions"] = exceptions_module
 
 if "homeassistant.config_entries" not in sys.modules:
     config_entries_module = types.ModuleType("homeassistant.config_entries")
@@ -28,6 +46,7 @@ if "homeassistant.const" not in sys.modules:
     sys.modules["homeassistant.const"] = const_module
 
 # Mock homeassistant.helpers.service
+# Always ensure ServiceValidationError is the same class as in homeassistant.exceptions
 if "homeassistant.helpers.service" not in sys.modules:
 
     class MockServiceCall:
@@ -38,7 +57,7 @@ if "homeassistant.helpers.service" not in sys.modules:
 
     helpers_service_module = types.ModuleType("homeassistant.helpers.service")
     helpers_service_module.ServiceCall = MockServiceCall
-    helpers_service_module.ServiceValidationError = Exception
+    helpers_service_module.ServiceValidationError = _ServiceValidationError
 
     def mock_async_register_admin_service(hass, domain, service, func, schema=None):
         """Mock that delegates to hass.services.async_register."""
@@ -49,6 +68,10 @@ if "homeassistant.helpers.service" not in sys.modules:
         mock_async_register_admin_service
     )
     sys.modules["homeassistant.helpers.service"] = helpers_service_module
+else:
+    # Ensure the existing module's ServiceValidationError matches the exceptions one
+    helpers_service_module = sys.modules["homeassistant.helpers.service"]
+    helpers_service_module.ServiceValidationError = _ServiceValidationError
 
 # Mock homeassistant.core
 if "homeassistant.core" not in sys.modules:
@@ -96,6 +119,10 @@ if "custom_components.ha_daikin_altherma4_modbus.const" not in sys.modules:
     const_module.MAX_MODBUS_ADDRESS = 87
     const_module.REGISTER_OPERATION_MODE = "holding_3"
     const_module.REGISTER_DHW_HVAC_MODE = "coil_1"
+    const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
+    const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
+    const_module.SPECIAL_REGISTER_WAITING = 32765
+    const_module.SPECIAL_REGISTER_VALUES = frozenset({32767, 32766, 32765})
     # HVAC mode constants
     const_module.HVAC_OFF = 0
     const_module.HVAC_HEAT = 1
@@ -121,8 +148,12 @@ if "custom_components.ha_daikin_altherma4_modbus.const" not in sys.modules:
 # Mock voluptuous for schema validation tests
 try:
     import voluptuous as vol
+
+    print("Using real voluptuous library")
 except ImportError:
     # Create minimal mock for voluptuous
+    print("Using mock voluptuous")
+
     class MockVol:
         class Invalid(Exception):
             pass
@@ -131,30 +162,74 @@ except ImportError:
             def __init__(self, key):
                 self.key = key
 
+        class Optional:
+            def __init__(self, key):
+                self.key = key
+
         @staticmethod
-        def Schema(fields):
+        def Schema(schema_dict):
             class SchemaValidator:
                 def __call__(self, data):
-                    # Basic validation
-                    for key in fields:
-                        if isinstance(key, MockVol.Required) and key.key not in data:
-                            raise MockVol.Invalid(f"Missing required key: {key.key}")
+                    print(f"MockSchema validating data: {data}")
+                    print(f"Schema dict: {schema_dict}")
+                    # Validate each field in the schema
+                    for field_spec, validator in schema_dict.items():
+                        # Determine the field key
+                        if isinstance(field_spec, (MockVol.Required, MockVol.Optional)):
+                            field_key = field_spec.key
+                            is_required = isinstance(field_spec, MockVol.Required)
+                        else:
+                            # field_spec is the key itself
+                            field_key = field_spec
+                            is_required = False
+
+                        print(f"  Checking field: {field_key}, required: {is_required}")
+
+                        # Check if required field is present
+                        if is_required and field_key not in data:
+                            print(f"  ERROR: Missing required field {field_key}")
+                            raise MockVol.Invalid(
+                                f"Required field '{field_key}' not provided"
+                            )
+
+                        # Validate the value if present
+                        if field_key in data:
+                            value = data[field_key]
+                            print(f"  Validating {field_key}={value} with {validator}")
+                            # Call the validator if it's callable
+                            if hasattr(validator, "__call__"):
+                                try:
+                                    result = validator(value)
+                                    print(f"  Validation passed, result: {result}")
+                                except MockVol.Invalid:
+                                    raise
+                                except Exception as e:
+                                    print(f"  Validation failed: {e}")
+                                    raise MockVol.Invalid(
+                                        f"Invalid value for '{field_key}': {e}"
+                                    )
+
+                    print("  Validation successful")
                     return data
 
-                def __init__(self, fields):
-                    self.fields = fields
+                def __init__(self, schema_dict):
+                    self.schema_dict = schema_dict
 
-            return SchemaValidator(fields)
+            return SchemaValidator(schema_dict)
 
         @staticmethod
         def In(options):
             class InValidator:
                 def __init__(self, options):
-                    self.options = options
+                    self.options = list(options) if options else []
+                    print(f"Created InValidator with options: {self.options}")
 
                 def __call__(self, value):
+                    print(f"InValidator checking if '{value}' in {self.options}")
                     if value not in self.options:
-                        raise MockVol.Invalid(f"Invalid option: {value}")
+                        raise MockVol.Invalid(
+                            f"Invalid option: {value}, must be one of {self.options}"
+                        )
                     return value
 
             return InValidator(options)
@@ -162,6 +237,7 @@ except ImportError:
     vol_module = types.ModuleType("voluptuous")
     vol_module.Invalid = MockVol.Invalid
     vol_module.Required = MockVol.Required
+    vol_module.Optional = MockVol.Optional
     vol_module.Schema = MockVol.Schema
     vol_module.In = MockVol.In
     sys.modules["voluptuous"] = vol_module
@@ -950,15 +1026,33 @@ class TestServiceSchemasExtended:
         with pytest.raises(vol.Invalid):
             SERVICE_SET_SMART_GRID_MODE_SCHEMA(invalid_data)
 
-    def test_set_smart_grid_mode_schema_missing_required(self):
+    async def test_set_smart_grid_mode_schema_missing_required(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
         """Test missing required fields in set_smart_grid_mode schema."""
-        invalid_data = {
-            "config_entry_id": "test_entry_id",
-            # Missing smart_grid_mode
-        }
+        from custom_components.ha_daikin_altherma4_modbus.services import (
+            async_set_smart_grid_mode,
+        )  # noqa: I001
 
-        with pytest.raises(vol.Invalid):
-            SERVICE_SET_SMART_GRID_MODE_SCHEMA(invalid_data)
+        # Setup
+        mock_config_entry.runtime_data = mock_runtime_data
+        hass.config_entries.async_get_entry.return_value = mock_config_entry
+
+        # Create service call with missing smart_grid_mode
+        call = ServiceCall(
+            domain=DOMAIN,
+            service=SERVICE_SET_SMART_GRID_MODE,
+            data={
+                "config_entry_id": "test_entry_id",
+                # Missing smart_grid_mode
+            },
+        )
+
+        # Execute and expect error (service handler validates required fields)
+        with pytest.raises(
+            ServiceValidationError,
+        ):
+            await async_set_smart_grid_mode(hass, call)
 
 
 class TestOperationModeMapping:

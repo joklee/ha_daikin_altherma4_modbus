@@ -1077,45 +1077,62 @@ async def test_options_flow_missing_keys_in_input(monkeypatch):
 
 def test_config_flow_import_fallback(monkeypatch):
     """Test that CONF_HOST/CONF_PORT fallback works when homeassistant not available."""
-    # Remove homeassistant.const from modules to trigger fallback
-    sys.modules.pop("homeassistant.const", None)
+    # Replace homeassistant.const with a module that raises ImportError on
+    # attribute access, to trigger the CONF_HOST/CONF_PORT fallback. This keeps
+    # the module in sys.modules so subsequent tests are not affected.
 
-    # Mock homeassistant.config_entries for the ConfigFlow base class
-    if "homeassistant.config_entries" not in sys.modules:
-        config_entries_module = types.ModuleType("homeassistant.config_entries")
-        config_entries_module.CONN_CLASS_LOCAL_POLL = "local_poll"
+    class _MissingConstModule(types.ModuleType):
+        """Module that raises ImportError for any attribute access."""
 
-        class FakeConfigFlow:
-            def __init_subclass__(cls, **kwargs):
-                return super().__init_subclass__()
+        def __getattr__(self, name):
+            raise ImportError(f"Module 'homeassistant.const' has no attribute '{name}'")
 
-            def async_create_entry(self, title, data, options=None):
-                return {
-                    "type": "create_entry",
-                    "title": title,
-                    "data": data,
-                    "options": options,
-                }
+    missing_const_module = _MissingConstModule("homeassistant.const")
+    monkeypatch.setitem(sys.modules, "homeassistant.const", missing_const_module)
 
-            def async_show_form(self, **kwargs):
-                return {"type": "form", **kwargs}
+    # Replace the homeassistant base module so that `from homeassistant import
+    # config_entries` resolves to our fake config_entries module rather than the
+    # real one (which may already be loaded as an attribute).
+    homeassistant = types.ModuleType("homeassistant")
+    monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
 
-        class FakeOptionsFlow:
-            def __init__(self, config_entry):
-                self._config_entry = config_entry
-                self.hass = SimpleNamespace(config_entries=SimpleNamespace())
+    # Mock homeassistant.config_entries for the ConfigFlow base class.
+    # Always install the fake module to ensure consistent behavior across
+    # environments with/without a real Home Assistant installation.
+    config_entries_module = types.ModuleType("homeassistant.config_entries")
+    homeassistant.config_entries = config_entries_module
 
-            def async_create_entry(self, title, data):
-                return {"type": "create_entry", "title": title, "data": data}
+    class FakeConfigFlow:
+        def __init_subclass__(cls, **kwargs):
+            return super().__init_subclass__()
 
-            def async_show_form(self, **kwargs):
-                return {"type": "form", **kwargs}
+        def async_create_entry(self, title, data, options=None):
+            return {
+                "type": "create_entry",
+                "title": title,
+                "data": data,
+                "options": options,
+            }
 
-        config_entries_module.ConfigFlow = FakeConfigFlow
-        config_entries_module.OptionsFlow = FakeOptionsFlow
-        monkeypatch.setitem(
-            sys.modules, "homeassistant.config_entries", config_entries_module
-        )
+        def async_show_form(self, **kwargs):
+            return {"type": "form", **kwargs}
+
+    class FakeOptionsFlow:
+        def __init__(self, config_entry):
+            self._config_entry = config_entry
+            self.hass = SimpleNamespace(config_entries=SimpleNamespace())
+
+        def async_create_entry(self, title, data):
+            return {"type": "create_entry", "title": title, "data": data}
+
+        def async_show_form(self, **kwargs):
+            return {"type": "form", **kwargs}
+
+    config_entries_module.ConfigFlow = FakeConfigFlow
+    config_entries_module.OptionsFlow = FakeOptionsFlow
+    monkeypatch.setitem(
+        sys.modules, "homeassistant.config_entries", config_entries_module
+    )
 
     # Mock voluptuous
     voluptuous_module = types.ModuleType("voluptuous")

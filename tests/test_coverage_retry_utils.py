@@ -1,7 +1,6 @@
 """Tests for retry_utils.py."""
-from datetime import timedelta
 
-import pytest
+from datetime import timedelta
 
 from custom_components.ha_daikin_altherma4_modbus.retry_utils import (
     CONNECTION_RETRY,
@@ -12,7 +11,6 @@ from custom_components.ha_daikin_altherma4_modbus.retry_utils import (
     RetryConfig,
     add_exponential_jitter,
     add_jitter,
-    retry_async,
 )
 
 
@@ -32,8 +30,6 @@ def test_retry_config_custom():
     assert config.max_attempts == 5
     assert config.base_delay == 2.0
     assert config.max_delay == 60.0
-
-
 
 
 def test_add_jitter_basic():

@@ -369,7 +369,6 @@ def _load_select_module(monkeypatch):
         register_constants_name,
         "homeassistant.components.select",
         "homeassistant.helpers.update_coordinator",
-        "homeassistant.exceptions",
     )
 
     select_component_module = types.ModuleType("homeassistant.components.select")

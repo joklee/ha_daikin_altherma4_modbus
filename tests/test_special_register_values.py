@@ -11,63 +11,78 @@ import types
 
 
 def _ensure_homeassistant_stubs():
-    """Ensure homeassistant stubs are available and correctly configured."""
-    modules_to_remove = [k for k in sys.modules if k.startswith("homeassistant")]
-    for module in modules_to_remove:
-        del sys.modules[module]
+    """Ensure homeassistant stubs are available and correctly configured.
 
-    homeassistant = types.ModuleType("homeassistant")
-    homeassistant.__path__ = []
-    sys.modules["homeassistant"] = homeassistant
+    Does NOT remove existing stubs (which are set up by conftest.py) to avoid
+    breaking other tests that rely on the conftest stubs.
+    """
+    if "homeassistant" not in sys.modules:
+        homeassistant = types.ModuleType("homeassistant")
+        homeassistant.__path__ = []
+        sys.modules["homeassistant"] = homeassistant
+    else:
+        homeassistant = sys.modules["homeassistant"]
 
-    exceptions_module = types.ModuleType("homeassistant.exceptions")
-    exceptions_module.ConfigEntryNotReady = Exception
-    sys.modules["homeassistant.exceptions"] = exceptions_module
+    if "homeassistant.exceptions" not in sys.modules:
+        exceptions_module = types.ModuleType("homeassistant.exceptions")
+        exceptions_module.ConfigEntryNotReady = Exception
+        sys.modules["homeassistant.exceptions"] = exceptions_module
+        homeassistant.exceptions = exceptions_module
 
-    const_module = types.ModuleType("homeassistant.const")
-    const_module.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
-    sys.modules["homeassistant.const"] = const_module
+    if "homeassistant.const" not in sys.modules:
+        const_module = types.ModuleType("homeassistant.const")
+        const_module.EntityCategory = types.SimpleNamespace(DIAGNOSTIC="diagnostic")
+        sys.modules["homeassistant.const"] = const_module
+        homeassistant.const = const_module
 
-    core_module = types.ModuleType("homeassistant.core")
-    core_module.Event = object
-    core_module.HomeAssistant = object
-    sys.modules["homeassistant.core"] = core_module
+    if "homeassistant.core" not in sys.modules:
+        core_module = types.ModuleType("homeassistant.core")
+        core_module.Event = object
+        core_module.HomeAssistant = object
+        sys.modules["homeassistant.core"] = core_module
+        homeassistant.core = core_module
 
-    helpers_module = types.ModuleType("homeassistant.helpers")
-    helpers_module.__path__ = []
-    sys.modules["homeassistant.helpers"] = helpers_module
+    if "homeassistant.helpers" not in sys.modules:
+        helpers_module = types.ModuleType("homeassistant.helpers")
+        helpers_module.__path__ = []
+        sys.modules["homeassistant.helpers"] = helpers_module
+        homeassistant.helpers = helpers_module
 
-    update_coordinator_module = types.ModuleType(
-        "homeassistant.helpers.update_coordinator"
-    )
-    update_coordinator_module.DataUpdateCoordinator = object
-    update_coordinator_module.CoordinatorEntity = object
-    update_coordinator_module.UpdateFailed = Exception
-    sys.modules["homeassistant.helpers.update_coordinator"] = update_coordinator_module
+    if "homeassistant.helpers.update_coordinator" not in sys.modules:
+        update_coordinator_module = types.ModuleType(
+            "homeassistant.helpers.update_coordinator"
+        )
+        update_coordinator_module.DataUpdateCoordinator = object
+        update_coordinator_module.CoordinatorEntity = object
+        update_coordinator_module.UpdateFailed = Exception
+        sys.modules["homeassistant.helpers.update_coordinator"] = (
+            update_coordinator_module
+        )
 
-    helpers_typing_module = types.ModuleType("homeassistant.helpers.typing")
-    helpers_typing_module.ConfigType = dict
-    sys.modules["homeassistant.helpers.typing"] = helpers_typing_module
+    if "homeassistant.helpers.typing" not in sys.modules:
+        helpers_typing_module = types.ModuleType("homeassistant.helpers.typing")
+        helpers_typing_module.ConfigType = dict
+        sys.modules["homeassistant.helpers.typing"] = helpers_typing_module
 
 
 _ensure_homeassistant_stubs()
 
-from custom_components.ha_daikin_altherma4_modbus.common import (
+from custom_components.ha_daikin_altherma4_modbus.common import (  # noqa: E402
     is_entity_available,
     is_unavailable_value,
     validate_register_value,
 )
-from custom_components.ha_daikin_altherma4_modbus.const import (
+from custom_components.ha_daikin_altherma4_modbus.const import (  # noqa: E402
     SPECIAL_REGISTER_NOT_AVAILABLE,
     SPECIAL_REGISTER_NOT_SUPPORTED,
     SPECIAL_REGISTER_VALUES,
     SPECIAL_REGISTER_WAITING,
 )
-from custom_components.ha_daikin_altherma4_modbus.data_types import (
+from custom_components.ha_daikin_altherma4_modbus.data_types import (  # noqa: E402
     EntityStatePayload,
     ProcessedRegisterItem,
 )
-from custom_components.ha_daikin_altherma4_modbus.mapping_transform import (
+from custom_components.ha_daikin_altherma4_modbus.mapping_transform import (  # noqa: E402
     ModbusMappingTransform,
 )
 

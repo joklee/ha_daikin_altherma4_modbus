@@ -143,7 +143,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Minimaler Config Flow für Daikin Altherma 4 Modbus."""
 
     VERSION = 1
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     async def async_step_user(self, user_input=None):
         """Handle the user step."""

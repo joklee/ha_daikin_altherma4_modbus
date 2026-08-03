@@ -343,7 +343,14 @@ if HAS_HA:
     async def async_set_smart_grid_mode(hass, call) -> None:
         """Set the Smart Grid operation mode."""
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
-        smart_grid_mode = call.data[ATTR_SMART_GRID_MODE]
+        smart_grid_mode = call.data.get(ATTR_SMART_GRID_MODE)
+
+        if smart_grid_mode is None:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_smart_grid_mode",
+                translation_placeholders={"smart_grid_mode": "None"},
+            )
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data

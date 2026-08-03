@@ -1,16 +1,17 @@
 """Tests for select.py."""
+
 from types import SimpleNamespace
 
 import pytest
 
-from custom_components.ha_daikin_altherma4_modbus.select import (
-    DaikinSelect,
-    async_setup_entry,
-)
 from custom_components.ha_daikin_altherma4_modbus.const import DOMAIN
 from custom_components.ha_daikin_altherma4_modbus.register_types import (
     INT16,
     SelectRegister,
+)
+from custom_components.ha_daikin_altherma4_modbus.select import (
+    DaikinSelect,
+    async_setup_entry,
 )
 
 
@@ -23,16 +24,15 @@ def _mock_coordinator(data=None):
 def _mock_entry():
     coordinator = _mock_coordinator()
     runtime_data = SimpleNamespace(coordinator=coordinator)
-    return SimpleNamespace(entry_id="test", data={}, options={}, runtime_data=runtime_data)
+    return SimpleNamespace(
+        entry_id="test", data={}, options={}, runtime_data=runtime_data
+    )
 
 
 @pytest.mark.asyncio
 async def test_async_setup_entry_creates_selects():
     """Test that async_setup_entry creates DaikinSelect for SelectRegister with enum_map."""
     import custom_components.ha_daikin_altherma4_modbus.select as sel_mod
-    from custom_components.ha_daikin_altherma4_modbus.register_constants import (
-        HOLDING_REGISTERS,
-    )
 
     # Patch HOLDING_REGISTERS with a SelectRegister
     original = sel_mod.HOLDING_REGISTERS
@@ -49,7 +49,6 @@ async def test_async_setup_entry_creates_selects():
         )
     ]
 
-    coordinator = _mock_coordinator()
     entry = _mock_entry()
     hass = SimpleNamespace()
 
@@ -60,8 +59,6 @@ async def test_async_setup_entry_creates_selects():
         assert isinstance(added[0], DaikinSelect)
     finally:
         sel_mod.HOLDING_REGISTERS = original
-
-
 
 
 def test_daikin_select_init():
@@ -159,9 +156,7 @@ async def test_daikin_select_option_success():
     from unittest.mock import AsyncMock
 
     coordinator = _mock_coordinator({"holding_3": {"value": 1}})
-    coordinator.data_manager = SimpleNamespace(
-        write_holding_register=AsyncMock()
-    )
+    coordinator.data_manager = SimpleNamespace(write_holding_register=AsyncMock())
     entry = _mock_entry()
     select_entity = DaikinSelect(
         coordinator=coordinator,
