@@ -1,5 +1,7 @@
 """Register definition dataclasses for type-safe Modbus register handling."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 
 from homeassistant.const import EntityCategory
