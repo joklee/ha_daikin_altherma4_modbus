@@ -197,7 +197,7 @@ except ImportError:
                             value = data[field_key]
                             print(f"  Validating {field_key}={value} with {validator}")
                             # Call the validator if it's callable
-                            if hasattr(validator, "__call__"):
+                            if callable(validator):
                                 try:
                                     result = validator(value)
                                     print(f"  Validation passed, result: {result}")
@@ -1032,7 +1032,7 @@ class TestServiceSchemasExtended:
         """Test missing required fields in set_smart_grid_mode schema."""
         from custom_components.ha_daikin_altherma4_modbus.services import (
             async_set_smart_grid_mode,
-        )  # noqa: I001
+        )
 
         # Setup
         mock_config_entry.runtime_data = mock_runtime_data
