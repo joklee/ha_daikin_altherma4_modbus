@@ -120,14 +120,27 @@ def load_register_constants_module(project_root):
     try:
         os.chdir(custom_components_parent)
 
-        # Import the module properly
+        # Import the modules properly
         import importlib.util
 
+        # First load register_types so register_constants' relative import works
+        register_types_spec = importlib.util.spec_from_file_location(
+            "ha_daikin_altherma4_modbus.register_types",
+            "ha_daikin_altherma4_modbus/register_types.py",
+        )
+        register_types_module = importlib.util.module_from_spec(register_types_spec)
+        sys.modules["ha_daikin_altherma4_modbus.register_types"] = register_types_module
+        register_types_spec.loader.exec_module(register_types_module)
+
+        # Now load register_constants which imports from .register_types
         spec = importlib.util.spec_from_file_location(
             "ha_daikin_altherma4_modbus.register_constants",
             "ha_daikin_altherma4_modbus/register_constants.py",
         )
         register_constants_module = importlib.util.module_from_spec(spec)
+        sys.modules["ha_daikin_altherma4_modbus.register_constants"] = (
+            register_constants_module
+        )
         spec.loader.exec_module(register_constants_module)
 
         return register_constants_module
