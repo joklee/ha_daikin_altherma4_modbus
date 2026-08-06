@@ -245,9 +245,12 @@ def _load_switch_module(monkeypatch):
             self.kwargs = kwargs
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> 4e8ba37 (style: apply ruff formatting to test files)
+=======
+>>>>>>> b58bdf0 (style: apply ruff format to test_setup_error_paths.py)
     exceptions_module.HomeAssistantError = HomeAssistantError
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
 
@@ -307,9 +310,12 @@ async def test_switch_handles_daikin_modbus_exception(monkeypatch):
             self.kwargs = kwargs
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> 4e8ba37 (style: apply ruff formatting to test files)
+=======
+>>>>>>> b58bdf0 (style: apply ruff format to test_setup_error_paths.py)
     exceptions_module.HomeAssistantError = HomeAssistantError
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
 
@@ -404,9 +410,12 @@ def _load_select_module(monkeypatch):
             self.kwargs = kwargs
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> 4e8ba37 (style: apply ruff formatting to test files)
+=======
+>>>>>>> b58bdf0 (style: apply ruff format to test_setup_error_paths.py)
     exceptions_module.HomeAssistantError = HomeAssistantError
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
 
