@@ -94,6 +94,10 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
 
     sensor_component_module = types.ModuleType("homeassistant.components.sensor")
     sensor_component_module.SensorEntity = type("FakeSensorEntity", (), {})
+    # Add SensorStateClass for long-term statistics support
+    sensor_component_module.SensorStateClass = type(
+        "SensorStateClass", (), {"MEASUREMENT": "measurement"}
+    )
     monkeypatch.setitem(
         sys.modules, "homeassistant.components.sensor", sensor_component_module
     )
