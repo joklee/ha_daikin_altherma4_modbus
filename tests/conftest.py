@@ -178,11 +178,19 @@ sensor_module.SensorEntity = _SensorEntity
 class _SensorStateClass:
     MEASUREMENT = "measurement"
 
+# Define SensorDeviceClass as an enum-like class for proper import compatibility
+class _SensorDeviceClass:
+    TEMPERATURE = "temperature"
+    POWER = "power"
+    RUNNING = "running"
+    PROBLEM = "problem"
+    TIMESTAMP = "timestamp"
+    SPEED = "speed"
+    PRESSURE = "pressure"
 
 # Make it accessible as both module attribute and importable name
 sensor_module.SensorStateClass = _SensorStateClass
-# Also expose it directly in the module's namespace for 'from X import Y' imports
-sensor_module.SensorStateClass = _SensorStateClass
+sensor_module.SensorDeviceClass = _SensorDeviceClass
 sys.modules["homeassistant.components.sensor"] = sensor_module
 
 # Switch stub
