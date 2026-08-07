@@ -178,6 +178,7 @@ sensor_module.SensorEntity = _SensorEntity
 class _SensorStateClass:
     MEASUREMENT = "measurement"
 
+
 # Define SensorDeviceClass as an enum-like class for proper import compatibility
 class _SensorDeviceClass:
     TEMPERATURE = "temperature"
@@ -187,6 +188,7 @@ class _SensorDeviceClass:
     TIMESTAMP = "timestamp"
     SPEED = "speed"
     PRESSURE = "pressure"
+
 
 # Make it accessible as both module attribute and importable name
 sensor_module.SensorStateClass = _SensorStateClass

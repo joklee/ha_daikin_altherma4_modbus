@@ -100,7 +100,9 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
     )
     # Add SensorDeviceClass for device class enums
     sensor_component_module.SensorDeviceClass = type(
-        "SensorDeviceClass", (), {
+        "SensorDeviceClass",
+        (),
+        {
             "TEMPERATURE": "temperature",
             "POWER": "power",
             "RUNNING": "running",
@@ -108,7 +110,7 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
             "TIMESTAMP": "timestamp",
             "SPEED": "speed",
             "PRESSURE": "pressure",
-        }
+        },
     )
     monkeypatch.setitem(
         sys.modules, "homeassistant.components.sensor", sensor_component_module
