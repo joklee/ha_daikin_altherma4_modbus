@@ -82,7 +82,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 unique_id=unique_id,
                 translation_key=translation_key,
                 device_info=INPUT_DEVICE_INFO,
-                state_class=item.state_class,
             )
         )
         _LOGGER.debug(f"unique_id: {unique_id} - translation_key {translation_key}")
@@ -220,7 +219,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         unique_id=None,
         device_info=None,
         translation_key=None,
-        state_class=None,
     ):
         super().__init__(coordinator)
         self._entry = entry
@@ -248,11 +246,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
             }
         else:
             # Numeric sensors: enable long-term statistics
-            # Use register-defined state_class if specified, otherwise default to MEASUREMENT
-            if state_class:
-                self._attr_state_class = state_class
-            else:
-                self._attr_state_class = SensorStateClass.MEASUREMENT
+            self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def available(self) -> bool:
@@ -405,7 +399,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
-        self._attr_state_class = "measurement"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
@@ -564,7 +558,7 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
-        self._attr_state_class = "measurement"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
@@ -634,7 +628,7 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
-        self._attr_state_class = "measurement"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
 

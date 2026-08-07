@@ -107,20 +107,6 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
     sensor_component_module.SensorStateClass = type(
         "SensorStateClass", (), {"MEASUREMENT": "measurement"}
     )
-    # Add SensorDeviceClass for device class enums
-    sensor_component_module.SensorDeviceClass = type(
-        "SensorDeviceClass",
-        (),
-        {
-            "TEMPERATURE": "temperature",
-            "POWER": "power",
-            "RUNNING": "running",
-            "PROBLEM": "problem",
-            "TIMESTAMP": "timestamp",
-            "SPEED": "speed",
-            "PRESSURE": "pressure",
-        },
-    )
     monkeypatch.setitem(
         sys.modules, "homeassistant.components.sensor", sensor_component_module
     )
@@ -193,15 +179,10 @@ def _load_config_flow_module(monkeypatch):
     const_module = types.ModuleType(const_module_name)
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.SLOW_SCAN_INTERVAL = 600
-    const_module.NORMAL_SCAN_INTERVAL = 10
     const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
     const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
     const_module.SPECIAL_REGISTER_WAITING = 32765
     const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
-    # Add HVAC constants for climate module
-    const_module.HVAC_COOL = 2
-    const_module.HVAC_HEAT = 1
-    const_module.HVAC_OFF = 0
     monkeypatch.setitem(sys.modules, const_module_name, const_module)
 
     # Mock modbus_client module for connection testing
@@ -279,10 +260,6 @@ def _load_integration_module(monkeypatch):
     const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
     const_module.SPECIAL_REGISTER_WAITING = 32765
     const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
-    # Add HVAC constants for climate module
-    const_module.HVAC_COOL = 2
-    const_module.HVAC_HEAT = 1
-    const_module.HVAC_OFF = 0
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
     coordinator_manager_module = types.ModuleType(coordinator_manager_name)
