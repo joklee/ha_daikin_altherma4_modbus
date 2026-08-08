@@ -15,6 +15,7 @@ except ImportError:
         TIMESTAMP = "timestamp"
         SPEED = "speed"
         PRESSURE = "pressure"
+        VOLUME_FLOW_RATE = "volume_flow_rate"
 
     class EntityCategory(StrEnum):
         DIAGNOSTIC = "diagnostic"
@@ -258,6 +259,7 @@ INPUT_REGISTERS = [
         register_name="input_49",
         data_type=INT16S100,
         unit="L/min",
+        device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
         translation_key="input_49",
     ),
     SensorRegister(

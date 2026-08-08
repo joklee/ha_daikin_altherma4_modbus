@@ -110,6 +110,7 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
             "TIMESTAMP": "timestamp",
             "SPEED": "speed",
             "PRESSURE": "pressure",
+            "VOLUME_FLOW_RATE": "volume_flow_rate",
         },
     )
     monkeypatch.setitem(

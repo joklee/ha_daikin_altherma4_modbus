@@ -188,6 +188,7 @@ class _SensorDeviceClass:
     TIMESTAMP = "timestamp"
     SPEED = "speed"
     PRESSURE = "pressure"
+    VOLUME_FLOW_RATE = "volume_flow_rate"
 
 
 # Make it accessible as both module attribute and importable name
