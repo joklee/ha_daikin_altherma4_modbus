@@ -239,12 +239,12 @@ You can change the host address and port via the reconfigure flow:
 #### Status and Control Values
 | Sensor | Address | Unit | Device Class | State Class | Description |
 |--------|---------|------|-------------|------------|-------------|
-| Bypass valve position | 66 | % | – | – | – |
-| Storage valve position | 67 | % | – | – | – |
+| Bypass valve position | 66 | % | – | measurement | – |
+| Storage valve position | 67 | % | – | measurement | – |
 | Circulation pump speed | 68 | % | speed | measurement | – |
-| Mixed pump PWM | 69 | % | – | – |
-| Direct pump PWM | 70 | % | – | – |
-| Mixing valve position | 71 | % | – | – |
+| Mixed pump PWM | 69 | % | – | measurement | – |
+| Direct pump PWM | 70 | % | – | measurement | – |
+| Mixing valve position | 71 | % | – | measurement | – |
 
 #### Error Monitoring
 | Sensor | Address | Description |
