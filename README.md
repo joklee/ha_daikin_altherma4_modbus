@@ -202,19 +202,19 @@ You can change the host address and port via the reconfigure flow:
 | Sensor | Address | Unit | Device Class | State Class | Description |
 |--------|---------|------|-------------|------------|-------------|
 | Leaving water temperature PHE | 40 | °C | temperature | measurement | Primary heat exchanger outlet |
-| Leaving water temperature BUH | 41 | °C | temperature | Backup heater outlet |
-| Return water temperature | 42 | °C | temperature | Water return |
-| DHW temperature | 43 | °C | temperature | Domestic hot water |
-| Outside air temperature | 44 | °C | temperature | Outdoor sensor |
-| Liquid refrigerant temperature | 45 | °C | temperature | Refrigerant |
-| Remote control room temp (Main) | 50 | °C | temperature | Thermostat reading |
-| Remote control room temp (Add) | 78 | °C | temperature | Thermostat reading additional zone |
-| Mixing leaving water temp | 72 | °C | temperature | Mixing kit outlet |
-| Space heating/cooling target Main in mixing kit | 73 | °C | temperature | Mixing kit target temperature |
-| Leaving water temp prePHE outdoor | 74 | °C | temperature | – |
-| Leaving water temp Tank valve | 75 | °C | temperature | – |
-| DHW Upper temperature | 76 | °C | temperature | – |
-| DHW Lower temperature | 77 | °C | temperature | – |
+| Leaving water temperature BUH | 41 | °C | temperature | measurement | Backup heater outlet |
+| Return water temperature | 42 | °C | temperature | measurement | Water return |
+| DHW temperature | 43 | °C | temperature | measurement | Domestic hot water |
+| Outside air temperature | 44 | °C | temperature | measurement | Outdoor sensor |
+| Liquid refrigerant temperature | 45 | °C | temperature | measurement | Refrigerant |
+| Remote control room temp (Main) | 50 | °C | temperature | measurement | Thermostat reading |
+| Remote control room temp (Add) | 78 | °C | temperature | measurement | Thermostat reading additional zone |
+| Mixing leaving water temp | 72 | °C | temperature | measurement | Mixing kit outlet |
+| Space heating/cooling target Main in mixing kit | 73 | °C | temperature | measurement | Mixing kit target temperature |
+| Leaving water temp prePHE outdoor | 74 | °C | temperature | measurement | – |
+| Leaving water temp Tank valve | 75 | °C | temperature | measurement | – |
+| DHW Upper temperature | 76 | °C | temperature | measurement | – |
+| DHW Lower temperature | 77 | °C | temperature | measurement | – |
 
 #### Power and Flow Sensors
 | Sensor | Address | Unit | Device Class | State Class | Description |
