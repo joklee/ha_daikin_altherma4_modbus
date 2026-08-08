@@ -219,7 +219,7 @@ You can change the host address and port via the reconfigure flow:
 #### Power and Flow Sensors
 | Sensor | Address | Unit | Device Class | State Class | Description |
 |--------|---------|------|-------------|------------|-------------|
-| Flow rate | 49 | L/min | – | measurement | Water flow rate |
+| Flow rate | 49 | L/min | volume_flow_rate | measurement | Water flow rate |
 | Heat pump power consumption | 51 | kW | power | measurement | Electrical input power |
 | Water pressure | 79 | bar | pressure | measurement | – |
 
