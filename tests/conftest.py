@@ -177,6 +177,7 @@ sensor_module.SensorEntity = _SensorEntity
 # Define SensorStateClass as an enum-like class for proper import compatibility
 class _SensorStateClass:
     MEASUREMENT = "measurement"
+    TOTAL_INCREASING = "total_increasing"
 
 
 # Define SensorDeviceClass as an enum-like class for proper import compatibility

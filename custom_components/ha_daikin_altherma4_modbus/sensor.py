@@ -82,6 +82,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 unique_id=unique_id,
                 translation_key=translation_key,
                 device_info=INPUT_DEVICE_INFO,
+                state_class=item.state_class,
             )
         )
         _LOGGER.debug(f"unique_id: {unique_id} - translation_key {translation_key}")
@@ -219,6 +220,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         unique_id=None,
         device_info=None,
         translation_key=None,
+        state_class=None,
     ):
         super().__init__(coordinator)
         self._entry = entry
@@ -246,7 +248,11 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
             }
         else:
             # Numeric sensors: enable long-term statistics
-            self._attr_state_class = SensorStateClass.MEASUREMENT
+            # Use register-defined state_class if specified, otherwise default to MEASUREMENT
+            if state_class:
+                self._attr_state_class = state_class
+            else:
+                self._attr_state_class = SensorStateClass.MEASUREMENT
 
     @property
     def available(self) -> bool:
