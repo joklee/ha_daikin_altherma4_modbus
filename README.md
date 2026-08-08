@@ -199,9 +199,9 @@ You can change the host address and port via the reconfigure flow:
 ### Sensors (Input Registers)
 
 #### Temperature Sensors
-| Sensor | Address | Unit | Device Class | Description |
-|--------|---------|------|-------------|-------------|
-| Leaving water temperature PHE | 40 | °C | temperature | Primary heat exchanger outlet |
+| Sensor | Address | Unit | Device Class | State Class | Description |
+|--------|---------|------|-------------|------------|-------------|
+| Leaving water temperature PHE | 40 | °C | temperature | measurement | Primary heat exchanger outlet |
 | Leaving water temperature BUH | 41 | °C | temperature | Backup heater outlet |
 | Return water temperature | 42 | °C | temperature | Water return |
 | DHW temperature | 43 | °C | temperature | Domestic hot water |
@@ -217,11 +217,11 @@ You can change the host address and port via the reconfigure flow:
 | DHW Lower temperature | 77 | °C | temperature | – |
 
 #### Power and Flow Sensors
-| Sensor | Address | Unit | Device Class | Description |
-|--------|---------|------|-------------|-------------|
-| Flow rate | 49 | L/min | – | Water flow rate |
-| Heat pump power consumption | 51 | kW | power | Electrical input power |
-| Water pressure | 79 | bar | pressure | – |
+| Sensor | Address | Unit | Device Class | State Class | Description |
+|--------|---------|------|-------------|------------|-------------|
+| Flow rate | 49 | L/min | – | measurement | Water flow rate |
+| Heat pump power consumption | 51 | kW | power | measurement | Electrical input power |
+| Water pressure | 79 | bar | pressure | measurement | – |
 
 #### Operating Status
 | Sensor | Address | Description |
@@ -237,11 +237,11 @@ You can change the host address and port via the reconfigure flow:
 | Unit operation mode | 83 | Stop/Tank Heat Up/Heating/Cooling/Actuator |
 
 #### Status and Control Values
-| Sensor | Address | Unit | Device Class | Description |
-|--------|---------|------|-------------|-------------|
-| Bypass valve position | 66 | % | – | – |
-| Storage valve position | 67 | % | – | – |
-| Circulation pump speed | 68 | % | speed | – |
+| Sensor | Address | Unit | Device Class | State Class | Description |
+|--------|---------|------|-------------|------------|-------------|
+| Bypass valve position | 66 | % | – | – | – |
+| Storage valve position | 67 | % | – | – | – |
+| Circulation pump speed | 68 | % | speed | measurement | – |
 | Mixed pump PWM | 69 | % | – | – |
 | Direct pump PWM | 70 | % | – | – |
 | Mixing valve position | 71 | % | – | – |
