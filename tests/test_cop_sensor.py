@@ -96,7 +96,9 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
     sensor_component_module.SensorEntity = type("FakeSensorEntity", (), {})
     # Add SensorStateClass for long-term statistics support
     sensor_component_module.SensorStateClass = type(
-        "SensorStateClass", (), {"MEASUREMENT": "measurement"}
+        "SensorStateClass",
+        (),
+        {"MEASUREMENT": "measurement", "TOTAL_INCREASING": "total_increasing"},
     )
     # Add SensorDeviceClass for device class enums
     sensor_component_module.SensorDeviceClass = type(

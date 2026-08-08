@@ -1,7 +1,7 @@
 """Register constants using dataclasses for Daikin Altherma 4 Modbus integration."""
 
 try:
-    from homeassistant.components.sensor import SensorDeviceClass
+    from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
     from homeassistant.const import EntityCategory
 except ImportError:
     # Fallback for testing when homeassistant is not available
@@ -16,6 +16,11 @@ except ImportError:
         SPEED = "speed"
         PRESSURE = "pressure"
         VOLUME_FLOW_RATE = "volume_flow_rate"
+
+    class SensorStateClass(StrEnum):
+        MEASUREMENT = "measurement"
+        TOTAL = "total"
+        TOTAL_INCREASING = "total_increasing"
 
     class EntityCategory(StrEnum):
         DIAGNOSTIC = "diagnostic"
@@ -600,6 +605,7 @@ INPUT_REGISTERS = [
         register_name="input_82",
         data_type=INT16,
         entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         translation_key="input_82",
     ),
     SensorRegister(

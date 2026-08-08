@@ -247,12 +247,12 @@ You can change the host address and port via the reconfigure flow:
 | Mixing valve position | 71 | % | – | measurement | – |
 
 #### Error Monitoring
-| Sensor | Address | Description |
-|--------|---------|-------------|
-| Unit abnormality | 21 | 0=No error, 1=Fault, 2=Warning |
-| Abnormality code | 22 | Text code |
-| Abnormality sub code | 23 | Numeric code |
-| Abnormality counter | 82 | User abnormality counter |
+| Sensor | Address | State Class | Description |
+|--------|---------|-------------|-------------|
+| Unit abnormality | 21 | – | 0=No error, 1=Fault, 2=Warning |
+| Abnormality code | 22 | – | Text code |
+| Abnormality sub code | 23 | – | Numeric code |
+| Abnormality counter | 82 | total_increasing | User abnormality counter |
 
 #### Setpoint Limits
 | Sensor | Address | Unit | Description |

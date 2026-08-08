@@ -80,6 +80,7 @@ class RegisterDefinition:
     translation_key: str | None = None
     entity_category: EntityCategory | None = None
     step: int | float | None = None
+    state_class: str | None = None
 
 
 @dataclass
