@@ -224,17 +224,17 @@ You can change the host address and port via the reconfigure flow:
 | Water pressure | 79 | bar | pressure | measurement | – |
 
 #### Operating Status
-| Sensor | Address | State Class | Description |
-|--------|---------|-------------|------------|-------------|
-| Operation mode | 38 | – | None/Heating/Cooling |
-| 3-way valve | 37 | – | Heating/DHW |
-| Circulation pump running | 30 | – | On/Off |
-| Compressor run | 31 | – | On/Off |
-| Booster heater run | 32 | – | On/Off |
-| Disinfection operation | 33 | – | On/Off |
-| Defrost/Restart | 35 | – | On/Off |
-| Hot start | 36 | – | On/Off |
-| Unit operation mode | 83 | – | Stop/Tank Heat Up/Heating/Cooling/Actuator |
+| Sensor | Address | Description |
+|--------|---------|-------------|
+| Operation mode | 38 | None/Heating/Cooling |
+| 3-way valve | 37 | Heating/DHW |
+| Circulation pump running | 30 | On/Off |
+| Compressor run | 31 | On/Off |
+| Booster heater run | 32 | On/Off |
+| Disinfection operation | 33 | On/Off |
+| Defrost/Restart | 35 | On/Off |
+| Hot start | 36 | On/Off |
+| Unit operation mode | 83 | Stop/Tank Heat Up/Heating/Cooling/Actuator |
 
 #### Status and Control Values
 | Sensor | Address | Unit | Device Class | State Class | Description |
@@ -247,22 +247,22 @@ You can change the host address and port via the reconfigure flow:
 | Mixing valve position | 71 | % | – | – |
 
 #### Error Monitoring
-| Sensor | Address | State Class | Description |
-|--------|---------|-------------|------------|-------------|
-| Unit abnormality | 21 | – | 0=No error, 1=Fault, 2=Warning |
-| Abnormality code | 22 | – | Text code |
-| Abnormality sub code | 23 | – | Numeric code |
-| Abnormality counter | 82 | – | User abnormality counter |
+| Sensor | Address | Description |
+|--------|---------|-------------|
+| Unit abnormality | 21 | 0=No error, 1=Fault, 2=Warning |
+| Abnormality code | 22 | Text code |
+| Abnormality sub code | 23 | Numeric code |
+| Abnormality counter | 82 | User abnormality counter |
 
 #### Setpoint Limits
-| Sensor | Address | Unit | State Class | Description |
-|--------|---------|------|-------------|------------|-------------|
-| Heating leaving water Min/Max (Main) | 54-55 | °C | measurement | – |
-| Cooling leaving water Min/Max (Main) | 56-57 | °C | measurement | – |
-| Heating leaving water Min/Max (Add) | 58-59 | °C | measurement | – |
-| Cooling leaving water Min/Max (Add) | 60-61 | °C | measurement | – |
-| Room heating Min/Max | 84-85 | °C | measurement | – |
-| Room cooling Min/Max | 86-87 | °C | measurement | – |
+| Sensor | Address | Unit | Description |
+|--------|---------|------|-------------|
+| Heating leaving water Min/Max (Main) | 54-55 | °C | – |
+| Cooling leaving water Min/Max (Main) | 56-57 | °C | – |
+| Heating leaving water Min/Max (Add) | 58-59 | °C | – |
+| Cooling leaving water Min/Max (Add) | 60-61 | °C | – |
+| Room heating Min/Max | 84-85 | °C | – |
+| Room cooling Min/Max | 86-87 | °C | – |
 
 ### Binary Sensors (Discrete Inputs)
 
