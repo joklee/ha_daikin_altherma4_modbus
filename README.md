@@ -199,29 +199,29 @@ You can change the host address and port via the reconfigure flow:
 ### Sensors (Input Registers)
 
 #### Temperature Sensors
-| Sensor | Address | Unit | Description |
-|--------|---------|------|-------------|
-| Leaving water temperature PHE | 40 | °C | Primary heat exchanger outlet |
-| Leaving water temperature BUH | 41 | °C | Backup heater outlet |
-| Return water temperature | 42 | °C | Water return |
-| DHW temperature | 43 | °C | Domestic hot water |
-| Outside air temperature | 44 | °C | Outdoor sensor |
-| Liquid refrigerant temperature | 45 | °C | Refrigerant |
-| Remote control room temp (Main) | 50 | °C | Thermostat reading |
-| Remote control room temp (Add) | 78 | °C | Thermostat reading additional zone |
-| Mixing leaving water temp | 72 | °C | Mixing kit outlet |
-| Space heating/cooling target Main in mixing kit | 73 | °C | Mixing kit target temperature |
-| Leaving water temp prePHE outdoor | 74 | °C | – |
-| Leaving water temp Tank valve | 75 | °C | – |
-| DHW Upper temperature | 76 | °C | – |
-| DHW Lower temperature | 77 | °C | – |
+| Sensor | Address | Unit | Device Class | Description |
+|--------|---------|------|-------------|-------------|
+| Leaving water temperature PHE | 40 | °C | temperature | Primary heat exchanger outlet |
+| Leaving water temperature BUH | 41 | °C | temperature | Backup heater outlet |
+| Return water temperature | 42 | °C | temperature | Water return |
+| DHW temperature | 43 | °C | temperature | Domestic hot water |
+| Outside air temperature | 44 | °C | temperature | Outdoor sensor |
+| Liquid refrigerant temperature | 45 | °C | temperature | Refrigerant |
+| Remote control room temp (Main) | 50 | °C | temperature | Thermostat reading |
+| Remote control room temp (Add) | 78 | °C | temperature | Thermostat reading additional zone |
+| Mixing leaving water temp | 72 | °C | temperature | Mixing kit outlet |
+| Space heating/cooling target Main in mixing kit | 73 | °C | temperature | Mixing kit target temperature |
+| Leaving water temp prePHE outdoor | 74 | °C | temperature | – |
+| Leaving water temp Tank valve | 75 | °C | temperature | – |
+| DHW Upper temperature | 76 | °C | temperature | – |
+| DHW Lower temperature | 77 | °C | temperature | – |
 
 #### Power and Flow Sensors
-| Sensor | Address | Unit | Description |
-|--------|---------|------|-------------|
-| Flow rate | 49 | L/min | Water flow rate |
-| Heat pump power consumption | 51 | kW | Electrical input power |
-| Water pressure | 79 | bar | – |
+| Sensor | Address | Unit | Device Class | Description |
+|--------|---------|------|-------------|-------------|
+| Flow rate | 49 | L/min | – | Water flow rate |
+| Heat pump power consumption | 51 | kW | power | Electrical input power |
+| Water pressure | 79 | bar | pressure | – |
 
 #### Operating Status
 | Sensor | Address | Description |
@@ -237,14 +237,14 @@ You can change the host address and port via the reconfigure flow:
 | Unit operation mode | 83 | Stop/Tank Heat Up/Heating/Cooling/Actuator |
 
 #### Status and Control Values
-| Sensor | Address | Unit | Description |
-|--------|---------|------|-------------|
-| Bypass valve position | 66 | % | – |
-| Storage valve position | 67 | % | – |
-| Circulation pump speed | 68 | % | – |
-| Mixed pump PWM | 69 | % | – |
-| Direct pump PWM | 70 | % | – |
-| Mixing valve position | 71 | % | – |
+| Sensor | Address | Unit | Device Class | Description |
+|--------|---------|------|-------------|-------------|
+| Bypass valve position | 66 | % | – | – |
+| Storage valve position | 67 | % | – | – |
+| Circulation pump speed | 68 | % | speed | – |
+| Mixed pump PWM | 69 | % | – | – |
+| Direct pump PWM | 70 | % | – | – |
+| Mixing valve position | 71 | % | – | – |
 
 #### Error Monitoring
 | Sensor | Address | Description |
