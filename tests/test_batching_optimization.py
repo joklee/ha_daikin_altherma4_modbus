@@ -1,54 +1,18 @@
 """Performance tests for optimized register batching."""
 
 import asyncio
+import sys
 import time
+from pathlib import Path
 
 import pytest
 
+# Add tests directory to path for test_utils import
+tests_dir = Path(__file__).parent
+if str(tests_dir) not in sys.path:
+    sys.path.insert(0, str(tests_dir))
 
-class OptimizedMockClient:
-    """Mock client for testing optimized batching."""
-
-    def __init__(self, host: str, port: int):
-        self.host = host
-        self.port = port
-        self.connected = True
-        self.read_operations = []
-        self.total_bytes = 0
-
-    async def connect(self):
-        await asyncio.sleep(0.01)
-        self.connected = True
-
-    async def read_input_registers(self, address: int, count: int):
-        """Simulate optimized batch read."""
-        operation = f"read_input_registers({address}, {count})"
-        self.read_operations.append(operation)
-
-        # Simulate realistic timing: 1ms base + 0.01ms per register
-        await asyncio.sleep(0.001 + (count * 0.00001))
-
-        self.total_bytes += count * 2
-        return [0] * count
-
-    async def read_holding_registers(self, address: int, count: int):
-        """Simulate optimized batch read."""
-        operation = f"read_holding_registers({address}, {count})"
-        self.read_operations.append(operation)
-
-        await asyncio.sleep(0.001 + (count * 0.00001))
-        self.total_bytes += count * 2
-        return [0] * count
-
-    async def read_discrete_inputs(self, address: int, count: int):
-        await asyncio.sleep(0.0005)
-        self.total_bytes += count // 8
-        return [0] * ((count + 7) // 8)
-
-    async def read_coils(self, address: int, count: int):
-        await asyncio.sleep(0.0005)
-        self.total_bytes += count // 8
-        return [0] * ((count + 7) // 8)
+from test_utils import FakeModbusClientPerformance
 
 
 @pytest.mark.asyncio
@@ -60,7 +24,9 @@ async def test_batching_optimization_comparison():
     print("=" * 80)
 
     # Test OLD implementation (multiple small reads)
-    old_client = OptimizedMockClient("192.168.1.100", 502)
+    old_client = FakeModbusClientPerformance(
+        "192.168.1.100", 502, timing_mode="realistic"
+    )
     await old_client.connect()
 
     start_time = time.time()
@@ -77,10 +43,12 @@ async def test_batching_optimization_comparison():
     await old_client.read_holding_registers(51, 30)  # Block 3
 
     old_time = time.time() - start_time
-    old_operations = len(old_client.read_operations)
+    old_operations = len(old_client.get_read_operations())
 
     # Test NEW implementation (optimized batching)
-    new_client = OptimizedMockClient("192.168.1.100", 502)
+    new_client = FakeModbusClientPerformance(
+        "192.168.1.100", 502, timing_mode="realistic"
+    )
     await new_client.connect()
 
     start_time = time.time()
@@ -92,7 +60,7 @@ async def test_batching_optimization_comparison():
     await new_client.read_holding_registers(1, 79)  # All in one!
 
     new_time = time.time() - start_time
-    new_operations = len(new_client.read_operations)
+    new_operations = len(new_client.get_read_operations())
 
     # Results
     print("\n🔄 OLD Implementation:")
@@ -137,19 +105,28 @@ async def test_batching_fallback_mechanism():
     print("=" * 80)
 
     # Mock client that fails on large reads but succeeds on small reads
-    class FailingMockClient:
-        def __init__(self):
-            self.connected = True
-            self.read_operations = []
+    class FailingMockClient(FakeModbusClientPerformance):
+        async def read_holding_registers(self, address: int, count: int, **kwargs):
+            self._read_holding_registers_calls.append((address, count, kwargs))
 
-        async def read_holding_registers(self, address: int, count: int):
-            self.read_operations.append(f"read_holding_registers({address}, {count})")
+            # Log operation before checking for failure
+            self._operation_count += 1
+            self.operation_count = self._operation_count
+            self._read_operations.append(f"read_holding_registers({address}, {count})")
 
             # Fail on large reads, succeed on small reads
             if count > 50:
                 raise Exception("Large read failed")
+
+            if not self.connected:
+                raise ConnectionError("Not connected")
+
             await asyncio.sleep(0.001)
-            return [0] * count
+
+            registers = self._holding_registers.get(address, [0] * count)
+            if len(registers) < count:
+                registers = registers + [0] * (count - len(registers))
+            return registers[:count]
 
     client = FailingMockClient()
 
@@ -171,11 +148,11 @@ async def test_batching_fallback_mechanism():
 
     print("Optimized read failed as expected")
     print(f"Fallback reads: {len(fallback_results)} successful")
-    print(f"Total operations: {len(client.read_operations)}")
+    print(f"Total operations: {len(client.get_read_operations())}")
 
     # Verify fallback worked
     assert len(fallback_results) == 3, "All fallback reads should succeed"
-    assert len(client.read_operations) == 4, "1 failed + 3 successful reads"
+    assert len(client.get_read_operations()) == 4, "1 failed + 3 successful reads"
 
     print("✅ Fallback mechanism working correctly!")
 
@@ -190,7 +167,7 @@ async def test_memory_efficiency_of_batching():
     print("💾 MEMORY EFFICIENCY TEST")
     print("=" * 80)
 
-    client = OptimizedMockClient("192.168.1.100", 502)
+    client = FakeModbusClientPerformance("192.168.1.100", 502, timing_mode="fast")
     await client.connect()
 
     # Baseline memory

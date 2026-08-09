@@ -1,312 +1,20 @@
-"""Tests for CalculatedCoPSensor."""
+"""Tests for CalculatedCoPSensor using centralized mocking approach."""
 
-import importlib
 import sys
-import types
 from pathlib import Path
 from types import SimpleNamespace
 
+# Add tests directory to path for test_utils import
+tests_dir = Path(__file__).parent
+if str(tests_dir) not in sys.path:
+    sys.path.insert(0, str(tests_dir))
 
-def _reset_modules(*names: str) -> None:
-    for name in names:
-        sys.modules.pop(name, None)
-
-
-def _install_fake_package(monkeypatch) -> str:
-    package_name = "custom_components.ha_daikin_altherma4_modbus"
-    package_path = (
-        Path(__file__).resolve().parents[1]
-        / "custom_components"
-        / "ha_daikin_altherma4_modbus"
-    )
-    package_module = types.ModuleType(package_name)
-    package_module.__path__ = [str(package_path)]
-    package_module.NORMAL_SCAN_INTERVAL = 10
-    monkeypatch.setitem(sys.modules, package_name, package_module)
-    return package_name
-
-
-def _install_common_homeassistant_stubs(monkeypatch) -> None:
-    homeassistant = types.ModuleType("homeassistant")
-    homeassistant.__path__ = []  # Make it a package
-    monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
-
-    const_module = types.ModuleType("homeassistant.const")
-    const_module.CONF_HOST = "host"
-    const_module.CONF_PORT = "port"
-    const_module.EntityCategory = SimpleNamespace(DIAGNOSTIC="diagnostic")
-    monkeypatch.setitem(sys.modules, "homeassistant.const", const_module)
-
-    core_module = types.ModuleType("homeassistant.core")
-    core_module.HomeAssistant = object
-    core_module.Event = object
-    monkeypatch.setitem(sys.modules, "homeassistant.core", core_module)
-
-    helpers_module = types.ModuleType("homeassistant.helpers")
-    helpers_module.__path__ = []  # Make it a package
-    monkeypatch.setitem(sys.modules, "homeassistant.helpers", helpers_module)
-
-    restore_state_module = types.ModuleType("homeassistant.helpers.restore_state")
-    restore_state_module.RestoreEntity = type("RestoreEntity", (), {})
-    monkeypatch.setitem(
-        sys.modules, "homeassistant.helpers.restore_state", restore_state_module
-    )
-
-    update_coordinator_module = types.ModuleType(
-        "homeassistant.helpers.update_coordinator"
-    )
-
-    class FakeDataUpdateCoordinator:
-        def __init__(self, hass, logger, name, update_interval):
-            self.hass = hass
-            self.data = {}
-
-        async def async_config_entry_first_refresh(self):
-            return None
-
-        async def async_request_refresh(self):
-            return None
-
-        def async_add_listener(self, callback):
-            return lambda: None
-
-        def async_set_updated_data(self, data):
-            self.data = data
-
-    class FakeCoordinatorEntity:
-        def __init__(self, coordinator):
-            self.coordinator = coordinator
-
-        async def async_added_to_hass(self):
-            return None
-
-    update_coordinator_module.DataUpdateCoordinator = FakeDataUpdateCoordinator
-    update_coordinator_module.CoordinatorEntity = FakeCoordinatorEntity
-    update_coordinator_module.UpdateFailed = Exception
-    monkeypatch.setitem(
-        sys.modules,
-        "homeassistant.helpers.update_coordinator",
-        update_coordinator_module,
-    )
-
-    components_module = types.ModuleType("homeassistant.components")
-    monkeypatch.setitem(sys.modules, "homeassistant.components", components_module)
-
-    sensor_component_module = types.ModuleType("homeassistant.components.sensor")
-    sensor_component_module.SensorEntity = type("FakeSensorEntity", (), {})
-    monkeypatch.setitem(
-        sys.modules, "homeassistant.components.sensor", sensor_component_module
-    )
-
-    util_module = types.ModuleType("homeassistant.util")
-    util_module.__path__ = []  # Make it a package
-    monkeypatch.setitem(sys.modules, "homeassistant.util", util_module)
-
-    dt_module = types.ModuleType("homeassistant.util.dt")
-    from datetime import datetime
-
-    dt_module.parse_datetime = lambda value: datetime.fromisoformat(value)
-    monkeypatch.setitem(sys.modules, "homeassistant.util.dt", dt_module)
-
-
-def _load_sensor_module(monkeypatch):
-    _install_common_homeassistant_stubs(monkeypatch)
-    package_name = _install_fake_package(monkeypatch)
-
-    const_module_name = f"{package_name}.const"
-    sensor_module_name = f"{package_name}.sensor"
-    common_module_name = f"{package_name}.common"
-    config_utils_name = f"{package_name}.config_entry_utils"
-    register_constants_name = f"{package_name}.register_constants"
-    register_types_name = f"{package_name}.register_types"
-
-    _reset_modules(
-        const_module_name,
-        sensor_module_name,
-        common_module_name,
-        config_utils_name,
-        register_constants_name,
-        register_types_name,
-    )
-
-    # Create register_types module with all register classes
-    register_types_module = types.ModuleType(register_types_name)
-
-    class SensorRegister:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-
-    class CalculatedRegister:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-
-    class NumberRegister:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-
-    class SelectRegister:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-
-    class SwitchRegister:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-
-    class BIT:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-
-    register_types_module.SensorRegister = SensorRegister
-    register_types_module.CalculatedRegister = CalculatedRegister
-    register_types_module.NumberRegister = NumberRegister
-    register_types_module.SelectRegister = SelectRegister
-    register_types_module.SwitchRegister = SwitchRegister
-    register_types_module.BIT = BIT
-
-    # Add register type constants with proper attributes
-    class MockRegisterDataType:
-        def __init__(self, name, signed, bits, scaling, range=None):
-            self.name = name
-            self.signed = signed
-            self.bits = bits
-            self.scaling = scaling
-            self.range = range
-
-    register_types_module.RegisterDataType = MockRegisterDataType
-    register_types_module.TEMP16 = MockRegisterDataType(
-        "Temp16", True, 16, 0.01, (-327.68, 327.67)
-    )
-    register_types_module.INT16 = MockRegisterDataType(
-        "Int16", True, 16, 1, (-32768, 32767)
-    )
-    register_types_module.INT16S100 = MockRegisterDataType(
-        "Int16", True, 16, 0.01, (-32768, 32767)
-    )
-    register_types_module.TEXT16 = MockRegisterDataType("Text16", False, 16, 1, None)
-    register_types_module.POW16 = MockRegisterDataType(
-        "Pow16", True, 16, 0.01, (-327.68, 327.67)
-    )
-    register_types_module.BIT = MockRegisterDataType("Bit", False, 1, 1, (0, 1))
-    register_types_module.TIMESTAMP16 = MockRegisterDataType(
-        "Timestamp16", True, 16, 1, (-32768, 32767)
-    )
-
-    monkeypatch.setitem(sys.modules, register_types_name, register_types_module)
-
-    # Create const module
-    const_module = types.ModuleType(const_module_name)
-    const_module.DOMAIN = "ha_daikin_altherma4_modbus"
-    const_module.INPUT_DEVICE_INFO = {}
-    const_module.CALCULATED_DEVICE_INFO = {}
-    const_module.REGISTER_FLOW_RATE = "input_49"
-    const_module.REGISTER_LEAVING_WATER_TEMP = "input_40"
-    const_module.REGISTER_RETURN_WATER_TEMP = "input_42"
-    const_module.REGISTER_HEAT_PUMP_POWER = "input_51"
-    const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
-    const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
-    const_module.SPECIAL_REGISTER_WAITING = 32765
-    const_module.SPECIAL_REGISTER_VALUES = frozenset({32765, 32766, 32767})
-    const_module.INPUT_REGISTERS = [
-        SensorRegister(
-            name="Flow rate",
-            address=49,
-            input_type="input",
-            register_name="input_49",
-            unit="L/min",
-            data_type=register_types_module.POW16,
-        ),
-        SensorRegister(
-            name="Leaving water temperature PHE",
-            address=40,
-            input_type="input",
-            register_name="input_40",
-            unit="°C",
-            data_type=register_types_module.TEMP16,
-        ),
-        SensorRegister(
-            name="Return water temperature",
-            address=42,
-            input_type="input",
-            register_name="input_42",
-            unit="°C",
-            data_type=register_types_module.TEMP16,
-        ),
-        SensorRegister(
-            name="Heat pump power consumption",
-            address=51,
-            input_type="input",
-            register_name="input_51",
-            unit="W",
-            data_type=register_types_module.POW16,
-        ),
-    ]
-    const_module.CALCULATED_SENSORS = [
-        CalculatedRegister(
-            name="Coefficient of Performance",
-            address=0,
-            input_type="calculated",
-            register_name="cop",
-            calc_type="cop",
-            unit="CoP",
-            translation_key="cop",
-        ),
-    ]
-    monkeypatch.setitem(sys.modules, const_module_name, const_module)
-
-    # Create common module
-    common_module = types.ModuleType(common_module_name)
-
-    def get_register_value(data):
-        if isinstance(data, dict):
-            return data.get("value")
-        return None
-
-    def get_register_scale(data):
-        if isinstance(data, dict):
-            return data.get("scale")
-        return None
-
-    def is_entity_available(data, register_name):
-        return True
-
-    def is_unavailable_value(val):
-        return val in [32765, 32766]
-
-    def to_signed_16bit(val):
-        if val > 32767:
-            return val - 65536
-        return val
-
-    common_module.get_register_value = get_register_value
-    common_module.get_register_scale = get_register_scale
-    common_module.is_entity_available = is_entity_available
-    common_module.is_unavailable_value = is_unavailable_value
-    common_module.to_signed_16bit = to_signed_16bit
-    monkeypatch.setitem(sys.modules, common_module_name, common_module)
-
-    # Create config_entry_utils module
-    config_utils_module = types.ModuleType(config_utils_name)
-
-    def entry_value(entry, key, default=None):
-        options = getattr(entry, "options", {}) or {}
-        data = getattr(entry, "data", {}) or {}
-        return options.get(key, data.get(key, default))
-
-    config_utils_module.entry_value = entry_value
-    monkeypatch.setitem(sys.modules, config_utils_name, config_utils_module)
-
-    return importlib.import_module(sensor_module_name)
+from test_utils import setup_sensor_test_module
 
 
 def test_cop_sensor_with_external_power_sensor(monkeypatch):
     """Test CoP calculation with external power sensor."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     # Setup: heat_power = 3500W, electric_power = 1000W -> CoP = 3.5
     # Flow = 10 L/min, delta_T = 5K -> heat_power = 10 * 5 * 70 = 3500W
@@ -345,7 +53,7 @@ def test_cop_sensor_with_external_power_sensor(monkeypatch):
 
 def test_cop_sensor_with_modbus_power_data(monkeypatch):
     """Test CoP calculation with Modbus power data (input_51)."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     # No external sensor configured - should use input_51
     hass = SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: None))
@@ -375,7 +83,7 @@ def test_cop_sensor_with_modbus_power_data(monkeypatch):
 
 def test_cop_sensor_returns_none_when_heat_power_is_zero(monkeypatch):
     """Test that CoP returns None when heat power is zero (pump not running)."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     states = {
         "sensor.external_power": SimpleNamespace(
@@ -417,7 +125,7 @@ def test_cop_sensor_returns_none_when_heat_power_is_zero(monkeypatch):
 
 def test_cop_sensor_returns_none_when_electric_power_is_zero(monkeypatch):
     """Test that CoP returns None when electric power is zero."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     states = {
         "sensor.external_power": SimpleNamespace(
@@ -459,7 +167,7 @@ def test_cop_sensor_returns_none_when_electric_power_is_zero(monkeypatch):
 
 def test_cop_sensor_returns_none_when_external_sensor_unavailable(monkeypatch):
     """Test that CoP returns None when external power sensor is unavailable."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     # External sensor returns unavailable
     states = {
@@ -503,7 +211,7 @@ def test_cop_sensor_returns_none_when_external_sensor_unavailable(monkeypatch):
 
 def test_cop_sensor_with_unscaled_modbus_data(monkeypatch):
     """Test CoP calculation when Modbus data has no scale stored."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     hass = SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: None))
 
@@ -544,7 +252,7 @@ def test_cop_sensor_with_unscaled_modbus_data(monkeypatch):
 
 def test_cop_sensor_rounds_to_two_decimals(monkeypatch):
     """Test that CoP is rounded to 2 decimal places."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     states = {
         "sensor.external_power": SimpleNamespace(
@@ -587,7 +295,7 @@ def test_cop_sensor_rounds_to_two_decimals(monkeypatch):
 
 def test_cop_sensor_with_legacy_entry_data(monkeypatch):
     """Test CoP calculation when electric_power_sensor is in entry.data (legacy)."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     states = {
         "sensor.legacy_power": SimpleNamespace(
@@ -631,7 +339,7 @@ def test_cop_sensor_with_legacy_entry_data(monkeypatch):
 
 def test_cop_sensor_returns_none_when_electric_power_below_threshold(monkeypatch):
     """Test that CoP returns None when electric power is below 150W threshold."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     states = {
         "sensor.external_power": SimpleNamespace(
@@ -667,7 +375,7 @@ def test_cop_sensor_returns_none_when_electric_power_below_threshold(monkeypatch
 
 def test_cop_sensor_cooling_mode_negative_delta_t(monkeypatch):
     """Test CoP calculation in cooling mode where Vorlauf < Rücklauf (negative delta_t)."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     states = {
         "sensor.external_power": SimpleNamespace(
@@ -706,7 +414,7 @@ def test_cop_sensor_cooling_mode_negative_delta_t(monkeypatch):
 
 def test_cop_sensor_cooling_mode_with_modbus_power(monkeypatch):
     """Test CoP calculation in cooling mode using Modbus power data."""
-    sensor_module = _load_sensor_module(monkeypatch)
+    sensor_module = setup_sensor_test_module(monkeypatch)
 
     hass = SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: None))
 

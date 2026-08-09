@@ -1,9 +1,16 @@
 """Test to verify mock client doesn't generate invalid 16-bit values."""
 
+import importlib
 import sys
 import types
+from pathlib import Path
 
 import pytest
+
+# Add tests directory to path for test_utils import
+tests_dir = Path(__file__).parent
+if str(tests_dir) not in sys.path:
+    sys.path.insert(0, str(tests_dir))
 
 
 def _ensure_homeassistant_stubs():
@@ -70,30 +77,115 @@ def _ensure_homeassistant_stubs():
         sys.modules["homeassistant.helpers.issue_registry"] = issue_registry_module
 
 
+def _is_register_constants_polluted() -> bool:
+    """Check if register_constants module is polluted by another test file.
+
+    test_services.py replaces the real register_constants module with mock
+    data using MockRegister objects that lack an 'address' attribute, or
+    sets INPUT_REGISTERS to an empty list.
+
+    Returns:
+        True if the module is polluted, False otherwise.
+    """
+    rc_name = "custom_components.ha_daikin_altherma4_modbus.register_constants"
+    rc_module = sys.modules.get(rc_name)
+    if rc_module is None:
+        return False
+
+    registers = getattr(rc_module, "INPUT_REGISTERS", None)
+    if registers is None:
+        return True
+
+    if len(registers) == 0:
+        return True
+
+    for reg in registers:
+        if not hasattr(reg, "address"):
+            return True
+        if isinstance(reg, dict):
+            return True
+
+    return False
+
+
+def _get_mock_client_class(monkeypatch):
+    """Get MockModbusTcpClient class, restoring real register data first.
+
+    If register_constants has been polluted by another test file (e.g.,
+    test_services.py), this function restores the real register data
+    into the existing module so that the mock_client can function correctly
+    without breaking other tests that reference the module.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture
+
+    Returns:
+        MockModbusTcpClient class
+    """
+    _ensure_homeassistant_stubs()
+
+    if _is_register_constants_polluted():
+        _restore_real_register_constants(monkeypatch)
+
+    mock_client_name = "custom_components.ha_daikin_altherma4_modbus.mock_client"
+    if mock_client_name not in sys.modules:
+        importlib.import_module(mock_client_name)
+
+    mock_client_module = sys.modules[mock_client_name]
+    return mock_client_module.MockModbusTcpClient
+
+
+def _restore_real_register_constants(monkeypatch):
+    """Restore real register_constants data into the polluted module.
+
+    test_services.py replaces the real register_constants module with mock
+    data. This function loads the real register_constants module using the
+    shared test_utils helper and copies the essential register lists into
+    the polluted module. monkeypatch ensures the polluted values are restored
+    after the test.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture
+    """
+    from pathlib import Path
+
+    from test_utils import load_register_constants_module
+
+    project_root = Path(__file__).parent.parent
+    real_rc = load_register_constants_module(project_root)
+
+    rc_module = sys.modules[
+        "custom_components.ha_daikin_altherma4_modbus.register_constants"
+    ]
+    for attr in [
+        "INPUT_REGISTERS",
+        "HOLDING_REGISTERS",
+        "DISCRETE_REGISTERS",
+        "COIL_REGISTERS",
+        "CALCULATED_SENSORS",
+    ]:
+        if hasattr(real_rc, attr):
+            monkeypatch.setattr(rc_module, attr, getattr(real_rc, attr))
+
+
 # Setup stubs immediately
 _ensure_homeassistant_stubs()
 
-# Import after stubs are set up
-from custom_components.ha_daikin_altherma4_modbus.mock_client import MockModbusTcpClient
-
 
 @pytest.mark.asyncio
-async def test_mock_client_valid_16bit_values():
+async def test_mock_client_valid_16bit_values(monkeypatch):
     """Test that mock client generates only valid 16-bit values."""
-    # Ensure stubs are available at test execution time
-    _ensure_homeassistant_stubs()
+    MockModbusTcpClient = _get_mock_client_class(monkeypatch)
 
     client = MockModbusTcpClient("localhost", 502)
     await client.connect()
 
-    # Test input registers
     input_result = await client.read_input_registers(0, 100)
     for i, value in enumerate(input_result.registers):
         assert 0 <= value <= 65535, (
             f"Input register {i}: Value {value} is outside 16-bit range"
         )
 
-    # Test holding registers
     holding_result = await client.read_holding_registers(0, 100)
     for i, value in enumerate(holding_result.registers):
         assert 0 <= value <= 65535, (
@@ -104,28 +196,21 @@ async def test_mock_client_valid_16bit_values():
 
 
 @pytest.mark.asyncio
-async def test_mock_client_signed_register_conversion():
+async def test_mock_client_signed_register_conversion(monkeypatch):
     """Test that signed registers are properly converted to unsigned."""
-    # Ensure stubs are available at test execution time
-    _ensure_homeassistant_stubs()
+    MockModbusTcpClient = _get_mock_client_class(monkeypatch)
 
     client = MockModbusTcpClient("localhost", 502)
     await client.connect()
 
-    # Read registers that have negative min_value (holding_54, holding_55, etc.)
-    # These should be converted to unsigned 16-bit representation
-    result = await client.read_holding_registers(54, 4)  # holding_54 to holding_57
+    result = await client.read_holding_registers(54, 4)
 
-    for i, value in enumerate(
-        result.registers[:4]
-    ):  # First 4 are the holding registers
+    for i, value in enumerate(result.registers[:4]):
         assert 0 <= value <= 65535, (
             f"Signed register {54 + i}: Value {value} is outside 16-bit range"
         )
 
-        # Values in the range 65526-65535 likely represent negative numbers
         if value > 65535 - 10:
-            # This is probably a negative number converted to unsigned
             signed_value = value - 65536
             assert -10 <= signed_value <= -1, (
                 f"Expected negative value, got {signed_value} from {value}"
@@ -134,14 +219,12 @@ async def test_mock_client_signed_register_conversion():
     await client.disconnect()
 
 
-def test_mock_client_data_generation():
+def test_mock_client_data_generation(monkeypatch):
     """Test the demo data generation function directly."""
-    # Ensure stubs are available at test execution time
-    _ensure_homeassistant_stubs()
+    MockModbusTcpClient = _get_mock_client_class(monkeypatch)
 
     demo_data = MockModbusTcpClient.generate_demo_register_data()
 
-    # Check all value types
     for register_type, values in demo_data.items():
         if register_type in ["input_registers", "holding_registers"]:
             for i, value in enumerate(values):
@@ -149,7 +232,6 @@ def test_mock_client_data_generation():
                     f"{register_type}[{i}]: Value {value} is outside 16-bit range"
                 )
 
-    # Check that we have the expected register types
     assert "input_registers" in demo_data
     assert "holding_registers" in demo_data
     assert "discrete_inputs" in demo_data
@@ -157,10 +239,9 @@ def test_mock_client_data_generation():
 
 
 @pytest.mark.asyncio
-async def test_mock_client_reproducible_data():
+async def test_mock_client_reproducible_data(monkeypatch):
     """Test that mock client generates consistent data structure."""
-    # Ensure stubs are available at test execution time
-    _ensure_homeassistant_stubs()
+    MockModbusTcpClient = _get_mock_client_class(monkeypatch)
 
     client1 = MockModbusTcpClient("localhost", 502)
     await client1.connect()
@@ -168,11 +249,9 @@ async def test_mock_client_reproducible_data():
     client2 = MockModbusTcpClient("localhost", 502)
     await client2.connect()
 
-    # Both should generate valid data
     result1 = await client1.read_input_registers(0, 10)
     result2 = await client2.read_input_registers(0, 10)
 
-    # All values should be in valid range
     for i, value in enumerate(result1.registers):
         assert 0 <= value <= 65535, (
             f"Client1 register {i}: Value {value} is outside 16-bit range"

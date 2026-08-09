@@ -1,53 +1,18 @@
 """Performance tests for Daikin Altherma 4 Modbus integration."""
 
 import asyncio
+import sys
 import time
+from pathlib import Path
 
 import pytest
 
+# Add tests directory to path for test_utils import
+tests_dir = Path(__file__).parent
+if str(tests_dir) not in sys.path:
+    sys.path.insert(0, str(tests_dir))
 
-class MockPerformanceClient:
-    """Mock client for performance testing."""
-
-    def __init__(self, host: str, port: int):
-        self.host = host
-        self.port = port
-        self.connected = True
-        self.read_count = 0
-        self.total_bytes = 0
-
-    async def connect(self):
-        """Simulate connection with small delay."""
-        await asyncio.sleep(0.01)  # 10ms connection time
-        self.connected = True
-
-    async def read_input_registers(self, address: int, count: int):
-        """Simulate register read with realistic timing."""
-        await asyncio.sleep(0.001)  # 1ms per register block
-        self.read_count += 1
-        self.total_bytes += count * 2  # 2 bytes per register
-        return [0] * count
-
-    async def read_holding_registers(self, address: int, count: int):
-        """Simulate holding register read."""
-        await asyncio.sleep(0.001)
-        self.read_count += 1
-        self.total_bytes += count * 2
-        return [0] * count
-
-    async def read_discrete_inputs(self, address: int, count: int):
-        """Simulate discrete input read."""
-        await asyncio.sleep(0.0005)
-        self.read_count += 1
-        self.total_bytes += count // 8  # 1 bit per discrete input
-        return [0] * ((count + 7) // 8)
-
-    async def read_coils(self, address: int, count: int):
-        """Simulate coil read."""
-        await asyncio.sleep(0.0005)
-        self.read_count += 1
-        self.total_bytes += count // 8
-        return [0] * ((count + 7) // 8)
+from test_utils import FakeModbusClientPerformance
 
 
 def test_mock_client_performance(benchmark):
@@ -55,7 +20,7 @@ def test_mock_client_performance(benchmark):
 
     async def _async_operations():
         """All async operations in one coroutine."""
-        client = MockPerformanceClient("localhost", 502)
+        client = FakeModbusClientPerformance("localhost", 502, timing_mode="fast")
 
         # Connection
         await client.connect()
@@ -76,8 +41,8 @@ def test_mock_client_performance(benchmark):
     # Assertions
     assert len(result1) == 5
     assert len(result2) == 3
-    assert len(result3) == 1
-    assert len(result4) == 1
+    assert len(result3) == 8  # 8 discrete inputs requested
+    assert len(result4) == 8  # 8 coils requested
     assert client.read_count == 4
 
 
@@ -85,7 +50,7 @@ def test_register_read_performance(benchmark):
     """Benchmark register read operations."""
 
     def read_multiple_blocks():
-        client = MockPerformanceClient("localhost", 502)
+        client = FakeModbusClientPerformance("localhost", 502, timing_mode="fast")
         results = []
 
         # Read multiple register blocks
@@ -141,7 +106,9 @@ async def test_performance_scan_intervals():
         cycles = int(duration / interval)
 
         # Mock client for performance testing
-        client = MockPerformanceClient("192.168.1.100", 502)
+        client = FakeModbusClientPerformance(
+            "192.168.1.100", 502, timing_mode="realistic"
+        )
         await client.connect()
 
         # Simulate scan cycles
@@ -222,7 +189,7 @@ async def test_performance_scan_intervals():
 async def test_performance_batch_optimization():
     """Test performance impact of batch vs individual register reads."""
 
-    client = MockPerformanceClient("192.168.1.100", 502)
+    client = FakeModbusClientPerformance("192.168.1.100", 502, timing_mode="realistic")
     await client.connect()
 
     # Test 1: Individual register reads (current implementation)
@@ -261,7 +228,7 @@ async def test_performance_memory_usage():
     baseline_objects = len(gc.get_objects())
 
     # Simulate extended operation
-    client = MockPerformanceClient("192.168.1.100", 502)
+    client = FakeModbusClientPerformance("192.168.1.100", 502, timing_mode="fast")
     await client.connect()
 
     # Simulate 100 update cycles
