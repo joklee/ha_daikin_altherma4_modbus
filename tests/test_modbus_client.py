@@ -8,6 +8,11 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+# Add tests directory to path for test_utils import
+tests_dir = Path(__file__).parent
+if str(tests_dir) not in sys.path:
+    sys.path.insert(0, str(tests_dir))
+
 
 def _reset_modules(*names: str) -> None:
     for name in names:

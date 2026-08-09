@@ -1,57 +1,21 @@
 """Connection Pool Performance Tests for Daikin Altherma 4 Modbus Integration."""
 
 import asyncio
+import sys
 import time
-from unittest.mock import AsyncMock
+from pathlib import Path
 
 import pytest
 
+# Add tests directory to path for test_utils import
+tests_dir = Path(__file__).parent
+if str(tests_dir) not in sys.path:
+    sys.path.insert(0, str(tests_dir))
 
-class MockAsyncModbusTcpClient:
-    """Mock AsyncModbusTcpClient for connection pool testing."""
-
-    def __init__(self, host: str, port: int = 502, timeout: int = 10, retries: int = 1):
-        self.host = host
-        self.port = port
-        self.timeout = timeout
-        self.retries = retries
-        self.connected = False
-        self.connection_count = 0
-        self.operation_count = 0
-        self.read_operations = []
-
-    async def connect(self):
-        """Simulate connection with realistic timing."""
-        await asyncio.sleep(0.01)  # 10ms connection time
-        self.connected = True
-        self.connection_count += 1
-
-    def close(self):
-        """Simulate connection close."""
-        self.connected = False
-
-    async def read_input_registers(self, address: int, count: int):
-        """Simulate register read."""
-        if not self.connected:
-            raise ConnectionError("Not connected")
-
-        self.operation_count += 1
-        self.read_operations.append(f"read_input_registers({address}, {count})")
-        await asyncio.sleep(0.001)  # 1ms read time
-        return AsyncMock(registers=[0] * count, isError=lambda: False)
-
-    async def read_holding_registers(self, address: int, count: int):
-        """Simulate holding register read."""
-        if not self.connected:
-            raise ConnectionError("Not connected")
-
-        self.operation_count += 1
-        self.read_operations.append(f"read_holding_registers({address}, {count})")
-        await asyncio.sleep(0.001)
-        return AsyncMock(registers=[0] * count, isError=lambda: False)
-
-
+# Use centralized FakeModbusClient from test_utils
 from typing import ClassVar
+
+from test_utils import FakeModbusClient
 
 
 class MockRealModbusTcpClient:
@@ -64,7 +28,7 @@ class MockRealModbusTcpClient:
     def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
-        self._client = MockAsyncModbusTcpClient(host, port)
+        self._client = FakeModbusClient(host, port)
         self._lock = None
 
     @classmethod
@@ -248,18 +212,15 @@ async def test_connection_pool_recovery_concept():
     print("🔄 CONNECTION POOL RECOVERY TEST")
     print("=" * 80)
 
-    class FailingMockClient:
+    class FailingMockClient(FakeModbusClient):
         """Mock client that fails initially then recovers."""
 
         def __init__(
             self, host: str, port: int = 502, timeout: int = 10, retries: int = 1
         ):
-            self.host = host
-            self.port = port
-            self.connected = False
+            super().__init__(host, port, timeout)
             self.connection_attempts = 0
             self.should_fail = True
-            self.operation_count = 0
 
         async def connect(self):
             """Simulate connection failure then recovery."""
@@ -269,18 +230,6 @@ async def test_connection_pool_recovery_concept():
             await asyncio.sleep(0.01)
             self.connected = True
             self.should_fail = False
-
-        def close(self):
-            """Simulate connection close."""
-            self.connected = False
-
-        async def read_input_registers(self, address: int, count: int):
-            if not self.connected:
-                raise ConnectionError("Not connected")
-
-            self.operation_count += 1
-            await asyncio.sleep(0.001)
-            return AsyncMock(registers=[0] * count, isError=lambda: False)
 
     class FailingRealModbusTcpClient:
         """Mock RealModbusTcpClient with failing underlying client."""
