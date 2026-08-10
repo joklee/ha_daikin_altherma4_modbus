@@ -441,7 +441,7 @@ class FakeModbusClient:
     @property
     def read_count(self) -> int:
         """Get the number of read operations (for performance tests)."""
-        return self._operation_count
+        return len(self._read_operations)
 
     @property
     def total_bytes(self) -> int:
