@@ -20,8 +20,14 @@ from .register_constants import (
     INPUT_REGISTERS,
 )
 from .register_types import TEXT16
+from .repair import (
+    async_create_abnormality_issue,
+    async_delete_abnormality_issue,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
+PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -55,7 +61,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 continue
         unit = item.unit or ""
         count = item.count or 1
-        icon = item.icon or "mdi:information"
         enum_map = item.enum_map
         entity_category = item.entity_category
         unique_id = item.unique_id or f"{DOMAIN}_{register_name}"
@@ -71,7 +76,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 unit=unit,
                 data_type=data_type,
                 count=count,
-                icon=icon,
                 enum_map=enum_map,
                 entity_category=entity_category,
                 register_name=register_name,
@@ -158,11 +162,48 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     async_add_entities(entities)
 
+    # Set up abnormality monitoring callback
+    _abnormality_state = {"issue_created": False}
+
+    def _check_abnormality():
+        """Check input_21 (Unit abnormality) and create/delete repair issue."""
+        data = unified_coordinator.data.get("input_21")
+        if data is None:
+            return
+        val = get_register_value(data)
+        if val is None:
+            return
+
+        # Get abnormality code and sub code for the issue message
+        code_data = unified_coordinator.data.get("input_22")
+        code_val = get_register_value(code_data) if code_data else None
+        sub_code_data = unified_coordinator.data.get("input_23")
+        sub_code_val = get_register_value(sub_code_data) if sub_code_data else None
+
+        if val in (1, 2) and not _abnormality_state["issue_created"]:
+            # fault=1 or warning=2
+            async_create_abnormality_issue(
+                hass,
+                entry,
+                abnormality_code=str(code_val) if code_val is not None else "unknown",
+                abnormality_sub_code=int(sub_code_val)
+                if sub_code_val is not None
+                else 0,
+            )
+            _abnormality_state["issue_created"] = True
+        elif val == 0 and _abnormality_state["issue_created"]:
+            # no_error=0 - delete the issue
+            async_delete_abnormality_issue(hass, entry)
+            _abnormality_state["issue_created"] = False
+
+    unified_coordinator.async_add_listener(_check_abnormality)
+
 
 class DaikinInputSensor(CoordinatorEntity, SensorEntity):
     """A Sensor for Input-Register."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
@@ -172,7 +213,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         unit,
         data_type,
         count,
-        icon,
         enum_map,
         register_name,
         entity_category=None,
@@ -187,7 +227,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         # Scale only from register_types (data_type.scaling)
         self._scale = getattr(data_type, "scaling", 1) if data_type else 1
         self._count = count
-        self._icon = icon
         self._enum_map = enum_map
         self._attr_register_name = register_name
         self._attr_unique_id = unique_id
@@ -195,7 +234,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._attr_entity_category = entity_category
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
-        self._attr_icon = icon
 
         # Enum sensors: special configuration
         if enum_map:
@@ -302,6 +340,7 @@ class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Wärmepumpenleistung."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
@@ -319,7 +358,6 @@ class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = unique_id
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
-        self._attr_icon = "mdi:fire"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
@@ -339,6 +377,7 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
     """Berechneter Sensor für Coefficient of Performance (CoP)."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
@@ -357,7 +396,6 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_state_class = "measurement"
-        self._attr_icon = "mdi:gauge"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
@@ -417,6 +455,7 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
     """Sensor für das letzte Auslösen eines Binärsensors."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
@@ -497,6 +536,7 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
     """Sensor für externen elektrischen Leistungssensor."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
@@ -515,7 +555,6 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_state_class = "measurement"
-        self._attr_icon = "mdi:flash"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_entity_category = entity_category
         self._attr_translation_key = translation_key
@@ -568,6 +607,7 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
     """Calculated sensor for temperature difference (Delta-T)."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
@@ -585,7 +625,6 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = device_class
         self._attr_state_class = "measurement"
-        self._attr_icon = "mdi:thermometer-lines"
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
 

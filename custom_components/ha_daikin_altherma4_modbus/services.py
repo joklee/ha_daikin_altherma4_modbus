@@ -250,11 +250,15 @@ if HAS_HA:
         entry = hass.config_entries.async_get_entry(config_entry_id)
         if entry is None:
             raise ServiceValidationError(
-                f"Configuration entry {config_entry_id} not found"
+                translation_domain=DOMAIN,
+                translation_key="config_entry_not_found",
+                translation_placeholders={"config_entry_id": config_entry_id},
             )
         if entry.state != ConfigEntryState.LOADED:
             raise ServiceValidationError(
-                f"Configuration entry {config_entry_id} is not loaded"
+                translation_domain=DOMAIN,
+                translation_key="config_entry_not_loaded",
+                translation_placeholders={"config_entry_id": config_entry_id},
             )
         return entry
 
@@ -269,7 +273,11 @@ if HAS_HA:
 
         mode_value = OPERATION_MODE_MAP.get(operation_mode)
         if mode_value is None:
-            raise ServiceValidationError(f"Invalid operation mode: {operation_mode}")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_operation_mode",
+                translation_placeholders={"operation_mode": operation_mode},
+            )
 
         await manager.write_holding_register(REGISTER_OPERATION_MODE, mode_value)
         _LOGGER.debug(
@@ -335,7 +343,14 @@ if HAS_HA:
     async def async_set_smart_grid_mode(hass, call) -> None:
         """Set the Smart Grid operation mode."""
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
-        smart_grid_mode = call.data[ATTR_SMART_GRID_MODE]
+        smart_grid_mode = call.data.get(ATTR_SMART_GRID_MODE)
+
+        if smart_grid_mode is None:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_smart_grid_mode",
+                translation_placeholders={"smart_grid_mode": "None"},
+            )
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
@@ -344,7 +359,11 @@ if HAS_HA:
         smart_grid_mode_map = get_smart_grid_mode_map()
         mode_value = smart_grid_mode_map.get(smart_grid_mode)
         if mode_value is None:
-            raise ServiceValidationError(f"Invalid Smart Grid mode: {smart_grid_mode}")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_smart_grid_mode",
+                translation_placeholders={"smart_grid_mode": smart_grid_mode},
+            )
 
         await manager.write_holding_register("holding_56", mode_value)
         _LOGGER.debug(
@@ -366,7 +385,11 @@ if HAS_HA:
         quiet_mode_map = get_quiet_mode_map()
         mode_value = quiet_mode_map.get(quiet_mode)
         if mode_value is None:
-            raise ServiceValidationError(f"Invalid Quiet mode: {quiet_mode}")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_quiet_mode",
+                translation_placeholders={"quiet_mode": quiet_mode},
+            )
 
         await manager.write_holding_register("holding_9", mode_value)
         _LOGGER.debug(

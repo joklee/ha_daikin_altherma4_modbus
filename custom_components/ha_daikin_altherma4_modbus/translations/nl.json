@@ -1,0 +1,746 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Daikin Altherma 4 Modbus",
+        "description": "Configureer Daikin Altherma 4 Modbus integratie",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Scan Interval",
+          "slow_scan_interval": "Langzame Scan Interval",
+          "electric_power_sensor": "Externe stroomverbruik sensor Entity ID",
+          "demo_mode": "Demo Mode"
+        },
+        "data_description": {
+          "host": "IP address of hostname van de Daikin Altherma warmtepomp",
+          "port": "Modbus TCP port (default: 502)",
+          "scan_interval": "Scan interval in seconde voor normale data",
+          "slow_scan_interval": "Scan interval in seconde voor langzame data",
+          "electric_power_sensor": "Optionele Entity ID voor externe stroomverbruik sensor",
+          "demo_mode": "Demo mode inschakelen zonder connectie"
+        }
+      },
+      "reauth": {
+        "title": "Herauthenticeer Daikin Altherma 4 Modbus",
+        "description": "Werk de verbindingsgegevens bij voor uw Daikin Altherma 4 warmtepomp.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Scan Interval",
+          "slow_scan_interval": "Langzame Scan Interval",
+          "electric_power_sensor": "Externe stroomverbruik sensor Entity ID",
+          "demo_mode": "Demo Mode"
+        },
+        "data_description": {
+          "host": "IP address of hostname van de Daikin Altherma warmtepomp",
+          "port": "Modbus TCP port (default: 502)",
+          "scan_interval": "Scan interval in seconde voor normale data",
+          "slow_scan_interval": "Scan interval in seconde voor langzame data",
+          "electric_power_sensor": "Optionele Entity ID voor externe stroomverbruik sensor",
+          "demo_mode": "Demo mode inschakelen zonder connectie"
+        }
+      },
+      "reconfigure": {
+        "title": "Herconfigureer Daikin Altherma 4 Modbus",
+        "description": "Werk de verbindingsgegevens bij voor uw Daikin Altherma 4 warmtepomp.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "scan_interval": "Scan Interval",
+          "slow_scan_interval": "Langzame Scan Interval",
+          "electric_power_sensor": "Externe stroomverbruik sensor Entity ID",
+          "demo_mode": "Demo Mode"
+        },
+        "data_description": {
+          "host": "IP address of hostname van de Daikin Altherma warmtepomp",
+          "port": "Modbus TCP port (default: 502)",
+          "scan_interval": "Scan interval in seconde voor normale data",
+          "slow_scan_interval": "Scan interval in seconde voor langzame data",
+          "electric_power_sensor": "Optionele Entity ID voor externe stroomverbruik sensor",
+          "demo_mode": "Demo mode inschakelen zonder connectie"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Daikin Altherma 4 Opties",
+        "description": "Configureer Daikin Altherma 4 Modbus integratie opties",
+        "data": {
+          "scan_interval": "Scan Interval",
+          "slow_scan_interval": "Langzame Scan Interval",
+          "electric_power_sensor": "Externe Stroomverbruik Sensor Entity ID",
+          "demo_mode": "Demo Mode"
+        },
+        "data_description": {
+          "scan_interval": "Scan interval in seconde voor normale data",
+          "slow_scan_interval": "Scan interval in seconde voor langzame data",
+          "electric_power_sensor": "Optionele Entity ID voor externe stroomverbruik sensor",
+          "demo_mode": "Demo mode inschakelen zonder connectie"
+        }
+      }
+    }
+  },
+  "device": {
+    "daikin_altherma_modbus_input_registers": {
+      "name": "Daikin Altherma 4 - Input Register"
+    },
+    "daikin_altherma_modbus_holding_registers": {
+      "name": "Daikin Altherma 4 - Holding Register"
+    },
+    "daikin_altherma_modbus_calculated_sensors": {
+      "name": "Daikin Altherma 4 - Enhanced"
+    },
+    "daikin_altherma_modbus_discrete_input_registers": {
+      "name": "Daikin Altherma 4 - Discrete Input"
+    },
+    "daikin_altherma_modbus_coil_registers": {
+      "name": "Daikin Altherma 4 - Coil"
+    }
+  },
+  "entity": {
+    "climate": {
+      "daikin_thermostat_climate": {
+        "name": "Verwarming Thermostaat Controle"
+      },
+      "daikin_dhw_manual_thermostat": {
+        "name": "SWW eenmalig verwarmen Thermostaat Controle"
+      },
+      "daikin_dhw_booster_thermostat": {
+        "name": "SWW Booster Thermostaat Controle"
+      }
+    },
+    "switch": {
+      "coil_1": {
+        "name": "Sanitair Warm Water"
+      },
+      "coil_2": {
+        "name": "Primaire zone"
+      },
+      "coil_3": {
+        "name": "Secondaire zone"
+      },
+      "holding_4": {
+        "name": "Ruimte Verwarmen/Koelen",
+        "state": {
+          "off": "Uit",
+          "on": "Aan"
+        }
+      },
+      "holding_13": {
+        "name": "SWW Booster modus (Krachtig)",
+        "state": {
+          "off": "Uit",
+          "on_powerful": "Aan (Krachtig)"
+        }
+      },
+      "holding_15": {
+        "name": "SWW Eenmalig verwarmen (Handmatig)",
+        "state": {
+          "off": "Uit",
+          "on": "Aan"
+        }
+      }
+    },
+    "binary_sensor": {
+      "input_30": {
+        "name": "Compressor actief"
+      },
+      "input_31": {
+        "name": "Booster heater actief"
+      },
+      "input_32": {
+        "name": "Desinfectie cyclus actief"
+      },
+      "input_34": {
+        "name": "Ontdooi/Herstart"
+      },
+      "input_35": {
+        "name": "Warme start"
+      },
+      "input_63": {
+        "name": "Desinfectie status"
+      },
+      "input_64": {
+        "name": "Vakantie modus"
+      },
+      "discrete_1": {
+        "name": "Afsluitklep"
+      },
+      "discrete_2": {
+        "name": "Backup heater relay 1"
+      },
+      "discrete_3": {
+        "name": "Backup heater relay 2"
+      },
+      "discrete_4": {
+        "name": "Backup heater relay 3"
+      },
+      "discrete_5": {
+        "name": "Backup heater relay 4"
+      },
+      "discrete_6": {
+        "name": "Backup heater relay 5"
+      },
+      "discrete_7": {
+        "name": "Backup heater relay 6"
+      },
+      "discrete_8": {
+        "name": "Booster heater"
+      },
+      "discrete_9": {
+        "name": "Boilervat"
+      },
+      "discrete_10": {
+        "name": "Bivalent"
+      },
+      "discrete_11": {
+        "name": "Compressor actief"
+      },
+      "discrete_12": {
+        "name": "Stille modus actief"
+      },
+      "discrete_13": {
+        "name": "Vakantie modus actief"
+      },
+      "discrete_14": {
+        "name": "Vorstbeveiliging status"
+      },
+      "discrete_15": {
+        "name": "Waterleiding vorst preventie status"
+      },
+      "discrete_16": {
+        "name": "Desinfectie cyclus"
+      },
+      "discrete_17": {
+        "name": "Ontdooien"
+      },
+      "discrete_18": {
+        "name": "Warme start"
+      },
+      "discrete_19": {
+        "name": "SWW actief"
+      },
+      "discrete_20": {
+        "name": "Primaire zone actief"
+      },
+      "discrete_21": {
+        "name": "Secondaire zone actief"
+      },
+      "discrete_22": {
+        "name": "Krachtig boiler opwarmen verzocht"
+      },
+      "discrete_23": {
+        "name": "Handmatig boiler opwarmen verzocht"
+      },
+      "discrete_24": {
+        "name": "Noodgeval actief"
+      },
+      "discrete_25": {
+        "name": "Circulatie pomp actief"
+      },
+      "discrete_26": {
+        "name": "Imposed limit acceptance"
+      }
+    },
+    "sensor": {
+      "input_21": {
+        "name": "Unit abnormality",
+        "state": {
+          "no_error": "Geen fout",
+          "fault": "Fout",
+          "warning": "Waarschuwing"
+        }
+      },
+      "input_22": {
+        "name": "Abnormality code"
+      },
+      "input_23": {
+        "name": "Subcode for abnormality",
+        "state": {
+          "no_error": "No error",
+          "error_0": "Error 0",
+          "error_1": "Error 1",
+          "error_2": "Error 2",
+          "error_3": "Error 3",
+          "error_4": "Error 4",
+          "error_5": "Error 5",
+          "error_6": "Error 6",
+          "error_7": "Error 7",
+          "error_8": "Error 8",
+          "error_9": "Error 9",
+          "error_10": "Error 10",
+          "error_11": "Error 11",
+          "error_12": "Error 12",
+          "error_13": "Error 13",
+          "error_14": "Error 14",
+          "error_15": "Error 15",
+          "error_16": "Error 16",
+          "error_17": "Error 17",
+          "error_18": "Error 18",
+          "error_19": "Error 19",
+          "error_20": "Error 20",
+          "error_21": "Error 21",
+          "error_22": "Error 22",
+          "error_23": "Error 23",
+          "error_24": "Error 24",
+          "error_25": "Error 25",
+          "error_26": "Error 26",
+          "error_27": "Error 27",
+          "error_28": "Error 28",
+          "error_29": "Error 29",
+          "error_30": "Error 30",
+          "error_31": "Error 31",
+          "error_32": "Error 32",
+          "error_33": "Error 33",
+          "error_34": "Error 34",
+          "error_35": "Error 35",
+          "error_36": "Error 36",
+          "error_37": "Error 37",
+          "error_38": "Error 38",
+          "error_39": "Error 39",
+          "error_40": "Error 40",
+          "error_41": "Error 41",
+          "error_42": "Error 42",
+          "error_43": "Error 43",
+          "error_44": "Error 44",
+          "error_45": "Error 45",
+          "error_46": "Error 46",
+          "error_47": "Error 47",
+          "error_48": "Error 48",
+          "error_49": "Error 49",
+          "error_50": "Error 50",
+          "error_51": "Error 51",
+          "error_52": "Error 52",
+          "error_53": "Error 53",
+          "error_54": "Error 54",
+          "error_55": "Error 55",
+          "error_56": "Error 56",
+          "error_57": "Error 57",
+          "error_58": "Error 58",
+          "error_59": "Error 59",
+          "error_60": "Error 60",
+          "error_61": "Error 61",
+          "error_62": "Error 62",
+          "error_63": "Error 63",
+          "error_64": "Error 64",
+          "error_65": "Error 65",
+          "error_66": "Error 66",
+          "error_67": "Error 67",
+          "error_68": "Error 68",
+          "error_69": "Error 69",
+          "error_70": "Error 70",
+          "error_71": "Error 71",
+          "error_72": "Error 72",
+          "error_73": "Error 73",
+          "error_74": "Error 74",
+          "error_75": "Error 75",
+          "error_76": "Error 76",
+          "error_77": "Error 77",
+          "error_78": "Error 78",
+          "error_79": "Error 79",
+          "error_80": "Error 80",
+          "error_81": "Error 81",
+          "error_82": "Error 82",
+          "error_83": "Error 83",
+          "error_84": "Error 84",
+          "error_85": "Error 85",
+          "error_86": "Error 86",
+          "error_87": "Error 87",
+          "error_88": "Error 88",
+          "error_89": "Error 89",
+          "error_90": "Error 90",
+          "error_91": "Error 91",
+          "error_92": "Error 92",
+          "error_93": "Error 93",
+          "error_94": "Error 94",
+          "error_95": "Error 95",
+          "error_96": "Error 96",
+          "error_97": "Error 97",
+          "error_98": "Error 98",
+          "error_99": "Error 99"
+        }
+      },
+      "input_30": {
+        "name": "Compressor run"
+      },
+      "input_31": {
+        "name": "Booster heater run"
+      },
+      "input_32": {
+        "name": "Desinfectie actief"
+      },
+      "input_33": {
+        "name": "Desinfectie actief"
+      },
+      "input_34": {
+        "name": "Ontdooi/Herstart"
+      },
+      "input_35": {
+        "name": "Warme start"
+      },
+      "input_36": {
+        "name": "Warme start"
+      },
+      "input_37": {
+        "name": "3-weg klep",
+        "state": {
+          "space_heating": "Ruimte Verwarmen/Koelen",
+          "dhw": "SWW"
+        }
+      },
+      "input_38": {
+        "name": "Actieve modus",
+        "state": {
+          "none": "Geen",
+          "heating": "Verwarmen",
+          "cooling": "Koelen"
+        }
+      },
+      "input_40": {
+        "name": "Uitgaand water temperatuur PHE"
+      },
+      "input_41": {
+        "name": "Uitgaand water temperatuur BUH"
+      },
+      "input_42": {
+        "name": "Retour water temperatuur"
+      },
+      "input_43": {
+        "name": "SWW temperatuur"
+      },
+      "input_44": {
+        "name": "Buiten temperatuur"
+      },
+      "input_45": {
+        "name": "Koelmiddel temperatuur"
+      },
+      "input_49": {
+        "name": "Debiet"
+      },
+      "input_50": {
+        "name": "Remote control Ruimte temperatuur (Primair)"
+      },
+      "input_51": {
+        "name": "Warmtepomp stroomverbruik"
+      },
+      "input_52": {
+        "name": "SWW modus",
+        "state": {
+          "idle_buffering": "Idle/Bufferen",
+          "operation": "Actief"
+        }
+      },
+      "input_53": {
+        "name": "Ruimte Verwarmen/Koelen Modus",
+        "state": {
+          "idle_buffering": "Idle/Bufferen",
+          "operation": "Actief"
+        }
+      },
+      "input_54": {
+        "name": "Uitgaande water Primair Verwarmen instelpunt limiet laag"
+      },
+      "input_55": {
+        "name": "Uitgaande water Primair Verwarmen instelpunt limiet hoog"
+      },
+      "input_56": {
+        "name": "Uitgaande water Primair Koelen instelpunt limiet laag"
+      },
+      "input_57": {
+        "name": "Uitgaande water Primair Koelen instelpunt limiet hoog"
+      },
+      "input_58": {
+        "name": "Secondair verwarmen instelpunt limiet laag"
+      },
+      "input_59": {
+        "name": "Secondair verwarmen instelpunt limiet hoog"
+      },
+      "input_60": {
+        "name": "Secondair koelen instelpunt limiet laag"
+      },
+      "input_61": {
+        "name": "Secondair koelen instelpunt limiet hoog"
+      },
+      "input_63": {
+        "name": "Desinfectie status",
+        "state": {
+          "unsuccessful": "Onsuccesvol",
+          "successful": "Succesvol",
+          "maintain": "Onderhoud",
+          "heat_up": "Opwarmen"
+        }
+      },
+      "input_65": {
+        "name": "Demand request mode",
+        "state": {
+          "free": "Vrij",
+          "forced_off": "Geforceerd uit",
+          "forced_on": "Geforceerd aan",
+          "recommended_on": "Aanbevolen aan",
+          "reduced": "Gereduceerd"
+        }
+      },
+      "input_66": {
+        "name": "Bypass klep positie"
+      },
+      "input_67": {
+        "name": "Opslag Klep positie"
+      },
+      "input_68": {
+        "name": "Circulatie pomp snelheid"
+      },
+      "input_69": {
+        "name": "Mixed pomp PWM in mixing ratio"
+      },
+      "input_70": {
+        "name": "Direct pomp PWM in mixing ratio"
+      },
+      "input_71": {
+        "name": "Mixing valve position in mixing ratio"
+      },
+      "input_72": {
+        "name": "Mixing Leaving water temperature in mixing kit"
+      },
+      "input_73": {
+        "name": "Space heating/cooling target voor primaire zone in mixing kit"
+      },
+      "input_74": {
+        "name": "Uitgaand water temperatuur prePHE buiten"
+      },
+      "input_75": {
+        "name": "Uitgaand water temperatuur Tank klep"
+      },
+      "input_76": {
+        "name": "SWW Hoogste temperatuur"
+      },
+      "input_77": {
+        "name": "SWW Laagste temperatuur"
+      },
+      "input_78": {
+        "name": "Remote controller kamer temperatuur (Secondair)"
+      },
+      "input_79": {
+        "name": "Waterdruk"
+      },
+      "input_80": {
+        "name": "Ruimte Verwarmen/Koelen instelpunt voor Primaire zone"
+      },
+      "input_81": {
+        "name": "Ruimte Verwarmen/Koelen instelpunt voor Secondaire zone"
+      },
+      "input_82": {
+        "name": "Abnormality counter (user)"
+      },
+      "input_83": {
+        "name": "Bedrijfsmodus",
+        "state": {
+          "stop": "Stop",
+          "tank_heat_up": "Boiler Verwarmen",
+          "space_heating": "Ruimte Verwarmen",
+          "space_cooling": "Ruimte Koelen",
+          "actuator": "Actuator"
+        }
+      },
+      "input_84": {
+        "name": "Ruimte Verwarmen instelpunt limiet laag"
+      },
+      "input_85": {
+        "name": "Ruimte Verwarmen instelpunt limiet hoog"
+      },
+      "input_86": {
+        "name": "Ruimte Koelen instelpunt limiet laag"
+      },
+      "input_87": {
+        "name": "Ruimte Koelen instelpunt limiet hoog"
+      },
+      "thermal_heat_output": {
+        "name": "Thermisch uitgaand vermogen"
+      },
+      "cop": {
+        "name": "Coefficient of Performance"
+      },
+      "delta_t": {
+        "name": "Delta-T"
+      },
+      "last_compressor_run": {
+        "name": "Laatste Compressor Run"
+      },
+      "last_defrost": {
+        "name": "Laatste ontdooi cyclus"
+      },
+      "last_booster_heater": {
+        "name": "Laatste Booster Heater"
+      },
+      "last_dhw_running": {
+        "name": "Laatste SWW cyclus"
+      },
+      "external_electric_power": {
+        "name": "Extern stroomverbruik"
+      }
+    },
+    "number": {
+      "holding_1": {
+        "name": "Primaire verwarming instelpunt"
+      },
+      "holding_2": {
+        "name": "Primaire koeling instelpunt"
+      },
+      "holding_6": {
+        "name": "Ruimte thermostaat regeling verwarmen instelpunt main"
+      },
+      "holding_7": {
+        "name": "Ruimte thermostaat regeling koelen instelpunt main"
+      },
+      "holding_10": {
+        "name": "SWW warmhouden instelpunt"
+      },
+      "holding_14": {
+        "name": "SWW secondaire instelpunt (Krachtig)"
+      },
+      "holding_16": {
+        "name": "SWW eenmalig verwarmen instelpunt (Handmatig)"
+      },
+      "holding_54": {
+        "name": "Weersafhankelijk modus primair LWT verwarmen instelpunt offset"
+      },
+      "holding_55": {
+        "name": "Weersafhankelijk modus primair LWT koelen instelpunt offset"
+      },
+      "holding_58": {
+        "name": "Opgelegde vermogenslimiet"
+      },
+      "holding_63": {
+        "name": "Secondair verwarmen instelpunt"
+      },
+      "holding_64": {
+        "name": "Secondair koelen instelpunt"
+      },
+      "holding_66": {
+        "name": "Weersafhankelijk modus secondaire LWT verwarmen instelpunt offset"
+      },
+      "holding_67": {
+        "name": "Weersafhankelijk modus secondaire LWT koelen instelpunt offset"
+      },
+      "holding_76": {
+        "name": "Ruimte thermostaat regeling verwarmen instelpunt primair"
+      },
+      "holding_77": {
+        "name": "Ruimte thermostaat regeling koelen instelpunt primair"
+      },
+      "holding_78": {
+        "name": "Ruimte thermostaat regeling verwarmen instelpunt secondair"
+      },
+      "holding_79": {
+        "name": "Ruimte thermostaat regeling koelen instelpunt secondair"
+      }
+    },
+    "select": {
+      "holding_3": {
+        "name": "Modus",
+        "state": {
+          "auto": "Auto",
+          "heating": "Verwarmen",
+          "cooling": "Koelen"
+        }
+      },
+      "holding_9": {
+        "name": "Stille Modus",
+        "state": {
+          "off": "Uit",
+          "on_automatic": "Aan (Automatisch)",
+          "on_manual": "Aan (Handmatig)"
+        }
+      },
+      "holding_56": {
+        "name": "Smart grid modus",
+        "state": {
+          "free_running": "Vrijlopend",
+          "forced_off": "Geforceerd uit",
+          "recommended_on": "Aanbevolen aan",
+          "forced_on": "Geforceerd aan"
+        }
+      },
+      "holding_68": {
+        "name": "Weersafhankelijk modus verwarmen primair",
+        "state": {
+          "fixed": "Vast",
+          "weather_dependent": "Weersafhankelijk"
+        }
+      },
+      "holding_69": {
+        "name": "Weersafhankelijk modus koelen primair",
+        "state": {
+          "fixed": "Vast",
+          "weather_dependent": "Weersafhankelijk"
+        }
+      },
+      "holding_74": {
+        "name": "Thermostaat verzoek Primair",
+        "state": {
+          "none": "Geen",
+          "heating": "Verwarmen",
+          "cooling": "Koelen"
+        }
+      },
+      "holding_75": {
+        "name": "Thermostaat verzoek Secondair",
+        "state": {
+          "none": "Geen",
+          "heating": "Verwarmen",
+          "cooling": "Koelen"
+        }
+      },
+      "holding_80": {
+        "name": "SWW Modus",
+        "state": {
+          "reheat": "Warmhouden",
+          "schedule_and_reheat": "Programma en warmhouden",
+          "scheduled": "Programma",
+          "off": "Uit"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "config_entry_not_found": {
+      "message": "Configuratie-item {config_entry_id} niet gevonden"
+    },
+    "config_entry_not_loaded": {
+      "message": "Configuratie-item {config_entry_id} is niet geladen"
+    },
+    "invalid_operation_mode": {
+      "message": "Ongeldige bedrijfsmodus: {operation_mode}"
+    },
+    "invalid_smart_grid_mode": {
+      "message": "Ongeldige Smart Grid modus: {smart_grid_mode}"
+    },
+    "invalid_quiet_mode": {
+      "message": "Ongeldige stille modus: {quiet_mode}"
+    },
+    "write_failed": {
+      "message": "Kan {operation_name} {register_type} {register_name} niet uitvoeren: {error}"
+    },
+    "write_failed_no_detail": {
+      "message": "Kan {operation_name} {register_type} {register_name} niet uitvoeren"
+    },
+    "coordinator_no_data_manager": {
+      "message": "Coordinator heeft geen data_manager attribuut"
+    },
+    "unsupported_option": {
+      "message": "Niet-ondersteunde optie {option} voor {register_name}"
+    }
+  },
+  "issues": {
+    "connection_lost": {
+      "title": "Verbinding met Daikin Altherma 4 verloren",
+      "description": "De verbinding met uw Daikin Altherma 4 warmtepomp ({entry_name}) is verbroken.\n\nFout: {error_message}\n\nControleer of het apparaat is ingeschakeld en bereikbaar is op het netwerk. U kunt dit proberen op te lossen door de verbindingsinstellingen opnieuw te configureren."
+    },
+    "device_abnormality": {
+      "title": "Daikin Altherma 4 meldt een afwijking",
+      "description": "Uw Daikin Altherma 4 warmtepomp ({entry_name}) meldt een afwijking.\n\nAfwijkingscode: {abnormality_code}\nSubcode: {abnormality_sub_code}\n\nRaadpleeg de documentatie van het apparaat of neem contact op met Daikin support voor details over deze foutcode."
+    }
+  }
+}

@@ -17,6 +17,8 @@ from .register_types import NumberRegister
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     runtime_data = entry.runtime_data
@@ -65,7 +67,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 class DaikinNumber(CoordinatorEntity, NumberEntity):
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,

@@ -57,6 +57,9 @@ def _install_common_homeassistant_stubs(monkeypatch):
         def async_show_form(self, **kwargs):
             return {"type": "form", **kwargs}
 
+        def async_abort(self, *, reason):
+            return {"type": "abort", "reason": reason}
+
     class FakeOptionsFlow:
         def __init__(self, config_entry):
             self._config_entry = config_entry
@@ -125,6 +128,7 @@ def _load_config_flow_module(monkeypatch, connection_success=True):
         return entry.options.get(key, default)
 
     config_entry_utils_module.entry_value = entry_value
+    config_entry_utils_module.entry_data_value = entry_value
     monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
 
     # Mock modbus_client module
@@ -173,6 +177,10 @@ def _load_config_flow_module(monkeypatch, connection_success=True):
     content = content.replace(
         "from . import NORMAL_SCAN_INTERVAL",
         f"from {package_name} import NORMAL_SCAN_INTERVAL",
+    )
+    content = content.replace(
+        "from .config_entry_utils import entry_data_value, entry_value",
+        f"from {config_entry_utils_name} import entry_data_value, entry_value",
     )
     content = content.replace(
         "from .config_entry_utils import entry_value",
@@ -788,6 +796,9 @@ async def test_config_flow_connection_read_register_exception(monkeypatch):
     config_entry_utils_module.entry_value = lambda entry, key, default=None: (
         entry.options.get(key, default)
     )
+    config_entry_utils_module.entry_data_value = lambda entry, key, default=None: (
+        entry.data.get(key, default)
+    )
     monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
 
     # Mock modbus_client with read_input_registers that raises exception
@@ -833,6 +844,10 @@ async def test_config_flow_connection_read_register_exception(monkeypatch):
     content = content.replace(
         "from . import NORMAL_SCAN_INTERVAL",
         f"from {package_name} import NORMAL_SCAN_INTERVAL",
+    )
+    content = content.replace(
+        "from .config_entry_utils import entry_data_value, entry_value",
+        f"from {config_entry_utils_name} import entry_data_value, entry_value",
     )
     content = content.replace(
         "from .config_entry_utils import entry_value",
@@ -911,6 +926,9 @@ async def test_config_flow_connection_client_create_exception(monkeypatch):
     config_entry_utils_module.entry_value = lambda entry, key, default=None: (
         entry.options.get(key, default)
     )
+    config_entry_utils_module.entry_data_value = lambda entry, key, default=None: (
+        entry.data.get(key, default)
+    )
     monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
 
     modbus_client_name = f"{package_name}.modbus_client"
@@ -936,6 +954,10 @@ async def test_config_flow_connection_client_create_exception(monkeypatch):
     content = content.replace(
         "from . import NORMAL_SCAN_INTERVAL",
         f"from {package_name} import NORMAL_SCAN_INTERVAL",
+    )
+    content = content.replace(
+        "from .config_entry_utils import entry_data_value, entry_value",
+        f"from {config_entry_utils_name} import entry_data_value, entry_value",
     )
     content = content.replace(
         "from .config_entry_utils import entry_value",
@@ -1055,45 +1077,62 @@ async def test_options_flow_missing_keys_in_input(monkeypatch):
 
 def test_config_flow_import_fallback(monkeypatch):
     """Test that CONF_HOST/CONF_PORT fallback works when homeassistant not available."""
-    # Remove homeassistant.const from modules to trigger fallback
-    sys.modules.pop("homeassistant.const", None)
+    # Replace homeassistant.const with a module that raises ImportError on
+    # attribute access, to trigger the CONF_HOST/CONF_PORT fallback. This keeps
+    # the module in sys.modules so subsequent tests are not affected.
 
-    # Mock homeassistant.config_entries for the ConfigFlow base class
-    if "homeassistant.config_entries" not in sys.modules:
-        config_entries_module = types.ModuleType("homeassistant.config_entries")
-        config_entries_module.CONN_CLASS_LOCAL_POLL = "local_poll"
+    class _MissingConstModule(types.ModuleType):
+        """Module that raises ImportError for any attribute access."""
 
-        class FakeConfigFlow:
-            def __init_subclass__(cls, **kwargs):
-                return super().__init_subclass__()
+        def __getattr__(self, name):
+            raise ImportError(f"Module 'homeassistant.const' has no attribute '{name}'")
 
-            def async_create_entry(self, title, data, options=None):
-                return {
-                    "type": "create_entry",
-                    "title": title,
-                    "data": data,
-                    "options": options,
-                }
+    missing_const_module = _MissingConstModule("homeassistant.const")
+    monkeypatch.setitem(sys.modules, "homeassistant.const", missing_const_module)
 
-            def async_show_form(self, **kwargs):
-                return {"type": "form", **kwargs}
+    # Replace the homeassistant base module so that `from homeassistant import
+    # config_entries` resolves to our fake config_entries module rather than the
+    # real one (which may already be loaded as an attribute).
+    homeassistant = types.ModuleType("homeassistant")
+    monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
 
-        class FakeOptionsFlow:
-            def __init__(self, config_entry):
-                self._config_entry = config_entry
-                self.hass = SimpleNamespace(config_entries=SimpleNamespace())
+    # Mock homeassistant.config_entries for the ConfigFlow base class.
+    # Always install the fake module to ensure consistent behavior across
+    # environments with/without a real Home Assistant installation.
+    config_entries_module = types.ModuleType("homeassistant.config_entries")
+    homeassistant.config_entries = config_entries_module
 
-            def async_create_entry(self, title, data):
-                return {"type": "create_entry", "title": title, "data": data}
+    class FakeConfigFlow:
+        def __init_subclass__(cls, **kwargs):
+            return super().__init_subclass__()
 
-            def async_show_form(self, **kwargs):
-                return {"type": "form", **kwargs}
+        def async_create_entry(self, title, data, options=None):
+            return {
+                "type": "create_entry",
+                "title": title,
+                "data": data,
+                "options": options,
+            }
 
-        config_entries_module.ConfigFlow = FakeConfigFlow
-        config_entries_module.OptionsFlow = FakeOptionsFlow
-        monkeypatch.setitem(
-            sys.modules, "homeassistant.config_entries", config_entries_module
-        )
+        def async_show_form(self, **kwargs):
+            return {"type": "form", **kwargs}
+
+    class FakeOptionsFlow:
+        def __init__(self, config_entry):
+            self._config_entry = config_entry
+            self.hass = SimpleNamespace(config_entries=SimpleNamespace())
+
+        def async_create_entry(self, title, data):
+            return {"type": "create_entry", "title": title, "data": data}
+
+        def async_show_form(self, **kwargs):
+            return {"type": "form", **kwargs}
+
+    config_entries_module.ConfigFlow = FakeConfigFlow
+    config_entries_module.OptionsFlow = FakeOptionsFlow
+    monkeypatch.setitem(
+        sys.modules, "homeassistant.config_entries", config_entries_module
+    )
 
     # Mock voluptuous
     voluptuous_module = types.ModuleType("voluptuous")
@@ -1144,6 +1183,9 @@ def test_config_flow_import_fallback(monkeypatch):
     config_entry_utils_module.entry_value = lambda entry, key, default=None: (
         entry.options.get(key, default)
     )
+    config_entry_utils_module.entry_data_value = lambda entry, key, default=None: (
+        entry.data.get(key, default)
+    )
     monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
 
     # Load config flow directly to test fallback
@@ -1155,6 +1197,10 @@ def test_config_flow_import_fallback(monkeypatch):
     content = content.replace(
         "from . import NORMAL_SCAN_INTERVAL",
         f"from {package_name} import NORMAL_SCAN_INTERVAL",
+    )
+    content = content.replace(
+        "from .config_entry_utils import entry_data_value, entry_value",
+        f"from {config_entry_utils_name} import entry_data_value, entry_value",
     )
     content = content.replace(
         "from .config_entry_utils import entry_value",
@@ -1184,6 +1230,121 @@ def test_config_flow_import_fallback(monkeypatch):
         assert config_flow_module.CONF_PORT == "port"
     finally:
         os.unlink(tmp_file_path)
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reauth_shows_form(monkeypatch):
+    """Test reauth shows form with pre-filled values."""
+    config_flow_module = _load_config_flow_module(monkeypatch)
+    flow = config_flow_module.ConfigFlow()
+
+    # Mock hass with config entry
+    mock_entry = SimpleNamespace(
+        entry_id="test_entry_1",
+        data={"host": "192.168.1.100", "port": 502},
+        options={"scan_interval": 15, "slow_scan_interval": 300, "demo_mode": False},
+    )
+
+    mock_config_entries = SimpleNamespace(async_get_entry=lambda entry_id: mock_entry)
+    flow.hass = SimpleNamespace(config_entries=mock_config_entries)
+    flow.context = {"entry_id": "test_entry_1"}
+
+    result = await flow.async_step_reauth(user_input=None)
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "reauth"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reauth_success(monkeypatch):
+    """Test reauth successful update."""
+    config_flow_module = _load_config_flow_module(monkeypatch)
+    flow = config_flow_module.ConfigFlow()
+
+    # Track if async_update_entry was called
+    updated_entry = {}
+    reloaded_entry = []
+
+    def mock_update_entry(config_entry, *, unique_id, data, options):
+        updated_entry["unique_id"] = unique_id
+        updated_entry["data"] = data
+        updated_entry["options"] = options
+
+    async def mock_reload(entry_id):
+        reloaded_entry.append(entry_id)
+
+    mock_entry = SimpleNamespace(
+        entry_id="test_entry_1",
+        data={"host": "192.168.1.100", "port": 502},
+        options={"scan_interval": 15, "slow_scan_interval": 300, "demo_mode": False},
+    )
+
+    mock_config_entries = SimpleNamespace(
+        async_get_entry=lambda entry_id: mock_entry,
+        async_update_entry=mock_update_entry,
+    )
+    mock_hass = SimpleNamespace(
+        config_entries=mock_config_entries,
+        async_create_task=lambda c: None,
+    )
+    mock_hass.config_entries.async_reload = mock_reload
+    flow.hass = mock_hass
+    flow.context = {"entry_id": "test_entry_1"}
+
+    # Mock async_set_unique_id and _abort_if_unique_id_configured
+    async def mock_async_set_unique_id(self, unique_id):
+        pass
+
+    def mock_abort_if_unique_id_configured(self):
+        pass
+
+    flow.async_set_unique_id = mock_async_set_unique_id
+    flow._abort_if_unique_id_configured = mock_abort_if_unique_id_configured
+
+    result = await flow.async_step_reauth(
+        user_input={
+            "host": "192.168.1.200",
+            "port": 502,
+            "scan_interval": 30,
+            "slow_scan_interval": 300,
+            "demo_mode": False,
+        }
+    )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert updated_entry["data"]["host"] == "192.168.1.200"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reauth_invalid_host(monkeypatch):
+    """Test reauth with invalid host."""
+    config_flow_module = _load_config_flow_module(monkeypatch)
+    flow = config_flow_module.ConfigFlow()
+
+    mock_entry = SimpleNamespace(
+        entry_id="test_entry_1",
+        data={"host": "192.168.1.100", "port": 502},
+        options={"scan_interval": 15, "slow_scan_interval": 300, "demo_mode": False},
+    )
+
+    mock_config_entries = SimpleNamespace(async_get_entry=lambda entry_id: mock_entry)
+    flow.hass = SimpleNamespace(config_entries=mock_config_entries)
+    flow.context = {"entry_id": "test_entry_1"}
+
+    result = await flow.async_step_reauth(
+        user_input={
+            "host": "invalid host with spaces",
+            "port": 502,
+            "scan_interval": 15,
+            "slow_scan_interval": 300,
+            "demo_mode": False,
+        }
+    )
+
+    assert result["type"] == "form"
+    assert "errors" in result
+    assert result["errors"]["host"] == "invalid_host"
 
 
 @pytest.mark.asyncio

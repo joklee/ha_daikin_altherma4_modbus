@@ -1,7 +1,7 @@
 # Makefile for Daikin Altherma 4 Modbus Integration
 # Provides convenient commands for development, testing, and code quality
 
-.PHONY: help install install-dev test test-unit test-integration test-all test-coverage lint format security clean docs benchmark
+.PHONY: help install install-dev test test-unit test-integration test-all test-coverage lint format security clean docs benchmark hassfest
 
 # Default target
 help:
@@ -39,6 +39,9 @@ help:
 	@echo "🧹 Maintenance:"
 	@echo "  clean         Clean test artifacts and cache"
 	@echo "  reset         Reset all test environments"
+	@echo ""
+	@echo "🏠 CI:"
+	@echo "  hassfest      Run hassfest integration validation"
 
 # Installation
 install:
@@ -161,11 +164,25 @@ reset: clean
 	pip uninstall -y ha-daikin-altherma4-modbus 2>/dev/null || true
 	pip cache purge
 
+# Hassfest validation
+HASSFEST_DIR ?= /tmp/ha-core-sparse
+
+hassfest:
+	@echo "🏠 Running hassfest validation..."
+	@if [ ! -d "$(HASSFEST_DIR)/script/hassfest" ]; then \
+		echo "📦 Cloning HA core hassfest scripts..."; \
+		git clone --depth 1 --filter=blob:none --sparse https://github.com/home-assistant/core.git $(HASSFEST_DIR) 2>/dev/null; \
+		cd $(HASSFEST_DIR) && git sparse-checkout set script/hassfest script/translations 2>/dev/null; \
+	fi
+	@PYTHONPATH=$(HASSFEST_DIR) python -m script.hassfest --integration-path custom_components/ha_daikin_altherma4_modbus
+	@echo "✅ hassfest validation passed!"
+
 # CI/CD Helpers
 ci-test:
 	@echo "🚀 Running CI test suite..."
 	$(MAKE) lint
 	$(MAKE) format-check
+	$(MAKE) hassfest
 	$(MAKE) security
 	$(MAKE) test-coverage
 	$(MAKE) benchmark

@@ -14,6 +14,8 @@ from .register_constants import (
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup aller Binary Sensors über Config Entry."""
@@ -63,6 +65,7 @@ class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Ein Binary Sensor für Modbus-Register."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
@@ -103,6 +106,7 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
     """A Binary Sensor for Discrete Input Register."""
 
     _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,

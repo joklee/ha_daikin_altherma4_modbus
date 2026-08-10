@@ -4,6 +4,7 @@ Shared test utilities for Daikin Altherma 4 Modbus integration tests.
 """
 
 import sys
+import types
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock
@@ -50,6 +51,15 @@ class MockSensorEntity:
 
 def setup_home_assistant_mocks():
     """Set up all Home Assistant module mocks."""
+    # Only set up mocks if conftest.py hasn't already set up proper stubs
+    # conftest.py sets up proper stubs with correct metaclass hierarchy
+    # which is needed for multiple inheritance (e.g. CoordinatorEntity + BinarySensorEntity)
+    if "homeassistant" in sys.modules and isinstance(
+        sys.modules["homeassistant"], types.ModuleType
+    ):
+        # conftest.py already set up proper stubs - don't overwrite them
+        return
+
     # Install mocks
     sys.modules["homeassistant"] = Mock()
     sys.modules["homeassistant.exceptions"] = Mock()

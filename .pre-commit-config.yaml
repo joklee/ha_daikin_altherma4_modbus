@@ -28,6 +28,15 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
 
+  # Check that .strict-typing marker file exists
+  - repo: local
+    hooks:
+      - id: check-strict-typing
+        name: check .strict-typing exists
+        entry: test -f custom_components/ha_daikin_altherma4_modbus/.strict-typing
+        language: system
+        always_run: true
+
   # Security checks
   - repo: https://github.com/pycqa/bandit
     rev: 1.7.5

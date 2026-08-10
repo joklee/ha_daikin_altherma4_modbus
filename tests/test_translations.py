@@ -144,6 +144,13 @@ class TestTranslations:
         )
 
     @pytest.fixture
+    def nl_keys(self, component_dir):
+        """Load all translation keys from nl.json."""
+        return get_translation_keys_from_json(
+            component_dir / "translations" / "nl.json"
+        )
+
+    @pytest.fixture
     def const_keys(self, component_dir):
         """Extract translation keys from const.py."""
         return get_translation_keys_from_python(component_dir / "const.py")
@@ -167,6 +174,11 @@ class TestTranslations:
         """Verify all translation keys from Python are in de.json."""
         missing = all_python_keys - de_keys
         assert not missing, f"Missing in de.json: {sorted(missing)}"
+
+    def test_all_python_keys_in_nl_json(self, all_python_keys, nl_keys):
+        """Verify all translation keys from Python are in nl.json."""
+        missing = all_python_keys - nl_keys
+        assert not missing, f"Missing in nl.json: {sorted(missing)}"
 
     def test_no_orphaned_translations_in_en(self, en_keys, all_python_keys):
         """Warn about translations in en.json that don't exist in Python."""
@@ -211,9 +223,30 @@ class TestTranslations:
             f"Orphaned translations in de.json (not in Python): {sorted(unexpected)}"
         )
 
+    def test_no_orphaned_translations_in_nl(self, nl_keys, all_python_keys):
+        """Warn about translations in nl.json that don't exist in Python."""
+        extra = nl_keys - all_python_keys
+        expected_extras = {
+            "daikin_dhw_booster_thermostat",
+            "daikin_dhw_manual_thermostat",
+            "daikin_thermostat_climate",
+            "external_electric_power",
+            "input_29",  # orphaned translation
+            "input_34",  # orphaned translation
+            "input_53",
+            "input_54",
+            "input_55",
+            "input_56",
+            "input_57",
+        }
+        unexpected = extra - expected_extras
+        assert not unexpected, (
+            f"Orphaned translations in nl.json (not in Python): {sorted(unexpected)}"
+        )
+
     def test_translation_files_have_required_structure(self, component_dir):
         """Verify translation files have the required entity section."""
-        for lang in ["en", "de"]:
+        for lang in ["en", "de", "nl"]:
             filepath = component_dir / "translations" / f"{lang}.json"
             with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
@@ -223,24 +256,27 @@ class TestTranslations:
                 f"'entity' must be a dict in {lang}.json"
             )
 
-    def test_translation_consistency_between_languages(self, en_keys, de_keys):
-        """Verify that en.json and de.json have the same translation keys."""
+    def test_translation_consistency_between_languages(self, en_keys, de_keys, nl_keys):
+        """Verify that en.json, de.json and nl.json have the same translation keys."""
         allowed_diff = {"input_29", "input_34"}
 
         en_only = en_keys - de_keys - allowed_diff
         de_only = de_keys - en_keys - allowed_diff
+        nl_only = nl_keys - en_keys - allowed_diff
 
-        if en_only or de_only:
+        if en_only or de_only or nl_only:
             msg = []
             if en_only:
                 msg.append(f"Only in en.json: {sorted(en_only)}")
             if de_only:
                 msg.append(f"Only in de.json: {sorted(de_only)}")
+            if nl_only:
+                msg.append(f"Only in nl.json: {sorted(nl_only)}")
             pytest.fail("Translation keys mismatch:\n" + "\n".join(msg))
 
     def test_all_translations_have_name_field(self, component_dir):
         """Verify all translation entries have a 'name' field."""
-        for lang in ["en", "de"]:
+        for lang in ["en", "de", "nl"]:
             filepath = component_dir / "translations" / f"{lang}.json"
             with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
@@ -259,31 +295,38 @@ class TestTranslations:
             )
 
     def test_state_consistency_between_languages(self, component_dir):
-        """Verify that state keys are consistent between en.json and de.json."""
+        """Verify that state keys are consistent between en.json, de.json and nl.json."""
         en_states = get_state_keys_from_json(component_dir / "translations" / "en.json")
         de_states = get_state_keys_from_json(component_dir / "translations" / "de.json")
+        nl_states = get_state_keys_from_json(component_dir / "translations" / "nl.json")
 
-        common_entities = set(en_states.keys()) & set(de_states.keys())
+        common_entities = (
+            set(en_states.keys()) & set(de_states.keys()) & set(nl_states.keys())
+        )
 
         mismatches = []
         for entity in sorted(common_entities):
             en_entity_states = en_states[entity]
             de_entity_states = de_states[entity]
+            nl_entity_states = nl_states[entity]
 
-            en_only = en_entity_states - de_entity_states
-            de_only = de_entity_states - en_entity_states
+            en_only = en_entity_states - de_entity_states - nl_entity_states
+            de_only = de_entity_states - en_entity_states - nl_entity_states
+            nl_only = nl_entity_states - en_entity_states - de_entity_states
 
-            if en_only or de_only:
+            if en_only or de_only or nl_only:
                 msg_parts = [f"{entity}:"]
                 if en_only:
                     msg_parts.append(f"  only in en: {sorted(en_only)}")
                 if de_only:
                     msg_parts.append(f"  only in de: {sorted(de_only)}")
+                if nl_only:
+                    msg_parts.append(f"  only in nl: {sorted(nl_only)}")
                 mismatches.append("\n".join(msg_parts))
 
         assert not mismatches, (
-            "State key mismatches between en.json and de.json:\n"
-            + "\n\n".join(mismatches)
+            "State key mismatches between en.json, de.json and nl.json:\n"
+            + "\n".join(mismatches)
         )
 
     def test_all_state_keys_match_lowercase_pattern(self, component_dir):
@@ -291,7 +334,7 @@ class TestTranslations:
         pattern = re.compile(r"^[a-z0-9_\-]+$")
         invalid = []
 
-        for lang in ["en", "de"]:
+        for lang in ["en", "de", "nl"]:
             filepath = component_dir / "translations" / f"{lang}.json"
             with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
@@ -359,3 +402,87 @@ class TestTranslations:
         assert not missing, (
             "enum_map values missing as state keys in de.json:\n" + "\n".join(missing)
         )
+
+    def test_all_enum_map_values_translated_in_nl_json(self, component_dir):
+        """Verify all enum_map values have state translations in nl.json."""
+        rc_path = component_dir / "register_constants.py"
+        enum_map = extract_enum_map_values(rc_path)
+        nl_states = get_state_keys_from_json(component_dir / "translations" / "nl.json")
+
+        missing = []
+        for entity_key, values in sorted(enum_map.items()):
+            nl_entry = set()
+            for full_key, state_keys in nl_states.items():
+                if full_key.endswith(f".{entity_key}"):
+                    nl_entry = state_keys
+                    break
+
+            missing_states = values - nl_entry
+            if missing_states and nl_entry:
+                missing.append(
+                    f"{entity_key}: missing in nl.json: {sorted(missing_states)}"
+                )
+
+        assert not missing, (
+            "enum_map values missing as state keys in nl.json:\n" + "\n".join(missing)
+        )
+
+    def test_config_flow_translation_structure(self, component_dir):
+        """Verify config flow translations follow HA schema.
+
+        config.step.<step_id> must have: title, description, data, data_description
+        config.reauth and config.reconfigure must use step sub-key structure,
+        not have data/data_description directly.
+        """
+        valid_step_keys = {"title", "description", "data", "data_description"}
+        # Keys allowed at config.reauth / config.reconfigure level (no data/data_description)
+        valid_section_keys = {"step"}
+
+        for lang in ["en", "de", "nl"]:
+            filepath = component_dir / "translations" / f"{lang}.json"
+            with open(filepath, encoding="utf-8") as f:
+                data = json.load(f)
+
+            config = data.get("config", {})
+
+            # Validate config.step
+            steps = config.get("step", {})
+            for step_id, step_data in steps.items():
+                if isinstance(step_data, dict):
+                    extra = set(step_data.keys()) - valid_step_keys
+                    assert not extra, (
+                        f"{lang}.json: config.step.{step_id} has extra keys: {extra}"
+                    )
+
+            # Validate config.reauth — must use step sub-key, not direct data
+            reauth = config.get("reauth", {})
+            if reauth:
+                extra = set(reauth.keys()) - valid_section_keys
+                assert not extra, (
+                    f"{lang}.json: config.reauth has extra keys {extra} at top level. "
+                    f"Use config.reauth.step.<step_id> structure instead."
+                )
+                # Validate nested steps
+                for step_id, step_data in reauth.get("step", {}).items():
+                    if isinstance(step_data, dict):
+                        step_extra = set(step_data.keys()) - valid_step_keys
+                        assert not step_extra, (
+                            f"{lang}.json: config.reauth.step.{step_id} has extra "
+                            f"keys: {step_extra}"
+                        )
+
+            # Validate config.reconfigure — must use step sub-key, not direct data
+            reconfigure = config.get("reconfigure", {})
+            if reconfigure:
+                extra = set(reconfigure.keys()) - valid_section_keys
+                assert not extra, (
+                    f"{lang}.json: config.reconfigure has extra keys {extra} at top "
+                    f"level. Use config.reconfigure.step.<step_id> structure instead."
+                )
+                for step_id, step_data in reconfigure.get("step", {}).items():
+                    if isinstance(step_data, dict):
+                        step_extra = set(step_data.keys()) - valid_step_keys
+                        assert not step_extra, (
+                            f"{lang}.json: config.reconfigure.step.{step_id} has "
+                            f"extra keys: {step_extra}"
+                        )

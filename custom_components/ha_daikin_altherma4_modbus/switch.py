@@ -18,6 +18,8 @@ from .register_types import SwitchRegister
 
 _LOGGER = logging.getLogger(__name__)
 
+PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup switch entities over Config Entry."""
@@ -69,7 +71,7 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
     """A Switch for Coil Register."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self, coordinator, entry, address, register_name, translation_key=None
@@ -82,7 +84,6 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
         self._register_name = register_name
         self._attr_unique_id = f"{DOMAIN}_{register_name}"
         self._attr_device_info = COIL_DEVICE_INFO
-        self._attr_icon = "mdi:power"
         self._attr_translation_key = translation_key
 
     @property
@@ -122,7 +123,7 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
     """A Switch for Holding Register."""
 
     _attr_has_entity_name = True
-    _attr_log_when_unavailable = True
+    _attr_log_when_unavailable = False
 
     def __init__(
         self,
@@ -141,7 +142,6 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
         self._register_name = register_name
         self._attr_unique_id = f"{DOMAIN}_{register_name}"
         self._attr_device_info = HOLDING_DEVICE_INFO
-        self._attr_icon = "mdi:power"
         self._attr_translation_key = translation_key
         self._enum_map = enum_map or {}
         self._on_value = self._resolve_enum_value(default=1, state_name="on")

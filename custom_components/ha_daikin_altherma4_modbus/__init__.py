@@ -6,6 +6,7 @@ from .config_entry_utils import entry_data_value, entry_value
 from .const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
 from .coordinator_manager import CoordinatorManager, UnifiedCoordinator
 from .modbus_client import RealModbusTcpClient
+from .repair import async_create_connection_issue, async_delete_connection_issue
 from .runtime_data import RuntimeData
 from .services import register_services
 
@@ -44,6 +45,9 @@ async def async_setup_entry(hass, entry):
             if not client.connected:
                 _LOGGER.error(f"Cannot connect to {host}:{port} during setup")
                 await RealModbusTcpClient.async_close_cached_client(host, port)
+                async_create_connection_issue(
+                    hass, entry, f"Cannot connect to {host}:{port}"
+                )
                 raise ConfigEntryNotReady(f"Cannot connect to {host}:{port}")
             # Disconnect after test - coordinators will create their own connections
             await client.disconnect()
@@ -53,6 +57,9 @@ async def async_setup_entry(hass, entry):
                 f"Connection test failed during setup to {host}:{port}: {err}"
             )
             await RealModbusTcpClient.async_close_cached_client(host, port)
+            async_create_connection_issue(
+                hass, entry, f"Connection failed to {host}:{port}"
+            )
             raise ConfigEntryNotReady(f"Connection failed to {host}:{port}") from err
     manager = CoordinatorManager(
         hass, host, port, scan_interval, slow_scan_interval, demo_mode
@@ -97,6 +104,9 @@ async def async_setup_entry(hass, entry):
 
         # Register integration services
         register_services(hass)
+
+        # Connection is healthy - delete any existing connection repair issue
+        async_delete_connection_issue(hass, entry)
 
         return True
     except Exception as err:
