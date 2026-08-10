@@ -11,7 +11,7 @@ sys.path.insert(
 )
 
 # Set up Home Assistant mocks before importing integration modules
-from tests.test_utils import setup_home_assistant_mocks
+from tests.helpers.modules import setup_home_assistant_mocks
 
 setup_home_assistant_mocks()
 

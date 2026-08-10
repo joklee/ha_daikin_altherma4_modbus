@@ -15,7 +15,7 @@ if str(tests_dir) not in sys.path:
 # Use centralized FakeModbusClient from test_utils
 from typing import ClassVar
 
-from test_utils import FakeModbusClient
+from tests.fakes.modbus import FakeModbusClient
 
 
 class MockRealModbusTcpClient:

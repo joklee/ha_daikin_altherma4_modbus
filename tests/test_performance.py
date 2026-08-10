@@ -12,7 +12,7 @@ tests_dir = Path(__file__).parent
 if str(tests_dir) not in sys.path:
     sys.path.insert(0, str(tests_dir))
 
-from test_utils import FakeModbusClientPerformance
+from tests.fakes.modbus import FakeModbusClientPerformance
 
 
 def test_mock_client_performance(benchmark):
