@@ -78,7 +78,6 @@ class FakeModbusClient:
         port: int = 502,
         timeout: int = 10,
         connected: bool = False,
-        timing_mode: str = "normal",
     ):
         """Initialize fake Modbus client.
 
@@ -87,13 +86,11 @@ class FakeModbusClient:
             port: Mock port
             timeout: Mock timeout
             connected: Initial connection state
-            timing_mode: Timing mode ('normal', 'fast', 'realistic')
         """
         self.host = host
         self.port = port
         self.timeout = timeout
         self.connected = connected
-        self.timing_mode = timing_mode
         self._connection_count = 0
         self._operation_count = 0
         self._read_operations = []
@@ -121,13 +118,7 @@ class FakeModbusClient:
         self._demo_data_loaded = False
 
     async def connect(self):
-        """Simulate connection with configurable timing."""
-        if self.timing_mode == "realistic":
-            await asyncio.sleep(0.01)  # 10ms connection time
-        elif self.timing_mode == "fast":
-            await asyncio.sleep(0.0001)  # 0.1ms connection time
-        else:
-            await asyncio.sleep(0.001)  # 1ms default
+        """Simulate connection."""
         self.connected = True
         self._connection_count += 1
         self._connect_calls.append(())
@@ -162,12 +153,6 @@ class FakeModbusClient:
         self._operation_count += 1
         self._read_operations.append(f"read_input_registers({address}, {count})")
 
-        # Performance timing
-        if self.timing_mode == "realistic":
-            await asyncio.sleep(0.001 + (count * 0.00001))
-        elif self.timing_mode == "fast":
-            await asyncio.sleep(0.0001)
-
         # Use custom register values if set, otherwise fall back to demo data
         custom_registers = self._registers.get("input", {}).get(address)
         if custom_registers is not None:
@@ -201,12 +186,6 @@ class FakeModbusClient:
         self._operation_count += 1
         self._read_operations.append(f"read_holding_registers({address}, {count})")
 
-        # Performance timing
-        if self.timing_mode == "realistic":
-            await asyncio.sleep(0.001 + (count * 0.00001))
-        elif self.timing_mode == "fast":
-            await asyncio.sleep(0.0001)
-
         custom_registers = self._holding_registers.get(address)
         if custom_registers is not None:
             # Build a full-length list with custom values at the correct address
@@ -239,12 +218,6 @@ class FakeModbusClient:
         self._operation_count += 1
         self._read_operations.append(f"read_discrete_inputs({address}, {count})")
 
-        # Performance timing
-        if self.timing_mode == "realistic":
-            await asyncio.sleep(0.0005)
-        elif self.timing_mode == "fast":
-            await asyncio.sleep(0.0001)
-
         custom_bits = self._discrete_inputs.get(address)
         if custom_bits is not None:
             # Build a full-length list with custom values at the correct address
@@ -276,12 +249,6 @@ class FakeModbusClient:
 
         self._operation_count += 1
         self._read_operations.append(f"read_coils({address}, {count})")
-
-        # Performance timing
-        if self.timing_mode == "realistic":
-            await asyncio.sleep(0.0005)
-        elif self.timing_mode == "fast":
-            await asyncio.sleep(0.0001)
 
         custom_bits = self._coils.get(address)
         if custom_bits is not None:
@@ -446,11 +413,6 @@ class FakeModbusClient:
     def operation_count(self) -> int:
         """Get the total number of operations performed."""
         return self._operation_count
-
-    @property
-    def total_bytes(self) -> int:
-        """Get the total bytes transferred (for performance tests)."""
-        return self._operation_count * 2  # Approximate: 2 bytes per register
 
     def get_read_operations(self) -> list:
         """Get the list of read operations performed."""
