@@ -6,24 +6,21 @@ from tests.fakes.modbus import FakeModbusClient
 
 
 @pytest.fixture
-def mock_client():
-    """Mock Modbus TCP client."""
-    return FakeModbusClient("192.168.1.100", 502)
+def fake_modbus_client():
+    """Create a FakeModbusClient instance."""
+    return FakeModbusClient()
 
 
 @pytest.fixture
-def connected_client():
-    """Mock Modbus TCP client that starts connected."""
-    client = FakeModbusClient("192.168.1.100", 502)
+def connected_modbus_client():
+    """Create a connected FakeModbusClient instance."""
+    client = FakeModbusClient()
     client.connected = True
     return client
 
 
 @pytest.fixture
-def reset_client():
-    """Return a factory for creating fresh FakeModbusClient instances."""
-
-    def _factory(**kwargs):
-        return FakeModbusClient(**kwargs)
-
-    return _factory
+def disconnected_modbus_client():
+    """Create a disconnected FakeModbusClient instance."""
+    client = FakeModbusClient(connected=False)
+    return client

@@ -153,17 +153,16 @@ class FakeModbusClient:
         # Use custom register values if set, otherwise fall back to demo data
         custom_registers = self._registers.get("input", {}).get(address)
         if custom_registers is not None:
-            registers = custom_registers
+            # Build a full-length list with custom values at the correct address
+            registers = list(self.demo_data.get("input_registers", []))
+            for i, val in enumerate(custom_registers):
+                if address + i < len(registers):
+                    registers[address + i] = val
         else:
-            demo_input = self.demo_data.get("input_registers", [])
-            if address < len(demo_input):
-                registers = demo_input[address : address + count]
-            else:
-                registers = [32766] * count
-        if len(registers) < count:
-            registers = registers + [32766] * (count - len(registers))
+            # Pass the full register list (FakeModbusResponse handles address lookup)
+            registers = self.demo_data.get("input_registers", [])
 
-        return FakeModbusResponse(registers[:count], address, count)
+        return FakeModbusResponse(registers, address, count)
 
     async def read_holding_registers(self, address: int, count: int, **kwargs):
         """Simulate reading holding registers.
@@ -187,17 +186,16 @@ class FakeModbusClient:
 
         custom_registers = self._holding_registers.get(address)
         if custom_registers is not None:
-            registers = custom_registers
+            # Build a full-length list with custom values at the correct address
+            registers = list(self.demo_data.get("holding_registers", []))
+            for i, val in enumerate(custom_registers):
+                if address + i < len(registers):
+                    registers[address + i] = val
         else:
-            demo_holding = self.demo_data.get("holding_registers", [])
-            if address < len(demo_holding):
-                registers = demo_holding[address : address + count]
-            else:
-                registers = [0] * count
-        if len(registers) < count:
-            registers = registers + [0] * (count - len(registers))
+            # Pass the full register list (FakeModbusResponse handles address lookup)
+            registers = self.demo_data.get("holding_registers", [])
 
-        return FakeModbusResponse(registers[:count], address, count)
+        return FakeModbusResponse(registers, address, count)
 
     async def read_discrete_inputs(self, address: int, count: int, **kwargs):
         """Simulate reading discrete inputs.
@@ -221,17 +219,16 @@ class FakeModbusClient:
 
         custom_bits = self._discrete_inputs.get(address)
         if custom_bits is not None:
-            bits = custom_bits
+            # Build a full-length list with custom values at the correct address
+            bits = list(self.demo_data.get("discrete_inputs", []))
+            for i, val in enumerate(custom_bits):
+                if address + i < len(bits):
+                    bits[address + i] = val
         else:
-            demo_discrete = self.demo_data.get("discrete_inputs", [])
-            if address < len(demo_discrete):
-                bits = demo_discrete[address : address + count]
-            else:
-                bits = [False] * count
-        if len(bits) < count:
-            bits = bits + [False] * (count - len(bits))
+            # Pass the full list (FakeModbusResponse handles address lookup)
+            bits = self.demo_data.get("discrete_inputs", [])
 
-        return FakeModbusResponse(bits[:count], address, count, is_bits=True)
+        return FakeModbusResponse(bits, address, count, is_bits=True)
 
     async def read_coils(self, address: int, count: int, **kwargs):
         """Simulate reading coils.
@@ -255,17 +252,16 @@ class FakeModbusClient:
 
         custom_bits = self._coils.get(address)
         if custom_bits is not None:
-            bits = custom_bits
+            # Build a full-length list with custom values at the correct address
+            bits = list(self.demo_data.get("coils", []))
+            for i, val in enumerate(custom_bits):
+                if address + i < len(bits):
+                    bits[address + i] = val
         else:
-            demo_coils = self.demo_data.get("coils", [])
-            if address < len(demo_coils):
-                bits = demo_coils[address : address + count]
-            else:
-                bits = [False] * count
-        if len(bits) < count:
-            bits = bits + [False] * (count - len(bits))
+            # Pass the full list (FakeModbusResponse handles address lookup)
+            bits = self.demo_data.get("coils", [])
 
-        return FakeModbusResponse(bits[:count], address, count, is_bits=True)
+        return FakeModbusResponse(bits, address, count, is_bits=True)
 
     async def write_register(self, address: int, value: int, **kwargs):
         """Simulate writing a single holding register.
