@@ -116,10 +116,6 @@ class FakeModbusClient:
         # Custom return values for testing
         self._custom_responses = {}
 
-        # Backward compatibility: expose as properties
-        self.connection_count = 0
-        self.operation_count = 0
-
         # Demo data for coverage tests compatibility (lazy-loaded)
         self._demo_data = None
         self._demo_data_loaded = False
@@ -134,7 +130,6 @@ class FakeModbusClient:
             await asyncio.sleep(0.001)  # 1ms default
         self.connected = True
         self._connection_count += 1
-        self.connection_count = self._connection_count
         self._connect_calls.append(())
 
     def close(self):
@@ -165,7 +160,6 @@ class FakeModbusClient:
             raise ConnectionError("Not connected")
 
         self._operation_count += 1
-        self.operation_count = self._operation_count
         self._read_operations.append(f"read_input_registers({address}, {count})")
 
         # Performance timing
@@ -205,7 +199,6 @@ class FakeModbusClient:
             raise ConnectionError("Not connected")
 
         self._operation_count += 1
-        self.operation_count = self._operation_count
         self._read_operations.append(f"read_holding_registers({address}, {count})")
 
         # Performance timing
@@ -244,7 +237,6 @@ class FakeModbusClient:
             raise ConnectionError("Not connected")
 
         self._operation_count += 1
-        self.operation_count = self._operation_count
         self._read_operations.append(f"read_discrete_inputs({address}, {count})")
 
         # Performance timing
@@ -283,7 +275,6 @@ class FakeModbusClient:
             raise ConnectionError("Not connected")
 
         self._operation_count += 1
-        self.operation_count = self._operation_count
         self._read_operations.append(f"read_coils({address}, {count})")
 
         # Performance timing
@@ -322,7 +313,6 @@ class FakeModbusClient:
             raise ConnectionError("Not connected")
 
         self._operation_count += 1
-        self.operation_count = self._operation_count
         self._write_operations.append(f"write_register({address}, {value})")
         self._holding_registers[address] = [value]
 
@@ -345,7 +335,6 @@ class FakeModbusClient:
             raise ConnectionError("Not connected")
 
         self._operation_count += 1
-        self.operation_count = self._operation_count
         self._write_operations.append(f"write_coil({address}, {value})")
         self._coils[address] = [value]
 
@@ -439,9 +428,24 @@ class FakeModbusClient:
         return self._operation_count
 
     @property
+    def connection_count(self) -> int:
+        """Get the number of connection attempts (backward compatibility)."""
+        return self._connection_count
+
+    @property
     def read_count(self) -> int:
-        """Get the number of read operations (for performance tests)."""
+        """Get the number of read operations."""
         return len(self._read_operations)
+
+    @property
+    def write_count(self) -> int:
+        """Get the number of write operations."""
+        return len(self._write_operations)
+
+    @property
+    def operation_count(self) -> int:
+        """Get the total number of operations performed."""
+        return self._operation_count
 
     @property
     def total_bytes(self) -> int:
@@ -460,8 +464,6 @@ class FakeModbusClient:
         """Reset client state for testing."""
         self._connection_count = 0
         self._operation_count = 0
-        self.connection_count = 0
-        self.operation_count = 0
         self._read_operations.clear()
         self._write_operations.clear()
         self._registers.clear()
