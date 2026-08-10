@@ -1,0 +1,603 @@
+"""Fake Modbus client implementations for testing."""
+
+import asyncio
+
+
+class FakeModbusResponse:
+    """Fake Modbus response for testing.
+
+    This class provides a realistic mock of Modbus response objects,
+    supporting both register and bit operations with 1-based indexing,
+    matching the interface of MockModbusResponse from mock_client.py.
+    """
+
+    def __init__(self, data: list, address: int, count: int, is_bits: bool = False):
+        """Initialize fake Modbus response.
+
+        Args:
+            data: List of register values or bit values
+            address: Starting address (1-based)
+            count: Number of registers/bits to expose
+            is_bits: Whether this response contains bit values
+        """
+        self.is_bits = is_bits
+        self._error = False
+
+        if is_bits:
+            # For discrete inputs and coils - create 1-based array
+            max_index = max(address + count, len(data)) + 1
+            self.bits = [False] * max_index  # Index 0 is dummy
+            for i in range(count):
+                if address + i < len(data):
+                    self.bits[address + i] = data[address + i]
+                else:
+                    self.bits[address + i] = False
+        else:
+            # For input and holding registers - create 1-based array
+            max_index = max(address + count, len(data)) + 1
+            self.registers = [32766] * max_index  # Index 0 is dummy
+            for i in range(count):
+                if address + i < len(data):
+                    self.registers[address + i] = data[address + i]
+                else:
+                    self.registers[address + i] = 32766  # Unavailable
+
+    def is_error(self) -> bool:
+        """Return error status."""
+        return self._error
+
+    def isError(self) -> bool:
+        """Return error status (alias for compatibility)."""
+        return self._error
+
+
+class FakeModbusClient:
+    """Centralized fake Modbus client for testing.
+
+    This class provides a realistic mock of AsyncModbusTcpClient behavior
+    for testing purposes, eliminating the need for scattered MagicMock
+    configurations across test files.
+    """
+
+    # Class-level cache for demo data to avoid regenerating per instance
+    _class_demo_data = None
+
+    def __init__(
+        self,
+        host: str = "192.168.1.100",
+        port: int = 502,
+        timeout: int = 10,
+        connected: bool = False,
+    ):
+        """Initialize fake Modbus client.
+
+        Args:
+            host: Mock host address
+            port: Mock port
+            timeout: Mock timeout
+            connected: Initial connection state
+        """
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+        self.connected = connected
+        self._connection_count = 0
+        self._operation_count = 0
+        self._read_operations = []
+        self._write_operations = []
+        self._registers = {}
+        self._coils = {}
+        self._discrete_inputs = {}
+        self._holding_registers = {}
+
+        # Mock-compatible call tracking
+        self._connect_calls = []
+        self._close_calls = []
+        self._read_input_registers_calls = []
+        self._read_holding_registers_calls = []
+        self._read_discrete_inputs_calls = []
+        self._read_coils_calls = []
+        self._write_register_calls = []
+        self._write_coil_calls = []
+
+        # Custom return values for testing
+        self._custom_responses = {}
+
+        # Backward compatibility: expose as properties
+        self.connection_count = 0
+        self.operation_count = 0
+
+        # Demo data for coverage tests compatibility (lazy-loaded)
+        self._demo_data = None
+        self._demo_data_loaded = False
+
+    async def connect(self):
+        """Simulate connection with realistic timing."""
+        await asyncio.sleep(0.001)  # 1ms connection time
+        self.connected = True
+        self._connection_count += 1
+        self.connection_count = self._connection_count
+        self._connect_calls.append(())
+
+    def close(self):
+        """Simulate connection close."""
+        self.connected = False
+        self._close_calls.append(())
+
+    async def disconnect(self):
+        """Simulate disconnection (compatible with MockModbusTcpClient)."""
+        await asyncio.sleep(0.001)  # 1ms disconnect time
+        self.connected = False
+        self._close_calls.append(())
+
+    async def read_input_registers(self, address: int, count: int, **kwargs):
+        """Simulate reading input registers.
+
+        Args:
+            address: Register address (1-based)
+            count: Number of registers to read
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response with registers
+        """
+        self._read_input_registers_calls.append((address, count, kwargs))
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._read_operations.append(f"read_input_registers({address}, {count})")
+
+        # Use custom register values if set, otherwise fall back to demo data
+        custom_registers = self._registers.get("input", {}).get(address)
+        if custom_registers is not None:
+            registers = custom_registers
+        else:
+            demo_input = self.demo_data.get("input_registers", [])
+            if address < len(demo_input):
+                registers = demo_input[address : address + count]
+            else:
+                registers = [32766] * count
+        if len(registers) < count:
+            registers = registers + [32766] * (count - len(registers))
+
+        return FakeModbusResponse(registers[:count], address, count)
+
+    async def read_holding_registers(self, address: int, count: int, **kwargs):
+        """Simulate reading holding registers.
+
+        Args:
+            address: Register address (1-based)
+            count: Number of registers to read
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response with registers
+        """
+        self._read_holding_registers_calls.append((address, count, kwargs))
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._read_operations.append(f"read_holding_registers({address}, {count})")
+
+        custom_registers = self._holding_registers.get(address)
+        if custom_registers is not None:
+            registers = custom_registers
+        else:
+            demo_holding = self.demo_data.get("holding_registers", [])
+            if address < len(demo_holding):
+                registers = demo_holding[address : address + count]
+            else:
+                registers = [0] * count
+        if len(registers) < count:
+            registers = registers + [0] * (count - len(registers))
+
+        return FakeModbusResponse(registers[:count], address, count)
+
+    async def read_discrete_inputs(self, address: int, count: int, **kwargs):
+        """Simulate reading discrete inputs.
+
+        Args:
+            address: Input address (1-based)
+            count: Number of inputs to read
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response with bits
+        """
+        self._read_discrete_inputs_calls.append((address, count, kwargs))
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._read_operations.append(f"read_discrete_inputs({address}, {count})")
+
+        custom_bits = self._discrete_inputs.get(address)
+        if custom_bits is not None:
+            bits = custom_bits
+        else:
+            demo_discrete = self.demo_data.get("discrete_inputs", [])
+            if address < len(demo_discrete):
+                bits = demo_discrete[address : address + count]
+            else:
+                bits = [False] * count
+        if len(bits) < count:
+            bits = bits + [False] * (count - len(bits))
+
+        return FakeModbusResponse(bits[:count], address, count, is_bits=True)
+
+    async def read_coils(self, address: int, count: int, **kwargs):
+        """Simulate reading coils.
+
+        Args:
+            address: Coil address (1-based)
+            count: Number of coils to read
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response with bits
+        """
+        self._read_coils_calls.append((address, count, kwargs))
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._read_operations.append(f"read_coils({address}, {count})")
+
+        custom_bits = self._coils.get(address)
+        if custom_bits is not None:
+            bits = custom_bits
+        else:
+            demo_coils = self.demo_data.get("coils", [])
+            if address < len(demo_coils):
+                bits = demo_coils[address : address + count]
+            else:
+                bits = [False] * count
+        if len(bits) < count:
+            bits = bits + [False] * (count - len(bits))
+
+        return FakeModbusResponse(bits[:count], address, count, is_bits=True)
+
+    async def write_register(self, address: int, value: int, **kwargs):
+        """Simulate writing a single holding register.
+
+        Args:
+            address: Register address (1-based)
+            value: Value to write
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response
+        """
+        self._write_register_calls.append((address, value, kwargs))
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._write_operations.append(f"write_register({address}, {value})")
+        self._holding_registers[address] = [value]
+
+        return FakeModbusResponse([], address, 0)
+
+    async def write_coil(self, address: int, value: bool, **kwargs):
+        """Simulate writing a single coil.
+
+        Args:
+            address: Coil address (1-based)
+            value: Value to write
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response
+        """
+        self._write_coil_calls.append((address, value, kwargs))
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._write_operations.append(f"write_coil({address}, {value})")
+        self._coils[address] = [value]
+
+        return FakeModbusResponse([], address, 0, is_bits=True)
+
+    async def write_holding_register(self, address: int, value: int):
+        """Simulate writing a holding register (compatible with ModbusClientInterface).
+
+        Args:
+            address: Register address
+            value: Value to write
+
+        Returns:
+            Mock response
+        """
+        return await self.write_register(address, value)
+
+    async def write_coil_register(self, address: int, value: bool):
+        """Simulate writing a coil (compatible with ModbusClientInterface).
+
+        Args:
+            address: Coil address
+            value: Value to write
+
+        Returns:
+            Mock response
+        """
+        return await self.write_coil(address, value)
+
+    @property
+    def demo_data(self) -> dict:
+        """Get demo data, generating it lazily on first access."""
+        if not self._demo_data_loaded:
+            self._demo_data = self.generate_demo_register_data()
+            self._demo_data_loaded = True
+        return self._demo_data
+
+    @classmethod
+    def generate_demo_register_data(cls) -> dict:
+        """Generate demo register data with class-level caching.
+
+        The demo data is generated once and cached at the class level to avoid
+        excessive memory usage when many client instances are created (e.g.,
+        in connection pool tests).
+
+        Returns:
+            Dict with input_registers, holding_registers, discrete_inputs, coils lists.
+        """
+        # Return cached data if available
+        if cls._class_demo_data is not None:
+            return cls._class_demo_data
+
+        data = cls._generate_demo_register_data()
+        cls._class_demo_data = data
+        return data
+
+    @staticmethod
+    def _generate_demo_register_data() -> dict:
+        """Generate realistic demo register data for testing.
+
+        Returns:
+            Dict with input_registers, holding_registers, discrete_inputs, coils lists.
+        """
+        from tests.fakes.responses import generate_demo_register_data
+
+        return generate_demo_register_data()
+
+    def set_register_value(self, register_type: str, address: int, values: list):
+        """Set register values for testing.
+
+        Args:
+            register_type: Type of register ('input', 'holding', 'discrete', 'coil')
+            address: Register address
+            values: List of values to set
+        """
+        if register_type == "input":
+            self._registers.setdefault("input", {})[address] = values
+        elif register_type == "holding":
+            self._holding_registers[address] = values
+        elif register_type == "discrete":
+            self._discrete_inputs[address] = values
+        elif register_type == "coil":
+            self._coils[address] = values
+
+    def get_connection_count(self) -> int:
+        """Get the number of connection attempts."""
+        return self._connection_count
+
+    def get_operation_count(self) -> int:
+        """Get the total number of operations performed."""
+        return self._operation_count
+
+    def get_read_operations(self) -> list:
+        """Get the list of read operations performed."""
+        return self._read_operations.copy()
+
+    def get_write_operations(self) -> list:
+        """Get the list of write operations performed."""
+        return self._write_operations.copy()
+
+    def reset(self):
+        """Reset client state for testing."""
+        self._connection_count = 0
+        self._operation_count = 0
+        self.connection_count = 0
+        self.operation_count = 0
+        self._read_operations.clear()
+        self._write_operations.clear()
+        self._registers.clear()
+        self._coils.clear()
+        self._discrete_inputs.clear()
+        self._holding_registers.clear()
+        self._connect_calls.clear()
+        self._close_calls.clear()
+        self._read_input_registers_calls.clear()
+        self._read_holding_registers_calls.clear()
+        self._read_discrete_inputs_calls.clear()
+        self._read_coils_calls.clear()
+        self._write_register_calls.clear()
+        self._write_coil_calls.clear()
+
+    # Mock-compatible assertion methods
+    def assert_called_once(self):
+        """Assert that connect was called exactly once."""
+        if len(self._connect_calls) != 1:
+            raise AssertionError(
+                f"Expected connect to be called once, but was called {len(self._connect_calls)} times"
+            )
+
+    def assert_not_called(self):
+        """Assert that close was not called."""
+        if len(self._close_calls) > 0:
+            raise AssertionError(
+                f"Expected close to not be called, but was called {len(self._close_calls)} times"
+            )
+
+
+class FakeModbusClientPerformance(FakeModbusClient):
+    """Performance-optimized variant of FakeModbusClient for benchmarking.
+
+    This subclass adds realistic timing and performance tracking capabilities
+    for performance testing scenarios.
+    """
+
+    def __init__(
+        self,
+        host: str = "192.168.1.100",
+        port: int = 502,
+        timeout: int = 10,
+        connected: bool = True,
+        timing_mode: str = "realistic",
+    ):
+        """Initialize performance-optimized fake Modbus client.
+
+        Args:
+            host: Mock host address
+            port: Mock port
+            timeout: Mock timeout
+            connected: Initial connection state
+            timing_mode: Timing mode ('realistic', 'fast', 'custom')
+        """
+        super().__init__(host, port, timeout, connected)
+        self.timing_mode = timing_mode
+        self.total_bytes = 0
+        self.read_count = 0
+
+    async def connect(self):
+        """Simulate connection with performance timing."""
+        if self.timing_mode == "realistic":
+            await asyncio.sleep(0.01)  # 10ms connection time
+        elif self.timing_mode == "fast":
+            await asyncio.sleep(0.001)  # 1ms connection time
+        self.connected = True
+        self._connection_count += 1
+        self._connect_calls.append(())
+
+    async def read_input_registers(self, address: int, count: int, **kwargs):
+        """Simulate reading input registers with performance timing."""
+        self._read_input_registers_calls.append((address, count, kwargs))
+        self.read_count += 1
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._read_operations.append(f"read_input_registers({address}, {count})")
+
+        # Performance timing
+        if self.timing_mode == "realistic":
+            await asyncio.sleep(
+                0.001 + (count * 0.00001)
+            )  # 1ms base + per-register time
+        elif self.timing_mode == "fast":
+            await asyncio.sleep(0.001)  # Fixed fast timing
+
+        # Track bytes
+        self.total_bytes += count * 2  # 2 bytes per register
+
+        registers = self._registers.get("input", {}).get(address, [0] * count)
+        if len(registers) < count:
+            registers = registers + [0] * (count - len(registers))
+
+        return registers[:count]
+
+    async def read_holding_registers(self, address: int, count: int, **kwargs):
+        """Simulate reading holding registers with performance timing."""
+        self._read_holding_registers_calls.append((address, count, kwargs))
+        self.read_count += 1
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._read_operations.append(f"read_holding_registers({address}, {count})")
+
+        # Performance timing
+        if self.timing_mode == "realistic":
+            await asyncio.sleep(0.001 + (count * 0.00001))
+        elif self.timing_mode == "fast":
+            await asyncio.sleep(0.001)
+
+        # Track bytes
+        self.total_bytes += count * 2
+
+        registers = self._holding_registers.get(address, [0] * count)
+        if len(registers) < count:
+            registers = registers + [0] * (count - len(registers))
+
+        return registers[:count]
+
+    async def read_discrete_inputs(self, address: int, count: int, **kwargs):
+        """Simulate reading discrete inputs with performance timing."""
+        self._read_discrete_inputs_calls.append((address, count, kwargs))
+        self.read_count += 1
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._read_operations.append(f"read_discrete_inputs({address}, {count})")
+
+        # Performance timing
+        if self.timing_mode == "realistic":
+            await asyncio.sleep(0.0005)
+        elif self.timing_mode == "fast":
+            await asyncio.sleep(0.0001)
+
+        # Track bytes (1 bit per discrete input)
+        self.total_bytes += count // 8
+
+        bits = self._discrete_inputs.get(address, [False] * count)
+        if len(bits) < count:
+            bits = bits + [False] * (count - len(bits))
+
+        return bits[:count]
+
+    async def read_coils(self, address: int, count: int, **kwargs):
+        """Simulate reading coils with performance timing."""
+        self._read_coils_calls.append((address, count, kwargs))
+        self.read_count += 1
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self.operation_count = self._operation_count
+        self._read_operations.append(f"read_coils({address}, {count})")
+
+        # Performance timing
+        if self.timing_mode == "realistic":
+            await asyncio.sleep(0.0005)
+        elif self.timing_mode == "fast":
+            await asyncio.sleep(0.0001)
+
+        # Track bytes
+        self.total_bytes += count // 8
+
+        bits = self._coils.get(address, [False] * count)
+        if len(bits) < count:
+            bits = bits + [False] * (count - len(bits))
+
+        return bits[:count]
+
+    def reset(self):
+        """Reset client state for testing."""
+        super().reset()
+        self.total_bytes = 0
+        self.read_count = 0
+        self.connection_count = 0
+        self.operation_count = 0

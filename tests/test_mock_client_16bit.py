@@ -149,7 +149,7 @@ def _restore_real_register_constants(monkeypatch):
     """
     from pathlib import Path
 
-    from test_utils import load_register_constants_module
+    from tests.helpers.modules import load_register_constants_module
 
     project_root = Path(__file__).parent.parent
     real_rc = load_register_constants_module(project_root)

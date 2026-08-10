@@ -16,9 +16,8 @@ if str(tests_dir) not in sys.path:
     sys.path.insert(0, str(tests_dir))
 
 # Import shared test utilities
-from test_utils import (
-    FakeModbusClient,
-    FakeModbusResponse,
+from tests.fakes.modbus import FakeModbusClient, FakeModbusResponse
+from tests.helpers.modules import (
     load_const_module,
     setup_home_assistant_mocks,
     setup_project_paths,

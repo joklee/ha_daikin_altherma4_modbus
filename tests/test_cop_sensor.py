@@ -9,7 +9,7 @@ tests_dir = Path(__file__).parent
 if str(tests_dir) not in sys.path:
     sys.path.insert(0, str(tests_dir))
 
-from test_utils import setup_sensor_test_module
+from tests.helpers.modules import setup_sensor_test_module
 
 
 def test_cop_sensor_with_external_power_sensor(monkeypatch):
