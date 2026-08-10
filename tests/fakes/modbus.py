@@ -1,7 +1,5 @@
 """Fake Modbus client implementations for testing."""
 
-import asyncio
-
 
 class FakeModbusResponse:
     """Fake Modbus response for testing.
