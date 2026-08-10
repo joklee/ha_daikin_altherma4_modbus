@@ -130,7 +130,6 @@ class FakeModbusClient:
 
     async def disconnect(self):
         """Simulate disconnection (compatible with MockModbusTcpClient)."""
-        await asyncio.sleep(0.001)  # 1ms disconnect time
         self.connected = False
         self._close_calls.append(())
 
