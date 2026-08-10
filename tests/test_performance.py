@@ -12,7 +12,7 @@ tests_dir = Path(__file__).parent
 if str(tests_dir) not in sys.path:
     sys.path.insert(0, str(tests_dir))
 
-from tests.fakes.modbus import FakeModbusClientPerformance
+from tests.fakes.modbus import FakeModbusClient
 
 
 def test_mock_client_performance(benchmark):
@@ -20,7 +20,7 @@ def test_mock_client_performance(benchmark):
 
     async def _async_operations():
         """All async operations in one coroutine."""
-        client = FakeModbusClientPerformance("localhost", 502, timing_mode="fast")
+        client = FakeModbusClient("localhost", 502, timing_mode="fast")
 
         # Connection
         await client.connect()
@@ -50,7 +50,7 @@ def test_register_read_performance(benchmark):
     """Benchmark register read operations."""
 
     def read_multiple_blocks():
-        client = FakeModbusClientPerformance("localhost", 502, timing_mode="fast")
+        client = FakeModbusClient("localhost", 502, connected=True, timing_mode="fast")
         results = []
 
         # Read multiple register blocks
@@ -106,9 +106,7 @@ async def test_performance_scan_intervals():
         cycles = int(duration / interval)
 
         # Mock client for performance testing
-        client = FakeModbusClientPerformance(
-            "192.168.1.100", 502, timing_mode="realistic"
-        )
+        client = FakeModbusClient("192.168.1.100", 502, timing_mode="realistic")
         await client.connect()
 
         # Simulate scan cycles
@@ -189,7 +187,7 @@ async def test_performance_scan_intervals():
 async def test_performance_batch_optimization():
     """Test performance impact of batch vs individual register reads."""
 
-    client = FakeModbusClientPerformance("192.168.1.100", 502, timing_mode="realistic")
+    client = FakeModbusClient("192.168.1.100", 502, timing_mode="realistic")
     await client.connect()
 
     # Test 1: Individual register reads (current implementation)
@@ -199,8 +197,7 @@ async def test_performance_batch_optimization():
     individual_time = time.time() - start_time
 
     # Reset client
-    client.read_count = 0
-    client.total_bytes = 0
+    client.reset()
 
     # Test 2: Batch register reads (optimized)
     start_time = time.time()
@@ -228,7 +225,7 @@ async def test_performance_memory_usage():
     baseline_objects = len(gc.get_objects())
 
     # Simulate extended operation
-    client = FakeModbusClientPerformance("192.168.1.100", 502, timing_mode="fast")
+    client = FakeModbusClient("192.168.1.100", 502, timing_mode="fast")
     await client.connect()
 
     # Simulate 100 update cycles
@@ -269,6 +266,8 @@ async def test_performance_memory_usage():
 
 
 if __name__ == "__main__":
+    import asyncio
+
     asyncio.run(test_performance_scan_intervals())
     asyncio.run(test_performance_batch_optimization())
     asyncio.run(test_performance_memory_usage())
