@@ -17,7 +17,7 @@ async def test_batching_optimization_comparison():
     print("=" * 80)
 
     # Test OLD implementation (multiple small reads)
-    old_client = FakeModbusClient("192.168.1.100", 502, timing_mode="realistic")
+    old_client = FakeModbusClient("192.168.1.100", 502)
     await old_client.connect()
 
     start_time = time.time()
@@ -37,7 +37,7 @@ async def test_batching_optimization_comparison():
     old_operations = len(old_client.get_read_operations())
 
     # Test NEW implementation (optimized batching)
-    new_client = FakeModbusClient("192.168.1.100", 502, timing_mode="realistic")
+    new_client = FakeModbusClient("192.168.1.100", 502)
     await new_client.connect()
 
     start_time = time.time()
@@ -147,7 +147,7 @@ async def test_memory_efficiency_of_batching():
     print("💾 MEMORY EFFICIENCY TEST")
     print("=" * 80)
 
-    client = FakeModbusClient("192.168.1.100", 502, timing_mode="fast")
+    client = FakeModbusClient("192.168.1.100", 502)
     await client.connect()
 
     # Baseline memory

@@ -60,11 +60,11 @@ async def test_batching_returns_same_data():
 
 
 @pytest.mark.asyncio
-async def test_batching_optimization_comparison():
-    """Compare old vs new batching performance."""
+async def test_batching_reduces_modbus_requests_across_register_types():
+    """Test that batching reduces requests across different register types."""
 
     # Test OLD implementation (multiple small reads)
-    old_client = FakeModbusClient("192.168.1.100", 502, timing_mode="realistic")
+    old_client = FakeModbusClient("192.168.1.100", 502)
     await old_client.connect()
 
     # OLD: 2 separate input register blocks
@@ -79,7 +79,7 @@ async def test_batching_optimization_comparison():
     old_operations = len(old_client.get_read_operations())
 
     # Test NEW implementation (optimized batching)
-    new_client = FakeModbusClient("192.168.1.100", 502, timing_mode="realistic")
+    new_client = FakeModbusClient("192.168.1.100", 502)
     await new_client.connect()
 
     # NEW: 1 single input register block
