@@ -60,11 +60,6 @@ class FakeModbusClient:
     This class provides a realistic mock of AsyncModbusTcpClient behavior
     for testing purposes, eliminating the need for scattered MagicMock
     configurations across test files.
-
-    The timing_mode parameter allows performance tests to control timing:
-    - 'normal': Default timing (1ms per operation)
-    - 'fast': Minimal timing for benchmarks (0.1ms per operation)
-    - 'realistic': Realistic network timing (10ms + variable)
     """
 
     # Class-level cache for demo data to avoid regenerating per instance

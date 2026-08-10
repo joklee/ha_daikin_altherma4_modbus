@@ -12,10 +12,8 @@ async def test_batching_reduces_requests():
     client = FakeModbusClient("192.168.1.100", 502, connected=True)
 
     # Read registers individually (67 separate requests)
-    individual_results = []
     for addr in range(21, 88):
-        result = await client.read_input_registers(addr, 1)
-        individual_results.append(result)
+        await client.read_input_registers(addr, 1)
 
     assert client.read_count == 67, "Individual reads should make 67 requests"
     assert client.write_count == 0, "No writes should have occurred"
@@ -96,7 +94,3 @@ async def test_batching_reduces_modbus_requests_across_register_types():
     )
     assert new_operations == 2, "New implementation should use exactly 2 operations"
     assert old_operations == 5, "Old implementation should use exactly 5 operations"
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
