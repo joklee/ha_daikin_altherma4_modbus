@@ -4,16 +4,9 @@ Clean test suite with proper coverage - final solution.
 Uses centralized FakeModbusClient from test_utils.
 """
 
-import sys
-from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-
-# Add tests directory to path for test_utils import
-tests_dir = Path(__file__).parent
-if str(tests_dir) not in sys.path:
-    sys.path.insert(0, str(tests_dir))
 
 # Import shared test utilities
 from tests.fakes.modbus import FakeModbusClient, FakeModbusResponse

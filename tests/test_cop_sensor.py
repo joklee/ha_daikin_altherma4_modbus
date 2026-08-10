@@ -1,13 +1,6 @@
 """Tests for CalculatedCoPSensor using centralized mocking approach."""
 
-import sys
-from pathlib import Path
 from types import SimpleNamespace
-
-# Add tests directory to path for test_utils import
-tests_dir = Path(__file__).parent
-if str(tests_dir) not in sys.path:
-    sys.path.insert(0, str(tests_dir))
 
 from tests.helpers.modules import setup_sensor_test_module
 

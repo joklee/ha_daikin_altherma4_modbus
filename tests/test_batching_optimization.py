@@ -1,16 +1,9 @@
 """Performance tests for optimized register batching."""
 
 import asyncio
-import sys
 import time
-from pathlib import Path
 
 import pytest
-
-# Add tests directory to path for test_utils import
-tests_dir = Path(__file__).parent
-if str(tests_dir) not in sys.path:
-    sys.path.insert(0, str(tests_dir))
 
 from tests.fakes.modbus import FakeModbusClient
 
