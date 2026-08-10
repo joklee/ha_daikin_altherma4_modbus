@@ -25,7 +25,7 @@ async def test_batching_reduces_requests():
     client.reset()
 
     # Read registers in one batch (1 request)
-    batch_result = await client.read_input_registers(21, 67)
+    await client.read_input_registers(21, 67)
 
     assert client.read_count == 1, "Batch read should make only 1 request"
     assert client.write_count == 0, "No writes should have occurred"
