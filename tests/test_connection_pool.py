@@ -1,19 +1,12 @@
 """Connection Pool Performance Tests for Daikin Altherma 4 Modbus Integration."""
 
 import asyncio
-import sys
 import time
-from pathlib import Path
-
-import pytest
-
-# Add tests directory to path for test_utils import
-tests_dir = Path(__file__).parent
-if str(tests_dir) not in sys.path:
-    sys.path.insert(0, str(tests_dir))
 
 # Use centralized FakeModbusClient from test_utils
 from typing import ClassVar
+
+import pytest
 
 from tests.fakes.modbus import FakeModbusClient
 

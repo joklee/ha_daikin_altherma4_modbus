@@ -7,11 +7,6 @@ from pathlib import Path
 
 import pytest
 
-# Add tests directory to path for test_utils import
-tests_dir = Path(__file__).parent
-if str(tests_dir) not in sys.path:
-    sys.path.insert(0, str(tests_dir))
-
 
 def _ensure_homeassistant_stubs():
     """Ensure homeassistant stubs are available and correctly configured.
@@ -151,7 +146,6 @@ def _restore_real_register_constants(monkeypatch):
     Args:
         monkeypatch: pytest monkeypatch fixture
     """
-    from pathlib import Path
 
     from tests.helpers.modules import load_register_constants_module
 
