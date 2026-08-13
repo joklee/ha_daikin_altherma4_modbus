@@ -1,11 +1,7 @@
 """Repair flows for Daikin Altherma 4 Modbus integration."""
 
 import logging
-<<<<<<< HEAD
-import voluptuous as vol
-=======
 
->>>>>>> 8f4f41c (Remove unused imports (ruff F401))
 from homeassistant import config_entries
 
 try:

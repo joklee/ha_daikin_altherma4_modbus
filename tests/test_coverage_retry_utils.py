@@ -2,8 +2,6 @@
 
 from datetime import timedelta
 
-import pytest
-
 from custom_components.ha_daikin_altherma4_modbus.retry_utils import (
     CONNECTION_RETRY,
     DEFAULT_JITTER,

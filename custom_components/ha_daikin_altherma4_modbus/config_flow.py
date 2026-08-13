@@ -115,10 +115,6 @@ def _build_reconfigure_schema(host: str, port: int) -> vol.Schema:
     )
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> d73dd05 (feat: add reconfigure flow for connection reconfiguration)
 def _validate_common_values(
     host: str | None,
     port: int | None,
@@ -372,10 +368,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=_build_reconfigure_schema(current_host, current_port),
             errors={},
         )
-<<<<<<< HEAD
-=======
 
->>>>>>> d73dd05 (feat: add reconfigure flow for connection reconfiguration)
     @staticmethod
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
