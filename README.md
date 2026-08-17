@@ -199,6 +199,7 @@ You can change the host address and port via the reconfigure flow:
 ### Sensors (Input Registers)
 
 #### Temperature Sensors
+<<<<<<< HEAD
 | Sensor | Address | Unit | Device Class | State Class | Description |
 |--------|---------|------|-------------|------------|-------------|
 | Leaving water temperature PHE | 40 | °C | temperature | measurement | Primary heat exchanger outlet |
@@ -222,6 +223,31 @@ You can change the host address and port via the reconfigure flow:
 | Flow rate | 49 | L/min | volume_flow_rate | measurement | Water flow rate |
 | Heat pump power consumption | 51 | kW | power | measurement | Electrical input power |
 | Water pressure | 79 | bar | pressure | measurement | – |
+=======
+| Sensor | Address | Unit | Description |
+|--------|---------|------|-------------|
+| Leaving water temperature PHE | 40 | °C | Primary heat exchanger outlet |
+| Leaving water temperature BUH | 41 | °C | Backup heater outlet |
+| Return water temperature | 42 | °C | Water return |
+| DHW temperature | 43 | °C | Domestic hot water |
+| Outside air temperature | 44 | °C | Outdoor sensor |
+| Liquid refrigerant temperature | 45 | °C | Refrigerant |
+| Remote control room temp (Main) | 50 | °C | Thermostat reading |
+| Remote control room temp (Add) | 78 | °C | Thermostat reading additional zone |
+| Mixing leaving water temp | 72 | °C | Mixing kit outlet |
+| Space heating/cooling target Main in mixing kit | 73 | °C | Mixing kit target temperature |
+| Leaving water temp prePHE outdoor | 74 | °C | – |
+| Leaving water temp Tank valve | 75 | °C | – |
+| DHW Upper temperature | 76 | °C | – |
+| DHW Lower temperature | 77 | °C | – |
+
+#### Power and Flow Sensors
+| Sensor | Address | Unit | Description |
+|--------|---------|------|-------------|
+| Flow rate | 49 | L/min | Water flow rate |
+| Heat pump power consumption | 51 | kW | Electrical input power |
+| Water pressure | 79 | bar | – |
+>>>>>>> 7851c25 (docs: rewrite README as home-assistant.io-conform documentation)
 
 #### Operating Status
 | Sensor | Address | Description |
@@ -237,22 +263,22 @@ You can change the host address and port via the reconfigure flow:
 | Unit operation mode | 83 | Stop/Tank Heat Up/Heating/Cooling/Actuator |
 
 #### Status and Control Values
-| Sensor | Address | Unit | Device Class | State Class | Description |
-|--------|---------|------|-------------|------------|-------------|
-| Bypass valve position | 66 | % | – | measurement | – |
-| Storage valve position | 67 | % | – | measurement | – |
-| Circulation pump speed | 68 | % | speed | measurement | – |
-| Mixed pump PWM | 69 | % | – | measurement | – |
-| Direct pump PWM | 70 | % | – | measurement | – |
-| Mixing valve position | 71 | % | – | measurement | – |
+| Sensor | Address | Unit | Description |
+|--------|---------|------|-------------|
+| Bypass valve position | 66 | % | – |
+| Storage valve position | 67 | % | – |
+| Circulation pump speed | 68 | % | – |
+| Mixed pump PWM | 69 | % | – |
+| Direct pump PWM | 70 | % | – |
+| Mixing valve position | 71 | % | – |
 
 #### Error Monitoring
-| Sensor | Address | State Class | Description |
-|--------|---------|-------------|-------------|
-| Unit abnormality | 21 | – | 0=No error, 1=Fault, 2=Warning |
-| Abnormality code | 22 | – | Text code |
-| Abnormality sub code | 23 | – | Numeric code |
-| Abnormality counter | 82 | total_increasing | User abnormality counter |
+| Sensor | Address | Description |
+|--------|---------|-------------|
+| Unit abnormality | 21 | 0=No error, 1=Fault, 2=Warning |
+| Abnormality code | 22 | Text code |
+| Abnormality sub code | 23 | Numeric code |
+| Abnormality counter | 82 | User abnormality counter |
 
 #### Setpoint Limits
 | Sensor | Address | Unit | Description |
@@ -355,15 +381,15 @@ All binary sensors have the **Diagnostic** category.
 
 ### Calculated Sensors
 
-| Sensor | Unit | Device Class | State Class | Description |
-|--------|------|-------------|------------|-------------|
-| Thermal Heat Output | W | power | measurement | `Flow rate × |ΔT| × 70` |
-| Coefficient of Performance | CoP | – | – | `Heat output / Electric power` |
-| Delta-T | K | – | measurement | `Leaving water − Return water` |
-| Last Compressor Run | – | timestamp | – | Timestamp of last compressor start |
-| Last Defrost | – | timestamp | – | Timestamp of last defrost cycle |
-| Last Booster Heater | – | timestamp | – | Timestamp of last auxiliary heater activation |
-| Last DHW Running | – | timestamp | – | Timestamp of last DHW heating cycle |
+| Sensor | Unit | Device Class | Description |
+|--------|------|-------------|-------------|
+| Thermal Heat Output | W | power | `Flow rate × |ΔT| × 70` |
+| Coefficient of Performance | CoP | – | `Heat output / Electric power` |
+| Delta-T | K | – | `Leaving water − Return water` |
+| Last Compressor Run | – | timestamp | Timestamp of last compressor start |
+| Last Defrost | – | timestamp | Timestamp of last defrost cycle |
+| Last Booster Heater | – | timestamp | Timestamp of last auxiliary heater activation |
+| Last DHW Running | – | timestamp | Timestamp of last DHW heating cycle |
 
 ### Special Register Values
 
