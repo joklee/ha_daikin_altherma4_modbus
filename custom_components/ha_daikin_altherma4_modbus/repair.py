@@ -40,7 +40,9 @@ def async_create_connection_issue(hass, entry, error_message: str) -> None:
             "error_message": error_message,
         },
     )
-    _LOGGER.warning("Created connection issue %s: %s", issue_id, error_message)
+    _LOGGER.warning(
+        "Created connection issue %s: %s", issue_id, error_message
+    )
 
 
 def async_delete_connection_issue(hass, entry) -> None:

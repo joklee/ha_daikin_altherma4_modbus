@@ -34,34 +34,6 @@ class _HAEntityBase(metaclass=_HAMetaclass):
         self.coordinator = coordinator
 
 
-class _CoordinatorEntity(_HAEntityBase):
-    pass
-
-
-class _BinarySensorEntity(_HAEntityBase):
-    pass
-
-
-class _SensorEntity(_HAEntityBase):
-    pass
-
-
-class _SwitchEntity(_HAEntityBase):
-    pass
-
-
-class _NumberEntity(_HAEntityBase):
-    pass
-
-
-class _SelectEntity(_HAEntityBase):
-    pass
-
-
-class _ClimateEntity(_HAEntityBase):
-    pass
-
-
 class _HADataUpdateCoordinator:
     def __init__(self, hass=None, logger=None, name=None, update_interval=None):
         self.hass = hass
@@ -93,7 +65,7 @@ homeassistant.helpers = helpers_module
 # homeassistant.helpers.update_coordinator stub
 update_coordinator_module = types.ModuleType("homeassistant.helpers.update_coordinator")
 update_coordinator_module.DataUpdateCoordinator = _HADataUpdateCoordinator
-update_coordinator_module.CoordinatorEntity = _CoordinatorEntity
+update_coordinator_module.CoordinatorEntity = _HAEntityBase
 update_coordinator_module.UpdateFailed = Exception
 sys.modules["homeassistant.helpers.update_coordinator"] = update_coordinator_module
 helpers_module.update_coordinator = update_coordinator_module
@@ -166,12 +138,12 @@ homeassistant.exceptions = exceptions_module
 
 # Binary sensor stub
 binary_sensor_module = types.ModuleType("homeassistant.components.binary_sensor")
-binary_sensor_module.BinarySensorEntity = _BinarySensorEntity
+binary_sensor_module.BinarySensorEntity = _HAEntityBase
 sys.modules["homeassistant.components.binary_sensor"] = binary_sensor_module
 
 # Sensor stub
 sensor_module = types.ModuleType("homeassistant.components.sensor")
-sensor_module.SensorEntity = _SensorEntity
+sensor_module.SensorEntity = _HAEntityBase
 
 
 # Define SensorStateClass as an enum-like class for proper import compatibility
@@ -199,22 +171,22 @@ sys.modules["homeassistant.components.sensor"] = sensor_module
 
 # Switch stub
 switch_module = types.ModuleType("homeassistant.components.switch")
-switch_module.SwitchEntity = _SwitchEntity
+switch_module.SwitchEntity = _HAEntityBase
 sys.modules["homeassistant.components.switch"] = switch_module
 
 # Number stub
 number_module = types.ModuleType("homeassistant.components.number")
-number_module.NumberEntity = _NumberEntity
+number_module.NumberEntity = _HAEntityBase
 sys.modules["homeassistant.components.number"] = number_module
 
 # Select stub
 select_module = types.ModuleType("homeassistant.components.select")
-select_module.SelectEntity = _SelectEntity
+select_module.SelectEntity = _HAEntityBase
 sys.modules["homeassistant.components.select"] = select_module
 
 # Climate stub
 climate_module = types.ModuleType("homeassistant.components.climate")
-climate_module.ClimateEntity = _ClimateEntity
+climate_module.ClimateEntity = _HAEntityBase
 climate_const_module = types.ModuleType("homeassistant.components.climate.const")
 climate_const_module.ClimateEntityFeature = types.SimpleNamespace(
     TARGET_TEMPERATURE=1, FAN_MODE=2
@@ -268,29 +240,3 @@ homeassistant.util = util_module
 
 # Unit of temperature stub
 const_module.UnitOfTemperature = types.SimpleNamespace(CELSIUS="°C")
-
-# Force-register all stubs
-for name, module in [
-    ("homeassistant.const", const_module),
-    ("homeassistant.core", core_module),
-    ("homeassistant.helpers", helpers_module),
-    ("homeassistant.helpers.update_coordinator", update_coordinator_module),
-    ("homeassistant.helpers.typing", helpers_typing_module),
-    ("homeassistant.helpers.config_validation", cv_module),
-    ("homeassistant.helpers.service", helpers_service_module),
-    ("homeassistant.helpers.issue_registry", issue_registry_module),
-    ("homeassistant.helpers.restore_state", restore_state_module),
-    ("homeassistant.exceptions", exceptions_module),
-    ("homeassistant.components.binary_sensor", binary_sensor_module),
-    ("homeassistant.components.sensor", sensor_module),
-    ("homeassistant.components.switch", switch_module),
-    ("homeassistant.components.number", number_module),
-    ("homeassistant.components.select", select_module),
-    ("homeassistant.components.climate", climate_module),
-    ("homeassistant.components.climate.const", climate_const_module),
-    ("homeassistant.config_entries", config_entries_module),
-    ("homeassistant.components.diagnostics", diagnostics_module),
-    ("homeassistant.util", util_module),
-    ("homeassistant.util.dt", dt_module),
-]:
-    sys.modules[name] = module

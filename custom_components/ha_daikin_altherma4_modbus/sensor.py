@@ -187,9 +187,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 hass,
                 entry,
                 abnormality_code=str(code_val) if code_val is not None else "unknown",
-                abnormality_sub_code=int(sub_code_val)
-                if sub_code_val is not None
-                else 0,
+                abnormality_sub_code=int(sub_code_val) if sub_code_val is not None else 0,
             )
             _abnormality_state["issue_created"] = True
         elif val == 0 and _abnormality_state["issue_created"]:

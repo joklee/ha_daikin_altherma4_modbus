@@ -5,6 +5,7 @@ import logging
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .config_entry_utils import entry_data_value
 from .const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
 from .data_manager import ModbusDataManager
 from .exceptions import (
@@ -178,12 +179,8 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
                 if entry:
                     # Only create if no issue exists yet (normal coordinator may have created one)
                     from .repair import ISSUE_CONNECTION_LOST
-
                     issue_id = f"{ISSUE_CONNECTION_LOST}_{entry.entry_id}"
-                    from homeassistant.helpers.issue_registry import (
-                        async_get as async_get_issue_registry,
-                    )
-
+                    from homeassistant.helpers.issue_registry import async_get as async_get_issue_registry
                     issue_registry = async_get_issue_registry(self.hass)
                     if issue_id not in issue_registry.issues:
                         async_create_connection_issue(
