@@ -818,7 +818,7 @@
       "message": "Coordinator does not have data_manager attribute"
     },
     "unsupported_option": {
-      "message": "Unsupported option {option} for {register_name}"
+      "message": "Unsupported option '{option}' for {register_name}"
     }
   },
   "issues": {

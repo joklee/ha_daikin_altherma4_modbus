@@ -810,7 +810,7 @@
       "message": "Koordinator hat kein data_manager-Attribut"
     },
     "unsupported_option": {
-      "message": "Nicht unterstützte Option {option} für {register_name}"
+      "message": "Nicht unterstützte Option '{option}' für {register_name}"
     }
   },
   "issues": {
