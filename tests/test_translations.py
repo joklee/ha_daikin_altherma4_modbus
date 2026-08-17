@@ -403,6 +403,7 @@ class TestTranslations:
             "enum_map values missing as state keys in de.json:\n" + "\n".join(missing)
         )
 
+<<<<<<< HEAD
     def test_all_enum_map_values_translated_in_nl_json(self, component_dir):
         """Verify all enum_map values have state translations in nl.json."""
         rc_path = component_dir / "register_constants.py"
@@ -427,6 +428,8 @@ class TestTranslations:
             "enum_map values missing as state keys in nl.json:\n" + "\n".join(missing)
         )
 
+=======
+>>>>>>> 0813960 (Add config flow translation schema validation test)
     def test_config_flow_translation_structure(self, component_dir):
         """Verify config flow translations follow HA schema.
 
@@ -438,7 +441,11 @@ class TestTranslations:
         # Keys allowed at config.reauth / config.reconfigure level (no data/data_description)
         valid_section_keys = {"step"}
 
+<<<<<<< HEAD
         for lang in ["en", "de", "nl"]:
+=======
+        for lang in ["en", "de"]:
+>>>>>>> 0813960 (Add config flow translation schema validation test)
             filepath = component_dir / "translations" / f"{lang}.json"
             with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
