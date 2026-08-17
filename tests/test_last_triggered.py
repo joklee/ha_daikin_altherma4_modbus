@@ -5,10 +5,11 @@ Test for all Last Triggered sensors functionality (Last Defrost, Last Compressor
 
 import pytest
 
+from tests.helpers.assertions import create_test_trigger_time
+
 # Import shared test utilities
-from .test_utils import (
+from tests.helpers.modules import (
     create_mock_coordinator,
-    create_test_trigger_time,
     load_const_module,
     load_register_constants_module,
     setup_home_assistant_mocks,

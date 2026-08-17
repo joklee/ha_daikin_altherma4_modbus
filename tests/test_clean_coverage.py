@@ -1,67 +1,27 @@
 #!/usr/bin/env python3
 """
 Clean test suite with proper coverage - final solution.
+Uses centralized FakeModbusClient from test_utils.
 """
 
-import sys
 from unittest.mock import Mock
 
 import pytest
 
 # Import shared test utilities
-from .test_utils import setup_home_assistant_mocks, setup_project_paths
+from tests.fakes.modbus import FakeModbusClient, FakeModbusResponse
+from tests.helpers.modules import (
+    load_const_module,
+    setup_home_assistant_mocks,
+    setup_project_paths,
+)
 
 # Set up mocks and paths
 setup_home_assistant_mocks()
 project_root = setup_project_paths()
 
-# Now import modules normally for coverage
-# This allows coverage to track the actual source files
-try:
-    # Add custom_components to path
-    custom_path = project_root / "custom_components"
-    sys.path.insert(0, str(custom_path))
-
-    # Import the modules we want to test
-    from ha_daikin_altherma4_modbus import const
-    from ha_daikin_altherma4_modbus.mock_client import (
-        MockModbusResponse,
-        MockModbusTcpClient,
-    )
-
-    COVERAGE_WORKING = True
-except ImportError as e:
-    print(f"Could not import for coverage: {e}")
-    # Fallback to manual loading
-    import types
-
-    custom_components_path = (
-        project_root / "custom_components" / "ha_daikin_altherma4_modbus"
-    )
-
-    # Load mock_client with patched imports
-    with open(custom_components_path / "mock_client.py", "r") as f:
-        source = f.read()
-
-    # Replace relative imports
-    source = source.replace(
-        "from .client_interface", "from ha_daikin_altherma4_modbus.client_interface"
-    )
-    source = source.replace("from .const", "from ha_daikin_altherma4_modbus.const")
-
-    mock_client_module = types.ModuleType("ha_daikin_altherma4_modbus.mock_client")
-    exec(source, mock_client_module.__dict__)
-    sys.modules["ha_daikin_altherma4_modbus.mock_client"] = mock_client_module
-
-    MockModbusTcpClient = mock_client_module.MockModbusTcpClient
-    MockModbusResponse = mock_client_module.MockModbusResponse
-
-    # Load const using the same method as test_utils
-    from .test_utils import load_const_module
-
-    const = load_const_module(project_root)
-
-    COVERAGE_WORKING = False
+# Load const module for constants access
+const = load_const_module(project_root)
 
 
 # Pytest fixtures
@@ -78,24 +38,23 @@ def mock_hass():
 @pytest.fixture
 def mock_client():
     """Mock Modbus TCP client."""
-    return MockModbusTcpClient("192.168.1.100", 502)
+    return FakeModbusClient("192.168.1.100", 502)
 
 
 @pytest.fixture
 def demo_data():
     """Demo register data."""
-    return MockModbusTcpClient.generate_demo_register_data()
+    return FakeModbusClient.generate_demo_register_data()
 
 
 class TestMockClientClean:
-    """Clean test cases for MockModbusTcpClient."""
+    """Clean test cases for FakeModbusClient."""
 
     def test_initialization(self, mock_client):
         """Test client initialization."""
         assert mock_client.host == "192.168.1.100"
         assert mock_client.port == 502
         assert mock_client.connected is False
-        assert mock_client._demo_data is not None
 
     @pytest.mark.asyncio
     async def test_connection(self, mock_client):
@@ -109,6 +68,8 @@ class TestMockClientClean:
     @pytest.mark.asyncio
     async def test_read_operations(self, mock_client):
         """Test all read operations."""
+        await mock_client.connect()
+
         # Test input registers
         input_resp = await mock_client.read_input_registers(1, 5)
         assert hasattr(input_resp, "registers")
@@ -129,6 +90,19 @@ class TestMockClientClean:
         assert hasattr(coil_resp, "bits")
         assert len(coil_resp.bits) >= 5
 
+    @pytest.mark.asyncio
+    async def test_write_operations(self, mock_client):
+        """Test write operations."""
+        await mock_client.connect()
+
+        # Test write holding register
+        write_resp = await mock_client.write_holding_register(1, 2500)
+        assert hasattr(write_resp, "isError")
+
+        # Test write coil
+        coil_resp = await mock_client.write_coil_register(1, True)
+        assert hasattr(coil_resp, "isError")
+
     def test_demo_data_generation(self, demo_data):
         """Test demo data generation."""
         assert isinstance(demo_data, dict)
@@ -144,18 +118,18 @@ class TestMockClientClean:
             assert len(demo_data[key]) > 0
 
     def test_discrete_input_bug_fix(self, demo_data):
-        """Test that the discrete input value assignment bug is fixed."""
+        """Test that the discrete input values are boolean."""
         discrete_inputs = demo_data["discrete_inputs"]
 
-        # All values should be boolean (the fix)
+        # All values should be boolean
         assert all(isinstance(value, bool) for value in discrete_inputs)
 
         # Should have values
         assert len(discrete_inputs) > 0
 
     def test_response_object(self):
-        """Test MockModbusResponse object."""
-        response = MockModbusResponse([100, 200, 300], 1, 3)
+        """Test FakeModbusResponse object."""
+        response = FakeModbusResponse([100, 200, 300], 1, 3)
 
         assert hasattr(response, "registers")
         assert hasattr(response, "is_bits")
@@ -164,11 +138,10 @@ class TestMockClientClean:
 
     def test_constants(self):
         """Test constants access."""
-        if COVERAGE_WORKING:
-            assert hasattr(const, "DOMAIN")
-            assert hasattr(const, "DEFAULT_PORT")
-            assert const.DOMAIN == "ha_daikin_altherma4_modbus"
-            assert const.DEFAULT_PORT == 502
+        assert hasattr(const, "DOMAIN")
+        assert hasattr(const, "DEFAULT_PORT")
+        assert const.DOMAIN == "ha_daikin_altherma4_modbus"
+        assert const.DEFAULT_PORT == 502
 
 
 class TestIntegrationClean:
@@ -176,10 +149,10 @@ class TestIntegrationClean:
 
     def test_full_workflow(self, mock_client):
         """Test complete workflow."""
-        demo_data = MockModbusTcpClient.generate_demo_register_data()
+        demo_data = FakeModbusClient.generate_demo_register_data()
         assert isinstance(demo_data, dict)
 
-        response = MockModbusResponse([100, 200], 1, 2)
+        response = FakeModbusResponse([100, 200], 1, 2)
         assert hasattr(response, "registers")
         assert len(response.registers) >= 2
 
@@ -191,8 +164,8 @@ class TestIntegrationClean:
 
     def test_error_handling(self):
         """Test error handling."""
-        MockModbusTcpClient("192.168.1.100", 502)
-        demo_data = MockModbusTcpClient.generate_demo_register_data()
+        FakeModbusClient("192.168.1.100", 502)
+        demo_data = FakeModbusClient.generate_demo_register_data()
         discrete_inputs = demo_data.get("discrete_inputs", [])
 
         # Verify the fix works
