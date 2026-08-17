@@ -23,6 +23,7 @@ PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
 =======
 >>>>>>> af2a684 (feat: add PARALLEL_UPDATES = 0 to all platform files)
 
+
 async def async_setup_entry(hass, entry, async_add_entities):
     runtime_data = entry.runtime_data
     coordinator = runtime_data.coordinator

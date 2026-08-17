@@ -243,7 +243,8 @@ def _load_switch_module(monkeypatch):
         def __init__(self, *args, **kwargs):
             super().__init__(*args)
             self.kwargs = kwargs
-            pass
+
+        pass
 
     exceptions_module.HomeAssistantError = HomeAssistantError
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
@@ -302,7 +303,8 @@ async def test_switch_handles_daikin_modbus_exception(monkeypatch):
         def __init__(self, *args, **kwargs):
             super().__init__(*args)
             self.kwargs = kwargs
-            pass
+
+        pass
 
     exceptions_module.HomeAssistantError = HomeAssistantError
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
@@ -396,7 +398,8 @@ def _load_select_module(monkeypatch):
         def __init__(self, *args, **kwargs):
             super().__init__(*args)
             self.kwargs = kwargs
-            pass
+
+        pass
 
     exceptions_module.HomeAssistantError = HomeAssistantError
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)

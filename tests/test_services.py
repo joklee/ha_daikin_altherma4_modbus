@@ -488,13 +488,7 @@ class TestSetOperationModeService:
         )
 
         # Execute and expect error
-        with pytest.raises(
-            ServiceValidationError,
-<<<<<<< HEAD
-=======
-            
->>>>>>> a276cba (refactor: move exception messages to translation files)
-        ):
+        with pytest.raises(ServiceValidationError):
             await async_set_operation_mode(hass, call)
 
     async def test_set_operation_mode_entry_not_loaded(self, hass, mock_config_entry):
@@ -518,13 +512,7 @@ class TestSetOperationModeService:
         )
 
         # Execute and expect error
-        with pytest.raises(
-            ServiceValidationError,
-<<<<<<< HEAD
-=======
-            
->>>>>>> a276cba (refactor: move exception messages to translation files)
-        ):
+        with pytest.raises(ServiceValidationError):
             await async_set_operation_mode(hass, call)
 
     async def test_set_operation_mode_invalid_mode(
@@ -550,7 +538,9 @@ class TestSetOperationModeService:
         )
 
         # Execute and expect error
-        with pytest.raises(ServiceValidationError):
+        with pytest.raises(
+            ServiceValidationError,
+        ):
             await async_set_operation_mode(hass, call)
 
 
@@ -653,13 +643,7 @@ class TestSetDHWStateService:
         )
 
         # Execute and expect error
-        with pytest.raises(
-            ServiceValidationError,
-<<<<<<< HEAD
-=======
-            
->>>>>>> a276cba (refactor: move exception messages to translation files)
-        ):
+        with pytest.raises(ServiceValidationError):
             await async_set_dhw_state(hass, call)
 
 
@@ -979,13 +963,7 @@ class TestSetSmartGridModeService:
         )
 
         # Execute and expect error
-        with pytest.raises(
-            ServiceValidationError,
-<<<<<<< HEAD
-=======
-            
->>>>>>> a276cba (refactor: move exception messages to translation files)
-        ):
+        with pytest.raises(ServiceValidationError):
             await async_set_smart_grid_mode(hass, call)
 
     async def test_set_smart_grid_mode_invalid_mode(
@@ -1011,7 +989,9 @@ class TestSetSmartGridModeService:
         )
 
         # Execute and expect error
-        with pytest.raises(ServiceValidationError):
+        with pytest.raises(
+            ServiceValidationError,
+        ):
             await async_set_smart_grid_mode(hass, call)
 
 
