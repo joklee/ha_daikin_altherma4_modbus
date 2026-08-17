@@ -1,95 +1,27 @@
 #!/usr/bin/env python3
 """
 Working pytest-compatible test suite for Daikin Altherma 4 Modbus integration.
+Uses centralized FakeModbusClient from test_utils.
 """
 
-import sys
-import types
 from unittest.mock import Mock
 
 import pytest
 
 # Import shared test utilities
-from .test_utils import setup_home_assistant_mocks, setup_project_paths
+from tests.fakes.modbus import FakeModbusClient, FakeModbusResponse
+from tests.helpers.modules import (
+    load_const_module,
+    setup_home_assistant_mocks,
+    setup_project_paths,
+)
 
 # Set up mocks and paths
 setup_home_assistant_mocks()
 project_root = setup_project_paths()
 
-# Add custom components path
-custom_components_path = (
-    project_root / "custom_components" / "ha_daikin_altherma4_modbus"
-)
-sys.path.insert(0, str(custom_components_path))
-
-# Create package structure
-package = types.ModuleType("ha_daikin_altherma4_modbus")
-sys.modules["ha_daikin_altherma4_modbus"] = package
-
-
-# Load modules manually to handle relative imports
-def load_module(module_name, file_path):
-    """Load a module and handle its dependencies."""
-    spec = None
-    try:
-        spec = __import__(module_name).__spec__ if module_name in sys.modules else None
-    except ImportError:
-        pass
-
-    if spec is None:
-        with open(file_path, "r") as f:
-            source = f.read()
-
-        # Replace relative imports
-        source = source.replace("from .", "from ha_daikin_altherma4_modbus.")
-        source = source.replace("import .", "import ha_daikin_altherma4_modbus.")
-
-        module = types.ModuleType(module_name)
-        exec(source, module.__dict__)
-        sys.modules[f"ha_daikin_altherma4_modbus.{module_name}"] = module
-        package.__dict__[module_name] = module
-        return module
-
-    return sys.modules[module_name]
-
-
-# Load const module using the old method but with proper relative import handling
-def load_const_module_legacy(project_root):
-    """Load const module using legacy method with relative import fixes."""
-    custom_components_path = (
-        project_root / "custom_components" / "ha_daikin_altherma4_modbus"
-    )
-
-    # Add path to sys.path
-    custom_components_parent = str(project_root / "custom_components")
-    if custom_components_parent not in sys.path:
-        sys.path.insert(0, custom_components_parent)
-
-    with open(custom_components_path / "const.py", "r") as f:
-        source = f.read()
-
-    # Replace relative imports with absolute imports
-    source = source.replace(
-        "from .register_constants import",
-        "from ha_daikin_altherma4_modbus.register_constants import",
-    )
-    source = source.replace(
-        "from .register_converter import",
-        "from ha_daikin_altherma4_modbus.register_converter import",
-    )
-
-    module = types.ModuleType("const_module")
-    exec(source, module.__dict__)
-    return module
-
-
-# Load const module
-const_module = load_const_module_legacy(project_root)
-
-# Load other modules using the old method for now (they don't have complex imports)
-mock_client_module = load_module(
-    "mock_client", custom_components_path / "mock_client.py"
-)
+# Load const module for constants access
+const_module = load_const_module(project_root)
 
 
 # Pytest fixtures
@@ -106,24 +38,23 @@ def mock_hass():
 @pytest.fixture
 def mock_client():
     """Mock Modbus TCP client."""
-    return mock_client_module.MockModbusTcpClient("192.168.1.100", 502)
+    return FakeModbusClient("192.168.1.100", 502)
 
 
 @pytest.fixture
 def demo_data():
     """Demo register data."""
-    return mock_client_module.MockModbusTcpClient.generate_demo_register_data()
+    return FakeModbusClient.generate_demo_register_data()
 
 
 class TestMockClient:
-    """Test cases for MockModbusTcpClient."""
+    """Test cases for FakeModbusClient."""
 
     def test_initialization(self, mock_client):
         """Test client initialization."""
         assert mock_client.host == "192.168.1.100"
         assert mock_client.port == 502
         assert mock_client.connected is False
-        assert mock_client._demo_data is not None
 
     @pytest.mark.asyncio
     async def test_connection(self, mock_client):
@@ -137,6 +68,7 @@ class TestMockClient:
     @pytest.mark.asyncio
     async def test_read_input_registers(self, mock_client):
         """Test reading input registers."""
+        await mock_client.connect()
         response = await mock_client.read_input_registers(1, 5)
         assert hasattr(response, "registers")
         assert len(response.registers) >= 5
@@ -144,6 +76,7 @@ class TestMockClient:
     @pytest.mark.asyncio
     async def test_read_holding_registers(self, mock_client):
         """Test reading holding registers."""
+        await mock_client.connect()
         response = await mock_client.read_holding_registers(1, 5)
         assert hasattr(response, "registers")
         assert len(response.registers) >= 5
@@ -151,6 +84,7 @@ class TestMockClient:
     @pytest.mark.asyncio
     async def test_read_discrete_inputs(self, mock_client):
         """Test reading discrete inputs."""
+        await mock_client.connect()
         response = await mock_client.read_discrete_inputs(1, 5)
         assert hasattr(response, "bits")
         assert len(response.bits) >= 5
@@ -158,6 +92,7 @@ class TestMockClient:
     @pytest.mark.asyncio
     async def test_read_coils(self, mock_client):
         """Test reading coils."""
+        await mock_client.connect()
         response = await mock_client.read_coils(1, 5)
         assert hasattr(response, "bits")
         assert len(response.bits) >= 5
@@ -181,8 +116,8 @@ class TestMockClient:
         assert len(discrete_inputs) > 0
 
     def test_response_object(self):
-        """Test MockModbusResponse object."""
-        response = mock_client_module.MockModbusResponse([100, 200, 300], 1, 3)
+        """Test FakeModbusResponse object."""
+        response = FakeModbusResponse([100, 200, 300], 1, 3)
 
         # Check that response has expected attributes
         assert hasattr(response, "registers")
@@ -192,6 +127,13 @@ class TestMockClient:
         assert response.is_bits is False
         assert len(response.registers) >= 3
 
+    def test_constants_access(self):
+        """Test that constants are accessible."""
+        assert hasattr(const_module, "DOMAIN")
+        assert hasattr(const_module, "DEFAULT_PORT")
+        assert const_module.DOMAIN == "ha_daikin_altherma4_modbus"
+        assert const_module.DEFAULT_PORT == 502
+
 
 class TestIntegration:
     """Integration tests."""
@@ -199,11 +141,11 @@ class TestIntegration:
     def test_full_workflow(self, mock_client):
         """Test complete workflow."""
         # Test data generation
-        demo_data = mock_client_module.MockModbusTcpClient.generate_demo_register_data()
+        demo_data = FakeModbusClient.generate_demo_register_data()
         assert isinstance(demo_data, dict)
 
         # Test response creation
-        response = mock_client_module.MockModbusResponse([100, 200], 1, 2)
+        response = FakeModbusResponse([100, 200], 1, 2)
         assert hasattr(response, "registers")
         assert len(response.registers) >= 2
 
