@@ -117,7 +117,11 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_30",
         data_type=INT16,
+<<<<<<< HEAD
         device_class=SensorDeviceClass.RUNNING,
+=======
+        device_class="running",
+>>>>>>> 94fa1f1 (refactor: move icon definitions from Python to translation files)
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_30",
     ),
@@ -127,7 +131,11 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_31",
         data_type=INT16,
+<<<<<<< HEAD
         device_class=SensorDeviceClass.RUNNING,
+=======
+        device_class="running",
+>>>>>>> 94fa1f1 (refactor: move icon definitions from Python to translation files)
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_31",
     ),
@@ -137,7 +145,11 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_32",
         data_type=INT16,
+<<<<<<< HEAD
         device_class=SensorDeviceClass.RUNNING,
+=======
+        device_class="running",
+>>>>>>> 94fa1f1 (refactor: move icon definitions from Python to translation files)
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_32",
     ),
@@ -147,7 +159,11 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_33",
         data_type=INT16,
+<<<<<<< HEAD
         device_class=SensorDeviceClass.RUNNING,
+=======
+        device_class="running",
+>>>>>>> 94fa1f1 (refactor: move icon definitions from Python to translation files)
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_33",
     ),
@@ -157,7 +173,11 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_35",
         data_type=INT16,
+<<<<<<< HEAD
         device_class=SensorDeviceClass.RUNNING,
+=======
+        device_class="running",
+>>>>>>> 94fa1f1 (refactor: move icon definitions from Python to translation files)
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_35",
     ),
@@ -167,7 +187,11 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_36",
         data_type=INT16,
+<<<<<<< HEAD
         device_class=SensorDeviceClass.RUNNING,
+=======
+        device_class="running",
+>>>>>>> 94fa1f1 (refactor: move icon definitions from Python to translation files)
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_36",
     ),
@@ -264,7 +288,6 @@ INPUT_REGISTERS = [
         register_name="input_49",
         data_type=INT16S100,
         unit="L/min",
-        device_class=SensorDeviceClass.VOLUME_FLOW_RATE,
         translation_key="input_49",
     ),
     SensorRegister(
@@ -285,7 +308,6 @@ INPUT_REGISTERS = [
         register_name="input_51",
         data_type=POW16,
         unit="kW",
-        device_class=SensorDeviceClass.POWER,
         translation_key="input_51",
     ),
     SensorRegister(
@@ -412,7 +434,11 @@ INPUT_REGISTERS = [
         input_type="input",
         register_name="input_64",
         data_type=INT16,
+<<<<<<< HEAD
         device_class=SensorDeviceClass.RUNNING,
+=======
+        device_class="running",
+>>>>>>> 94fa1f1 (refactor: move icon definitions from Python to translation files)
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="input_64",
     ),
@@ -456,7 +482,6 @@ INPUT_REGISTERS = [
         register_name="input_68",
         data_type=INT16,
         unit="%",
-        device_class=SensorDeviceClass.SPEED,
         translation_key="input_68",
     ),
     SensorRegister(
@@ -572,7 +597,6 @@ INPUT_REGISTERS = [
         register_name="input_79",
         data_type=INT16S100,
         unit="bar",
-        device_class=SensorDeviceClass.PRESSURE,
         translation_key="input_79",
     ),
     # Targets und Limits (80-87)

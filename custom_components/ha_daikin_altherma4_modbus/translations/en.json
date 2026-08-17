@@ -128,24 +128,30 @@
         "name": "Heating Thermostat Control"
       },
       "daikin_dhw_manual_thermostat": {
-        "name": "DHW Single Heat-up Thermostat Control"
+        "name": "DHW Single Heat-up Thermostat Control",
+        "icon": "mdi:water-boiler"
       },
       "daikin_dhw_booster_thermostat": {
-        "name": "DHW Booster Thermostat Control"
+        "name": "DHW Booster Thermostat Control",
+        "icon": "mdi:water-boiler-alert"
       }
     },
     "switch": {
       "coil_1": {
-        "name": "Domestic Hot Water"
+        "name": "Domestic Hot Water",
+        "icon": "mdi:power"
       },
       "coil_2": {
-        "name": "Main zone"
+        "name": "Main zone",
+        "icon": "mdi:power"
       },
       "coil_3": {
-        "name": "Additional zone"
+        "name": "Additional zone",
+        "icon": "mdi:power"
       },
       "holding_4": {
         "name": "Space heating/cooling",
+        "icon": "mdi:power",
         "state": {
           "off": "Off",
           "on": "On"
@@ -153,6 +159,7 @@
       },
       "holding_13": {
         "name": "DHW booster mode (Powerful)",
+        "icon": "mdi:power",
         "state": {
           "off": "Off",
           "on_powerful": "On (Powerful)"
@@ -160,6 +167,7 @@
       },
       "holding_15": {
         "name": "DHW Single heat-up (Manual)",
+        "icon": "mdi:power",
         "state": {
           "off": "Off",
           "on": "On"
@@ -270,6 +278,7 @@
     "sensor": {
       "input_21": {
         "name": "Unit abnormality",
+        "icon": "mdi:alert-circle",
         "state": {
           "no_error": "No error",
           "fault": "Fault",
@@ -277,10 +286,12 @@
         }
       },
       "input_22": {
-        "name": "Abnormality code"
+        "name": "Abnormality code",
+        "icon": "mdi:alert-circle"
       },
       "input_23": {
         "name": "Subcode for abnormality",
+        "icon": "mdi:alert-circle",
         "state": {
           "no_error": "No error",
           "error_0": "Error 0",
@@ -386,28 +397,35 @@
         }
       },
       "input_30": {
-        "name": "Compressor run"
+        "name": "Compressor run",
+        "icon": "mdi:pump"
       },
       "input_31": {
-        "name": "Booster heater run"
+        "name": "Booster heater run",
+        "icon": "mdi:compressor"
       },
       "input_32": {
-        "name": "Disinfection operation"
+        "name": "Disinfection operation",
+        "icon": "mdi:heater"
       },
       "input_33": {
-        "name": "Disinfection operation"
+        "name": "Disinfection operation",
+        "icon": "mdi:water-boiler"
       },
       "input_34": {
         "name": "Defrost/Restart"
       },
       "input_35": {
-        "name": "Hot start"
+        "name": "Hot start",
+        "icon": "mdi:snowflake-melt"
       },
       "input_36": {
-        "name": "Hot start"
+        "name": "Hot start",
+        "icon": "mdi:fire"
       },
       "input_37": {
         "name": "3-way valve",
+        "icon": "mdi:pipe-valve",
         "state": {
           "space_heating": "Space heating",
           "dhw": "DHW"
@@ -415,6 +433,7 @@
       },
       "input_38": {
         "name": "Operation mode",
+        "icon": "mdi:thermostat",
         "state": {
           "none": "None",
           "heating": "Heating",
@@ -422,34 +441,44 @@
         }
       },
       "input_40": {
-        "name": "Leaving water temperature PHE"
+        "name": "Leaving water temperature PHE",
+        "icon": "mdi:thermometer"
       },
       "input_41": {
-        "name": "Leaving water temperature BUH"
+        "name": "Leaving water temperature BUH",
+        "icon": "mdi:thermometer"
       },
       "input_42": {
-        "name": "Water return temperature"
+        "name": "Water return temperature",
+        "icon": "mdi:thermometer"
       },
       "input_43": {
-        "name": "DHW temperature"
+        "name": "DHW temperature",
+        "icon": "mdi:thermometer"
       },
       "input_44": {
-        "name": "Outdoor air temperature"
+        "name": "Outdoor air temperature",
+        "icon": "mdi:thermometer"
       },
       "input_45": {
-        "name": "Refrigerant liquid temperature"
+        "name": "Refrigerant liquid temperature",
+        "icon": "mdi:thermometer"
       },
       "input_49": {
-        "name": "Flow rate"
+        "name": "Flow rate",
+        "icon": "mdi:water"
       },
       "input_50": {
-        "name": "Remote control room temperature (Main)"
+        "name": "Remote control room temperature (Main)",
+        "icon": "mdi:thermometer"
       },
       "input_51": {
-        "name": "Heat pump power consumption"
+        "name": "Heat pump power consumption",
+        "icon": "mdi:flash"
       },
       "input_52": {
         "name": "DHW normal operation",
+        "icon": "mdi:information",
         "state": {
           "idle_buffering": "Idle/Buffering",
           "operation": "Operation"
@@ -457,37 +486,47 @@
       },
       "input_53": {
         "name": "Space heating/cooling normal operation",
+        "icon": "mdi:information",
         "state": {
           "idle_buffering": "Idle/Buffering",
           "operation": "Operation"
         }
       },
       "input_54": {
-        "name": "Leaving water Main Heating setpoint lower limit"
+        "name": "Leaving water Main Heating setpoint lower limit",
+        "icon": "mdi:thermometer"
       },
       "input_55": {
-        "name": "Leaving water Main Heating setpoint upper limit"
+        "name": "Leaving water Main Heating setpoint upper limit",
+        "icon": "mdi:thermometer"
       },
       "input_56": {
-        "name": "Leaving water Main Cooling setpoint lower limit"
+        "name": "Leaving water Main Cooling setpoint lower limit",
+        "icon": "mdi:thermometer"
       },
       "input_57": {
-        "name": "Main cooling setpoint upper limit"
+        "name": "Main cooling setpoint upper limit",
+        "icon": "mdi:thermometer"
       },
       "input_58": {
-        "name": "Additional heating setpoint lower limit"
+        "name": "Additional heating setpoint lower limit",
+        "icon": "mdi:thermometer"
       },
       "input_59": {
-        "name": "Additional heating setpoint upper limit"
+        "name": "Additional heating setpoint upper limit",
+        "icon": "mdi:thermometer"
       },
       "input_60": {
-        "name": "Additional cooling setpoint lower limit"
+        "name": "Additional cooling setpoint lower limit",
+        "icon": "mdi:thermometer"
       },
       "input_61": {
-        "name": "Additional cooling setpoint upper limit"
+        "name": "Additional cooling setpoint upper limit",
+        "icon": "mdi:thermometer"
       },
       "input_63": {
         "name": "Disinfection status",
+        "icon": "mdi:water-pump",
         "state": {
           "unsuccessful": "Unsuccessful",
           "successful": "Successful",
@@ -497,6 +536,7 @@
       },
       "input_65": {
         "name": "Demand request mode",
+        "icon": "mdi:lightning-bolt",
         "state": {
           "free": "Free",
           "forced_off": "Forced Off",
@@ -506,58 +546,76 @@
         }
       },
       "input_66": {
-        "name": "Bypass valve position"
+        "name": "Bypass valve position",
+        "icon": "mdi:valve"
       },
       "input_67": {
-        "name": "Storage valve position"
+        "name": "Storage valve position",
+        "icon": "mdi:valve"
       },
       "input_68": {
-        "name": "Circulation pump speed"
+        "name": "Circulation pump speed",
+        "icon": "mdi:water-pump"
       },
       "input_69": {
-        "name": "Mixed pump PWM in mixing ratio"
+        "name": "Mixed pump PWM in mixing ratio",
+        "icon": "mdi:fan"
       },
       "input_70": {
-        "name": "Direct pump PWM in mixing ratio"
+        "name": "Direct pump PWM in mixing ratio",
+        "icon": "mdi:fan"
       },
       "input_71": {
-        "name": "Mixing valve position in mixing ratio"
+        "name": "Mixing valve position in mixing ratio",
+        "icon": "mdi:valve"
       },
       "input_72": {
-        "name": "Mixing Leaving water temperature in mixing kit"
+        "name": "Mixing Leaving water temperature in mixing kit",
+        "icon": "mdi:thermometer"
       },
       "input_73": {
-        "name": "Space heating/cooling target for Main zone in mixing kit"
+        "name": "Space heating/cooling target for Main zone in mixing kit",
+        "icon": "mdi:thermometer"
       },
       "input_74": {
-        "name": "Leaving water temperature prePHE outdoor"
+        "name": "Leaving water temperature prePHE outdoor",
+        "icon": "mdi:thermometer"
       },
       "input_75": {
-        "name": "Leaving water temperature Tank valve"
+        "name": "Leaving water temperature Tank valve",
+        "icon": "mdi:thermometer"
       },
       "input_76": {
-        "name": "Domestic Hot Water Upper temperature"
+        "name": "Domestic Hot Water Upper temperature",
+        "icon": "mdi:thermometer"
       },
       "input_77": {
-        "name": "Domestic Hot Water Lower temperature"
+        "name": "Domestic Hot Water Lower temperature",
+        "icon": "mdi:thermometer"
       },
       "input_78": {
-        "name": "Remote controller room temperature (Add)"
+        "name": "Remote controller room temperature (Add)",
+        "icon": "mdi:thermometer"
       },
       "input_79": {
-        "name": "Water pressure"
+        "name": "Water pressure",
+        "icon": "mdi:gauge"
       },
       "input_80": {
-        "name": "Space heating/cooling target for Main zone"
+        "name": "Space heating/cooling target for Main zone",
+        "icon": "mdi:thermometer"
       },
       "input_81": {
-        "name": "Space heating/cooling target for Add zone"
+        "name": "Space heating/cooling target for Add zone",
+        "icon": "mdi:thermometer"
       },
       "input_82": {
-        "name": "Abnormality counter (user)"
+        "name": "Abnormality counter (user)",
+        "icon": "mdi:counter"
       },
       "input_83": {
         "name": "Unit operation mode",
+        "icon": "mdi:cog",
         "state": {
           "stop": "Stop",
           "tank_heat_up": "Tank Heat Up",
@@ -567,25 +625,32 @@
         }
       },
       "input_84": {
-        "name": "Room Heating setpoint Lower limit"
+        "name": "Room Heating setpoint Lower limit",
+        "icon": "mdi:thermometer-low"
       },
       "input_85": {
-        "name": "Room Heating setpoint Upper limit"
+        "name": "Room Heating setpoint Upper limit",
+        "icon": "mdi:thermometer-high"
       },
       "input_86": {
-        "name": "Room Cooling setpoint Lower limit"
+        "name": "Room Cooling setpoint Lower limit",
+        "icon": "mdi:thermometer-low"
       },
       "input_87": {
-        "name": "Room Cooling setpoint Upper limit"
+        "name": "Room Cooling setpoint Upper limit",
+        "icon": "mdi:thermometer-high"
       },
       "thermal_heat_output": {
-        "name": "Thermal Heat Output"
+        "name": "Thermal Heat Output",
+        "icon": "mdi:fire"
       },
       "cop": {
-        "name": "Coefficient of Performance"
+        "name": "Coefficient of Performance",
+        "icon": "mdi:gauge"
       },
       "delta_t": {
-        "name": "Delta-T"
+        "name": "Delta-T",
+        "icon": "mdi:thermometer-lines"
       },
       "last_compressor_run": {
         "name": "Last Compressor Run"
@@ -600,7 +665,8 @@
         "name": "Last DHW Running"
       },
       "external_electric_power": {
-        "name": "External Electric Power"
+        "name": "External Electric Power",
+        "icon": "mdi:flash"
       }
     },
     "number": {
