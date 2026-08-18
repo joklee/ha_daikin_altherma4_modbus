@@ -45,19 +45,9 @@ async def async_setup_entry(hass, entry):
             if not client.connected:
                 _LOGGER.error(f"Cannot connect to {host}:{port} during setup")
                 await RealModbusTcpClient.async_close_cached_client(host, port)
-<<<<<<< HEAD
-<<<<<<< HEAD
                 async_create_connection_issue(
                     hass, entry, f"Cannot connect to {host}:{port}"
                 )
-=======
-                async_create_connection_issue(hass, entry, f"Cannot connect to {host}:{port}")
->>>>>>> 9cb8ea4 (feat: add HA repair issues for connection loss and device abnormality)
-=======
-                async_create_connection_issue(
-                    hass, entry, f"Cannot connect to {host}:{port}"
-                )
->>>>>>> c7f70c7 (Add .strict-typing marker and pre-commit hook, run ruff format)
                 raise ConfigEntryNotReady(f"Cannot connect to {host}:{port}")
             # Disconnect after test - coordinators will create their own connections
             await client.disconnect()
