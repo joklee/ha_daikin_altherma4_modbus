@@ -172,7 +172,29 @@ sys.modules["homeassistant.components.binary_sensor"] = binary_sensor_module
 # Sensor stub
 sensor_module = types.ModuleType("homeassistant.components.sensor")
 sensor_module.SensorEntity = _SensorEntity
-sensor_module.SensorStateClass = types.SimpleNamespace(MEASUREMENT="measurement")
+
+
+# Define SensorStateClass as an enum-like class for proper import compatibility
+class _SensorStateClass:
+    MEASUREMENT = "measurement"
+    TOTAL_INCREASING = "total_increasing"
+
+
+# Define SensorDeviceClass as an enum-like class for proper import compatibility
+class _SensorDeviceClass:
+    TEMPERATURE = "temperature"
+    POWER = "power"
+    RUNNING = "running"
+    PROBLEM = "problem"
+    TIMESTAMP = "timestamp"
+    SPEED = "speed"
+    PRESSURE = "pressure"
+    VOLUME_FLOW_RATE = "volume_flow_rate"
+
+
+# Make it accessible as both module attribute and importable name
+sensor_module.SensorStateClass = _SensorStateClass
+sensor_module.SensorDeviceClass = _SensorDeviceClass
 sys.modules["homeassistant.components.sensor"] = sensor_module
 
 # Switch stub

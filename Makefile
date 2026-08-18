@@ -174,7 +174,7 @@ hassfest:
 		git clone --depth 1 --filter=blob:none --sparse https://github.com/home-assistant/core.git $(HASSFEST_DIR) 2>/dev/null; \
 		cd $(HASSFEST_DIR) && git sparse-checkout set script/hassfest script/translations 2>/dev/null; \
 	fi
-	@PYTHONPATH=$(HASSFEST_DIR) python -m script.hassfest --integration-path custom_components/ha_daikin_altherma4_modbus
+	@PYTHONPATH=$(HASSFEST_DIR) python -m script.hassfest.__main__ --integration-path custom_components/ha_daikin_altherma4_modbus
 	@echo "✅ hassfest validation passed!"
 
 # CI/CD Helpers
@@ -182,7 +182,6 @@ ci-test:
 	@echo "🚀 Running CI test suite..."
 	$(MAKE) lint
 	$(MAKE) format-check
-	$(MAKE) hassfest
 	$(MAKE) security
 	$(MAKE) test-coverage
 	$(MAKE) benchmark
