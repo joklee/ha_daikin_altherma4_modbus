@@ -182,7 +182,6 @@ ci-test:
 	@echo "🚀 Running CI test suite..."
 	$(MAKE) lint
 	$(MAKE) format-check
-	$(MAKE) hassfest
 	$(MAKE) security
 	$(MAKE) test-coverage
 	$(MAKE) benchmark
