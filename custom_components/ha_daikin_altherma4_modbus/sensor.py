@@ -77,8 +77,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 data_type=data_type,
                 count=count,
                 enum_map=enum_map,
-                entity_category=entity_category,
                 register_name=register_name,
+                device_class=item.device_class,
+                entity_category=entity_category,
                 unique_id=unique_id,
                 translation_key=translation_key,
                 device_info=INPUT_DEVICE_INFO,
@@ -216,6 +217,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         count,
         enum_map,
         register_name,
+        device_class=None,
         entity_category=None,
         unique_id=None,
         device_info=None,
@@ -232,6 +234,7 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         self._enum_map = enum_map
         self._attr_register_name = register_name
         self._attr_unique_id = unique_id
+        self._attr_device_class = device_class
         self._attr_native_unit_of_measurement = unit
         self._attr_entity_category = entity_category
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
