@@ -85,14 +85,12 @@ def _load_integration_module(monkeypatch):
             self.async_add_listener = AsyncMock()
             self.async_config_entry_first_refresh = AsyncMock()
 
-    coordinator_module.DaikinAlthermaNormalCoordinator = FakeDaikinAlthermaNormalCoordinator
+    coordinator_module.DaikinAlthermaNormalCoordinator = (
+        FakeDaikinAlthermaNormalCoordinator
+    )
     coordinator_module.DaikinAlthermaSlowCoordinator = FakeDaikinAlthermaSlowCoordinator
     # Ensure attributes used in async_setup_entry are available even if real module is used
     monkeypatch.setitem(sys.modules, coordinator_name, coordinator_module)
-
-    # VERY IMPORTANT: Mock BOTH the manager and the coordinators in a way that
-    # the real __init__.py will find them if it imports the real coordinator_manager.py
-    # because that file imports .coordinator
 
     # Mock coordinator manager
     coordinator_manager_module = types.ModuleType(coordinator_manager_name)
@@ -175,36 +173,58 @@ def _load_integration_module(monkeypatch):
     services_module.register_services = AsyncMock()
     monkeypatch.setitem(sys.modules, services_name, services_module)
 
-    # Force using the mock coordinator manager even if real module is loaded
-    coordinator_manager_module.CoordinatorManager = FakeCoordinatorManager
-    coordinator_manager_module.UnifiedCoordinator = FakeUnifiedCoordinator
-
     # Clear possible cache in sys.modules to ensure our mocks are picked up
     sys.modules.pop(module_name, None)
     sys.modules.pop(coordinator_manager_name, None)
     sys.modules.pop(coordinator_name, None)
-    
+
+    # Force using the mock coordinator manager even if real module is loaded
+    coordinator_manager_module.CoordinatorManager = FakeCoordinatorManager
+    coordinator_manager_module.UnifiedCoordinator = FakeUnifiedCoordinator
+
     # Re-apply mocks
     monkeypatch.setitem(sys.modules, coordinator_name, coordinator_module)
-    monkeypatch.setitem(sys.modules, coordinator_manager_name, coordinator_manager_module)
+    monkeypatch.setitem(
+        sys.modules, coordinator_manager_name, coordinator_manager_module
+    )
 
     integration = importlib.import_module(module_name)
 
-    return (
+    yield (
         integration,
         FakeCoordinatorManager,
         FakeUnifiedCoordinator,
         FakeRealModbusTcpClient,
     )
 
+    # Teardown: Remove mocks to prevent leakage
+    _reset_modules(
+        module_name,
+        const_name,
+        coordinator_manager_name,
+        coordinator_name,
+        modbus_client_name,
+        config_entry_utils_name,
+        services_name,
+    )
+    for m in [
+        module_name,
+        const_name,
+        coordinator_manager_name,
+        coordinator_name,
+        modbus_client_name,
+        config_entry_utils_name,
+        services_name,
+    ]:
+        sys.modules.pop(m, None)
+
 
 @pytest.mark.asyncio
 @pytest.mark.demo_mode
 async def test_demo_mode_installation(monkeypatch):
     """Test complete integration installation in demo mode (localhost)."""
-    integration, _manager_cls, _unified_cls, _client_cls = _load_integration_module(
-        monkeypatch
-    )
+    gen = _load_integration_module(monkeypatch)
+    integration, _manager_cls, _unified_cls, _client_cls = next(gen)
 
     hass = SimpleNamespace(
         data={},
@@ -247,14 +267,19 @@ async def test_demo_mode_installation(monkeypatch):
         entry, ["sensor", "binary_sensor", "number", "select", "climate", "switch"]
     )
 
+    # Trigger teardown
+    try:
+        next(gen)
+    except StopIteration:
+        pass
+
 
 @pytest.mark.asyncio
 @pytest.mark.demo_mode
 async def test_demo_mode_skips_connection_test(monkeypatch):
     """Test that demo mode skips the connection test."""
-    integration, _manager_cls, _unified_cls, _client_cls = _load_integration_module(
-        monkeypatch
-    )
+    gen = _load_integration_module(monkeypatch)
+    integration, _manager_cls, _unified_cls, _client_cls = next(gen)
 
     hass = SimpleNamespace(
         data={},
@@ -288,3 +313,9 @@ async def test_demo_mode_skips_connection_test(monkeypatch):
     # In demo mode, connection test should be skipped
     # The RealModbusTcpClient.create should NOT be called during setup
     assert len(connection_attempts) == 0
+
+    # Trigger teardown
+    try:
+        next(gen)
+    except StopIteration:
+        pass
