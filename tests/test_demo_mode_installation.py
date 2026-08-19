@@ -1,4 +1,5 @@
 """Test complete integration installation in demo mode."""
+
 import importlib
 import sys
 import types
@@ -45,6 +46,7 @@ def _load_integration_module(monkeypatch):
     coordinator_manager_name = f"{package_name}.coordinator_manager"
     modbus_client_name = f"{package_name}.modbus_client"
     config_entry_utils_name = f"{package_name}.config_entry_utils"
+    services_name = f"{package_name}.services"
     module_name = package_name
 
     _reset_modules(
@@ -53,13 +55,11 @@ def _load_integration_module(monkeypatch):
         coordinator_manager_name,
         modbus_client_name,
         config_entry_utils_name,
+        services_name,
     )
 
-    # Mock const module
-    const_module = types.ModuleType(const_name)
-    const_module.DOMAIN = "ha_daikin_altherma4_modbus"
-    const_module.SLOW_SCAN_INTERVAL = 600
-    const_module.NORMAL_SCAN_INTERVAL = 10
+    # Import real const module (no HA dependencies)
+    const_module = importlib.import_module(const_name)
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
     # Mock coordinator manager
@@ -135,6 +135,11 @@ def _load_integration_module(monkeypatch):
     config_entry_utils_module.entry_value = entry_value
     config_entry_utils_module.entry_data_value = entry_data_value
     monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
+
+    # Mock services module (has HA dependencies)
+    services_module = types.ModuleType(services_name)
+    services_module.register_services = AsyncMock()
+    monkeypatch.setitem(sys.modules, services_name, services_module)
 
     integration = importlib.import_module(module_name)
 
