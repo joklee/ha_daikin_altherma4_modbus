@@ -87,7 +87,12 @@ def _load_integration_module(monkeypatch):
 
     coordinator_module.DaikinAlthermaNormalCoordinator = FakeDaikinAlthermaNormalCoordinator
     coordinator_module.DaikinAlthermaSlowCoordinator = FakeDaikinAlthermaSlowCoordinator
+    # Ensure attributes used in async_setup_entry are available even if real module is used
     monkeypatch.setitem(sys.modules, coordinator_name, coordinator_module)
+
+    # VERY IMPORTANT: Mock BOTH the manager and the coordinators in a way that
+    # the real __init__.py will find them if it imports the real coordinator_manager.py
+    # because that file imports .coordinator
 
     # Mock coordinator manager
     coordinator_manager_module = types.ModuleType(coordinator_manager_name)
@@ -169,6 +174,19 @@ def _load_integration_module(monkeypatch):
     services_module = types.ModuleType(services_name)
     services_module.register_services = AsyncMock()
     monkeypatch.setitem(sys.modules, services_name, services_module)
+
+    # Force using the mock coordinator manager even if real module is loaded
+    coordinator_manager_module.CoordinatorManager = FakeCoordinatorManager
+    coordinator_manager_module.UnifiedCoordinator = FakeUnifiedCoordinator
+
+    # Clear possible cache in sys.modules to ensure our mocks are picked up
+    sys.modules.pop(module_name, None)
+    sys.modules.pop(coordinator_manager_name, None)
+    sys.modules.pop(coordinator_name, None)
+    
+    # Re-apply mocks
+    monkeypatch.setitem(sys.modules, coordinator_name, coordinator_module)
+    monkeypatch.setitem(sys.modules, coordinator_manager_name, coordinator_manager_module)
 
     integration = importlib.import_module(module_name)
 
