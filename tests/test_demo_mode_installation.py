@@ -44,6 +44,7 @@ def _load_integration_module(monkeypatch):
     package_name = _install_fake_package(monkeypatch)
     const_name = f"{package_name}.const"
     coordinator_manager_name = f"{package_name}.coordinator_manager"
+    coordinator_name = f"{package_name}.coordinator"
     modbus_client_name = f"{package_name}.modbus_client"
     config_entry_utils_name = f"{package_name}.config_entry_utils"
     services_name = f"{package_name}.services"
@@ -53,6 +54,7 @@ def _load_integration_module(monkeypatch):
         module_name,
         const_name,
         coordinator_manager_name,
+        coordinator_name,
         modbus_client_name,
         config_entry_utils_name,
         services_name,
@@ -61,6 +63,31 @@ def _load_integration_module(monkeypatch):
     # Import real const module (no HA dependencies)
     const_module = importlib.import_module(const_name)
     monkeypatch.setitem(sys.modules, const_name, const_module)
+
+    # Mock coordinator module
+    coordinator_module = types.ModuleType(coordinator_name)
+
+    class FakeDaikinAlthermaNormalCoordinator:
+        def __init__(self, hass, host, port, scan_interval, demo_mode):
+            self.hass = hass
+            self.host = host
+            self.port = port
+            self.demo_mode = demo_mode
+            self.async_add_listener = AsyncMock()
+            self.async_config_entry_first_refresh = AsyncMock()
+
+    class FakeDaikinAlthermaSlowCoordinator:
+        def __init__(self, hass, host, port, scan_interval, demo_mode):
+            self.hass = hass
+            self.host = host
+            self.port = port
+            self.demo_mode = demo_mode
+            self.async_add_listener = AsyncMock()
+            self.async_config_entry_first_refresh = AsyncMock()
+
+    coordinator_module.DaikinAlthermaNormalCoordinator = FakeDaikinAlthermaNormalCoordinator
+    coordinator_module.DaikinAlthermaSlowCoordinator = FakeDaikinAlthermaSlowCoordinator
+    monkeypatch.setitem(sys.modules, coordinator_name, coordinator_module)
 
     # Mock coordinator manager
     coordinator_manager_module = types.ModuleType(coordinator_manager_name)
@@ -73,7 +100,9 @@ def _load_integration_module(monkeypatch):
             self.port = port
             self.demo_mode = demo_mode
             self.normal = SimpleNamespace()
+            self.normal.async_add_listener = AsyncMock()
             self.slow = SimpleNamespace()
+            self.slow.async_add_listener = AsyncMock()
             self.async_setup = AsyncMock()
             self.async_shutdown = AsyncMock()
             FakeCoordinatorManager.last_instance = self
