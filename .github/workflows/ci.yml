@@ -85,6 +85,15 @@ jobs:
         run: |
           pytest tests/test_mock_client_16bit.py -v --junit-xml=test-results-mock-client.xml
 
+      - name: Run demo mode installation tests
+        run: |
+          pytest tests/test_demo_mode_installation.py -v --junit-xml=test-results-demo-mode.xml
+
+      - name: Run HA Docker demo mode test
+        run: |
+          python tests/test_ha_docker_demo_mode.py
+        if: false  # Disabled by default, can be enabled manually
+
       - name: Run tests with coverage
         run: |
           # First, try to run pytest in discovery mode to see what tests it finds
