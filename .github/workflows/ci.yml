@@ -268,7 +268,32 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # Get version from manifest
+      - name: Get manifest version
+        id: manifest
+        run: |
+          VERSION=$(jq -r '.version' custom_components/ha_daikin_altherma4_modbus/manifest.json)
+          echo "manifest_version=$VERSION" >> $GITHUB_OUTPUT
+
+      # Determine if this is a prerelease (dev tag)
+      - name: Check if prerelease
+        id: prerelease
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          if [[ "$TAG_VERSION" == *"-dev"* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2.6.1
         with:
+          prerelease: ${{ steps.prerelease.outputs.prerelease }}
           generate_release_notes: true
+          body: |
+            ${{ steps.prerelease.outputs.is_prerelease == 'true' && '## Development Release' || '## Stable Release' }} ${{ steps.manifest.outputs.manifest_version }}
+            
+            ${{ steps.prerelease.outputs.is_prerelease == 'true' && '**Warning:** This is a development release and may contain unstable features.' || 'This is a stable release ready for production use.' }}
