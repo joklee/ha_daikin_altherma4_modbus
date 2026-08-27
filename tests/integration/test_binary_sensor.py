@@ -1,4 +1,4 @@
-"""Tests for binary_sensor.py - target >95% coverage."""
+"""Tests for the binary_sensor platform (DaikinBinarySensor, DaikinDiscreteInputSensor)."""
 
 from types import SimpleNamespace
 
