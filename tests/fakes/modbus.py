@@ -65,6 +65,11 @@ class FakeModbusClient:
     # Class-level cache for demo data to avoid regenerating per instance
     _class_demo_data = None
 
+    @classmethod
+    def clear_demo_data_cache(cls):
+        """Clear the class-level demo data cache."""
+        cls._class_demo_data = None
+
     def __init__(
         self,
         host: str = "192.168.1.100",
@@ -322,6 +327,106 @@ class FakeModbusClient:
             Mock response
         """
         return await self.write_coil(address, value)
+
+    async def write_single_register(self, address: int, value: int, **kwargs):
+        """Simulate writing a single holding register (standard Modbus method).
+
+        Args:
+            address: Register address (1-based)
+            value: Value to write
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response with register_address and register_value
+        """
+        self._write_register_calls.append((address, value, kwargs))
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self._write_operations.append(f"write_single_register({address}, {value})")
+        self._holding_registers[address] = [value]
+
+        response = FakeModbusResponse([], address, 0)
+        response.register_address = address
+        response.register_value = value
+        return response
+
+    async def write_single_coil(self, address: int, value: bool, **kwargs):
+        """Simulate writing a single coil (standard Modbus method).
+
+        Args:
+            address: Coil address (1-based)
+            value: Value to write
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response with output_address and output_value
+        """
+        self._write_coil_calls.append((address, value, kwargs))
+
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self._write_operations.append(f"write_single_coil({address}, {value})")
+        self._coils[address] = [value]
+
+        response = FakeModbusResponse([], address, 0, is_bits=True)
+        response.output_address = address
+        response.output_value = value
+        return response
+
+    async def write_multiple_registers(self, address: int, values: list, **kwargs):
+        """Simulate writing multiple holding registers (standard Modbus method).
+
+        Args:
+            address: Register address (1-based)
+            values: List of values to write
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response with register_address and register_count
+        """
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self._write_operations.append(f"write_multiple_registers({address}, {values})")
+
+        for i, val in enumerate(values):
+            self._holding_registers[address + i] = [val]
+
+        response = FakeModbusResponse([], address, 0)
+        response.register_address = address
+        response.register_count = len(values)
+        return response
+
+    async def write_multiple_coils(self, address: int, values: list, **kwargs):
+        """Simulate writing multiple coils (standard Modbus method).
+
+        Args:
+            address: Coil address (1-based)
+            values: List of values to write
+            **kwargs: Additional arguments (ignored in mock)
+
+        Returns:
+            Mock response with output_address and output_count
+        """
+        if not self.connected:
+            raise ConnectionError("Not connected")
+
+        self._operation_count += 1
+        self._write_operations.append(f"write_multiple_coils({address}, {values})")
+
+        for i, val in enumerate(values):
+            self._coils[address + i] = [val]
+
+        response = FakeModbusResponse([], address, 0, is_bits=True)
+        response.output_address = address
+        response.output_count = len(values)
+        return response
 
     @property
     def demo_data(self) -> dict:

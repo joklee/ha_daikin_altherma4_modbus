@@ -65,44 +65,39 @@ jobs:
         run: ruff check --select I .
 
       # 🧪 Enhanced Pytest Steps
+      #
+      # The tests are selected by marker (see tests/conftest.py): ``unit``
+      # covers tests/unit + tests/modbus, ``integration`` covers
+      # tests/integration. Together they select the complete test suite.
+      # The single ``slow``-marked test is the Docker end-to-end boot test and
+      # is handled separately below (opt-in).
       - name: Run unit tests
         run: |
-          pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=xml --cov-report=term-missing --cov-report=html --junit-xml=test-results-unit.xml
+          pytest -m "unit" --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=term-missing --junit-xml=test-results-unit.xml
 
       - name: Run integration tests
         run: |
-          pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-append --cov-report=xml --cov-report=term-missing --junit-xml=test-results-integration.xml || true
+          pytest -m "integration" --cov=custom_components/ha_daikin_altherma4_modbus --cov-append --cov-report=term-missing --junit-xml=test-results-integration.xml
 
-      - name: Run slow tests (if any)
+      # The only test carrying the ``slow`` marker requires Docker and the
+      # opt-in env var HA_DOCKER_DEMO_TESTS=1; without it the test is skipped
+      # (pytest.skip). Running it here would therefore always report
+      # "1 skipped" without executing anything, so the step is deactivated.
+      # The Docker boot test is executed opt-in by the step below.
+      - name: Run slow tests
         run: |
-          pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-append --cov-report=xml --cov-report=term-missing --junit-xml=test-results-slow.xml || true
-
-      - name: Run config flow tests (data_description validation)
-        run: |
-          pytest tests/test_config_flow_data_description.py -v --junit-xml=test-results-config-flow.xml
-
-      - name: Run mock client tests (16-bit validation)
-        run: |
-          pytest tests/test_mock_client_16bit.py -v --junit-xml=test-results-mock-client.xml
-
-      - name: Run demo mode installation tests
-        run: |
-          pytest tests/test_demo_mode_installation.py -v --junit-xml=test-results-demo-mode.xml
+          pytest -m "slow" --cov=custom_components/ha_daikin_altherma4_modbus --cov-append --cov-report=term-missing --junit-xml=test-results-slow.xml
+        if: false  # Requires Docker + HA_DOCKER_DEMO_TESTS=1, see step below
 
       - name: Run HA Docker demo mode test
         run: |
-          python tests/test_ha_docker_demo_mode.py
+          HA_DOCKER_DEMO_TESTS=1 pytest -m "slow" tests/integration/test_ha_docker_demo_mode.py -v
         if: false  # Disabled by default, can be enabled manually
 
-      - name: Run tests with coverage
-        run: |
-          # First, try to run pytest in discovery mode to see what tests it finds
-          pytest --collect-only -v
-          
-          # If tests are found, run them with coverage
-          pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=xml --cov-report=term-missing -v
-
       # 📊 Coverage Reporting
+      # The combined coverage database (unit + integration, see --cov-append
+      # above) is converted into the final coverage.xml/html here, so the
+      # uploaded coverage always reflects the complete test suite.
       - name: Generate coverage reports
         run: |
           coverage xml
@@ -260,11 +255,11 @@ jobs:
           generate_release_notes: true
           body: |
             ## Development Release ${{ steps.manifest.outputs.manifest_version }}
-            
+
             This is an automatic development release from the dev branch.
-            
+
             **Warning:** This is a development release and may contain unstable features.
-            
+
             ### Changes
             See the "Changes" section below for automatic commit summary.
 
@@ -304,5 +299,5 @@ jobs:
           generate_release_notes: true
           body: |
             ${{ steps.prerelease.outputs.is_prerelease == 'true' && '## Development Release' || '## Stable Release' }} ${{ steps.manifest.outputs.manifest_version }}
-            
+
             ${{ steps.prerelease.outputs.is_prerelease == 'true' && '**Warning:** This is a development release and may contain unstable features.' || 'This is a stable release ready for production use.' }}

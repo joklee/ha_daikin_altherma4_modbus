@@ -1,0 +1,528 @@
+"""Climate Entity and Platform for Daikin Altherma 4 Modbus integration."""
+
+import logging
+from typing import Any
+
+from homeassistant.components.climate import ClimateEntity
+from homeassistant.components.climate.const import (
+    ClimateEntityFeature,
+    HVACAction,
+    HVACMode,
+)
+from homeassistant.const import UnitOfTemperature
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from ..common import (
+    get_coordinator_register_data,
+    get_register_scale,
+    get_register_value,
+    safe_write_register,
+    to_unsigned_16bit,
+)
+from ..core.const import (
+    DHW_OFF,
+    DHW_ON,
+    DOMAIN,
+    FAN_AUTO,
+    FAN_MANUAL,
+    FAN_OFF,
+    HVAC_COOL,
+    HVAC_HEAT,
+    HVAC_OFF,
+    REGISTER_COMPRESSOR,
+    REGISTER_CURRENT_TEMP,
+    REGISTER_DHW_BOOSTER_HVAC_MODE,
+    REGISTER_DHW_BOOSTER_RUNNING,
+    REGISTER_DHW_BOOSTER_SETPOINT,
+    REGISTER_DHW_BOOSTER_TEMP,
+    REGISTER_DHW_HVAC_MODE,
+    REGISTER_DHW_RUNNING,
+    REGISTER_DHW_SETPOINT,
+    REGISTER_DHW_TEMP,
+    REGISTER_OFFSET_COOLING,
+    REGISTER_OFFSET_HEATING,
+    REGISTER_OPERATION_MODE,
+    REGISTER_QUIET_MODE,
+)
+from ..core.register_constants import (
+    CALCULATED_DEVICE_INFO,
+    HOLDING_REGISTERS,
+    INPUT_REGISTERS,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
+
+
+class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
+    """Climate Entity for Daikin Altherma 4 Thermostat Control."""
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        # Type hint to indicate coordinator has data_manager attribute
+        self.coordinator: Any = coordinator  # Coordinator with data_manager attribute
+        self._entry = entry
+        self._attr_unique_id = f"{DOMAIN}_thermostat_climate"
+        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_supported_features = (
+            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
+        )
+        # Register holding_3 supports Auto/Heating/Cooling, but no dedicated Off state.
+        self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
+        self._attr_device_info = CALCULATED_DEVICE_INFO
+        self._attr_translation_key = "daikin_thermostat_climate"
+
+    def _get_register_data(self, register_name):
+        """Get register data without DOMAIN prefix."""
+        return get_coordinator_register_data(self.coordinator, register_name)
+
+    def _get_operation_mode(self):
+        """Get the current operation mode value."""
+        op_mode_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OPERATION_MODE}")
+        return get_register_value(op_mode_data) or 0
+
+    def _get_offset_register_config(self):
+        """Get the appropriate offset register config based on operation mode."""
+        op_mode_raw = self._get_operation_mode()
+
+        # Use cooling offset when operation mode is COOL (2), otherwise heating offset
+        if op_mode_raw == HVAC_COOL:
+            return self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_COOLING}")
+        else:
+            return self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_HEATING}")
+
+    @property
+    def current_temperature(self):
+        """Return the current temperature."""
+        temp_data = self._get_register_data(f"{DOMAIN}_{REGISTER_CURRENT_TEMP}")
+        temp_raw = get_register_value(temp_data) or 0
+
+        # Check if value is already scaled by checking if scale is stored in data
+        data_scale = get_register_scale(temp_data)
+
+        if data_scale is not None:
+            # Value is already scaled by data_manager
+            temp = temp_raw
+        else:
+            # Value is not scaled yet, apply scaling from register_types
+            temp = temp_raw * (get_register_scale(temp_data) or 1)
+
+        return round(temp, 2)
+
+    @property
+    def target_temperature(self):
+        """Return the current offset value as temperature."""
+        offset_data = self._get_offset_data()
+        return round(offset_data["offset"], 1)
+
+    def _get_offset_data(self):
+        """Get offset data including raw value, scale, and calculated offset."""
+        # Get operation mode from input_38
+        op_mode_raw = self._get_operation_mode()
+
+        # Use cooling offset when operation mode is COOL (2), otherwise heating offset
+        if op_mode_raw == HVAC_COOL:
+            offset_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_COOLING}")
+        else:
+            offset_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_HEATING}")
+        offset_raw = get_register_value(offset_data) or 0
+
+        # Check if value is already scaled by checking if scale is stored in data
+        data_scale = get_register_scale(offset_data)
+
+        # Get scale from centralized config (always needed for return value)
+        config = self._get_offset_register_config()
+
+        if data_scale is not None:
+            # Value is already scaled by data_manager
+            offset = offset_raw
+            scale = data_scale
+        else:
+            # Value is not scaled yet, apply scaling
+            scale = get_register_scale(config) or 1
+            offset = offset_raw * scale  # °C
+
+        return {
+            "op_mode_raw": op_mode_raw,
+            "offset_raw": offset_raw,
+            "offset": offset,
+            "scale": scale,
+            "config": config,
+        }
+
+    def _get_offset_static_config(self):
+        """Get the static config for offset register from const.py."""
+        op_mode_raw = self._get_operation_mode()
+        # Use cooling offset when operation mode is COOL (2), otherwise heating offset
+        register_name = (
+            REGISTER_OFFSET_COOLING
+            if op_mode_raw == HVAC_COOL
+            else REGISTER_OFFSET_HEATING
+        )
+        for register in HOLDING_REGISTERS:
+            if register.register_name == register_name:
+                return register
+        return None
+
+    @property
+    def target_temperature_step(self):
+        """Return the supported step of target temperature from const.py."""
+        config = self._get_offset_static_config()
+        return float(config.step if config else 0.1)
+
+    @property
+    def min_temp(self):
+        """Return the minimum offset value from const.py."""
+        config = self._get_offset_static_config()
+        return float(config.min_value if config else -5)
+
+    @property
+    def max_temp(self):
+        """Return the maximum offset value from const.py."""
+        config = self._get_offset_static_config()
+        return float(config.max_value if config else 5)
+
+    @property
+    def fan_mode(self):
+        """Return the current fan mode (quiet mode)."""
+        quiet_data = self._get_register_data(f"{DOMAIN}_{REGISTER_QUIET_MODE}")
+        quiet_raw = get_register_value(quiet_data) or 0
+
+        # Keep read mapping aligned with const.SELECT_REGISTERS enum_map for holding_9.
+        quiet_modes = {0: FAN_OFF, 1: FAN_AUTO, 2: FAN_MANUAL}
+        return quiet_modes.get(quiet_raw, FAN_OFF)
+
+    @property
+    def fan_modes(self):
+        """Return the list of available fan modes."""
+        return [FAN_OFF, FAN_AUTO, FAN_MANUAL]
+
+    @property
+    def hvac_mode(self):
+        """Return current operation mode."""
+        op_mode_raw = self._get_operation_mode()
+
+        mode_map = {
+            HVAC_OFF: HVACMode.AUTO,
+            HVAC_HEAT: HVACMode.HEAT,
+            HVAC_COOL: HVACMode.COOL,
+        }
+        return mode_map.get(op_mode_raw, HVACMode.AUTO)
+
+    @property
+    def hvac_action(self):
+        """Return the current running hvac operation."""
+        comp_data = self._get_register_data(f"{DOMAIN}_{REGISTER_COMPRESSOR}")
+        comp_raw = get_register_value(comp_data) or 0
+
+        if comp_raw:
+            return (
+                HVACAction.HEATING
+                if self.hvac_mode == HVACMode.HEAT
+                else HVACAction.COOLING
+            )
+        return HVACAction.IDLE
+
+    async def async_set_temperature(self, **kwargs):
+        """Set new offset temperature directly."""
+        temperature = kwargs.get("temperature")
+        if temperature is None:
+            _LOGGER.warning(
+                "async_set_temperature called without temperature parameter"
+            )
+            return
+
+        # Get limits from register configuration
+        config = self._get_offset_static_config()
+        min_temp = float(config.min_value if config else -5)
+        max_temp = float(config.max_value if config else 5)
+        offset = max(min_temp, min(max_temp, round(temperature, 0)))
+
+        # Konvertiere zu Rohwert für Holding Register
+        offset_raw = int(offset)
+
+        # Convert signed integer to unsigned 16-bit safely
+        offset_raw = to_unsigned_16bit(offset_raw)
+
+        # Get operation mode from input_38 before try block
+        offset_data = self._get_offset_data()
+        op_mode_raw = offset_data["op_mode_raw"]
+
+        if op_mode_raw == HVAC_COOL:
+            await safe_write_register(
+                self.coordinator.data_manager.write_holding_register,
+                REGISTER_OFFSET_COOLING,
+                offset_raw,
+                operation_name="set",
+                register_type="thermostat offset",
+                coordinator=self.coordinator,
+            )
+        else:
+            await safe_write_register(
+                self.coordinator.data_manager.write_holding_register,
+                REGISTER_OFFSET_HEATING,
+                offset_raw,
+                operation_name="set",
+                register_type="thermostat offset",
+                coordinator=self.coordinator,
+            )
+        _LOGGER.debug(f"Set thermostat offset to {offset}°C (raw: {offset_raw})")
+
+    async def async_set_hvac_mode(self, hvac_mode):
+        """Set new target hvac mode."""
+        # Keep semantics explicit: this entity has no native OFF in holding_3.
+        # For service compatibility, OFF is coerced to AUTO.
+        mode_map = {
+            HVACMode.AUTO: 0,
+            HVACMode.HEAT: HVAC_HEAT,
+            HVACMode.COOL: HVAC_COOL,
+            HVACMode.OFF: 0,
+        }
+        if hvac_mode == HVACMode.OFF:
+            _LOGGER.debug(
+                "HVAC OFF requested but not supported by holding_3; using AUTO"
+            )
+        mode_raw = mode_map.get(hvac_mode, 0)
+
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            REGISTER_OPERATION_MODE,
+            mode_raw,
+            operation_name="set",
+            register_type="HVAC mode",
+            coordinator=self.coordinator,
+        )
+        _LOGGER.debug(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
+
+    async def async_set_fan_mode(self, fan_mode):
+        """Set new fan mode (quiet mode)."""
+        # Keep write mapping aligned with const.SELECT_REGISTERS enum_map for holding_9.
+        fan_map = {FAN_OFF: 0, FAN_AUTO: 1, FAN_MANUAL: 2}
+        mode_raw = fan_map.get(fan_mode, 0)
+
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            REGISTER_QUIET_MODE,
+            mode_raw,
+            operation_name="set",
+            register_type="fan mode",
+            coordinator=self.coordinator,
+        )
+        _LOGGER.debug(f"Set fan mode to {fan_mode} (raw: {mode_raw})")
+
+    @property
+    def extra_state_attributes(self):
+        """Return additional state attributes."""
+        quiet_data = self._get_register_data(f"{DOMAIN}_{REGISTER_QUIET_MODE}")
+        quiet_raw = get_register_value(quiet_data) or 0
+        quiet_map = {0: "Off", 1: "On (Automatic)", 2: "On (Manual)"}
+        quiet_mode = quiet_map.get(quiet_raw, "Unknown")
+
+        # Get offset data using helper method
+        offset_data_info = self._get_offset_data()
+        offset = offset_data_info["offset"]
+        op_mode_raw = offset_data_info["op_mode_raw"]
+        config = offset_data_info["config"]
+
+        # Berechnete Solltemperatur für Anzeige
+        current_temp = self.current_temperature
+        calculated_setpoint = current_temp + offset
+
+        return {
+            "quiet_mode": quiet_mode,
+            "offset": round(offset, 2),
+            "calculated_setpoint": round(calculated_setpoint, 2),
+            "current_temperature": current_temp,
+            "register_config": {
+                "address": REGISTER_OFFSET_HEATING
+                if op_mode_raw != HVAC_COOL
+                else REGISTER_OFFSET_COOLING,
+                "min_value": config.get("min_value")
+                if isinstance(config, dict)
+                else getattr(config, "min_value", None),
+                "max_value": config.get("max_value")
+                if isinstance(config, dict)
+                else getattr(config, "max_value", None),
+                "step": config.get("step")
+                if isinstance(config, dict)
+                else getattr(config, "step", None),
+                "scale": offset_data_info["scale"],
+            },
+        }
+
+    async def async_turn_on(self):
+        """Turn thermostat control on (mapped to AUTO mode)."""
+        await self.async_set_hvac_mode(HVACMode.AUTO)
+
+    async def async_turn_off(self):
+        """Compatibility path for turn_off; this thermostat has no native OFF."""
+        await self.async_set_hvac_mode(HVACMode.AUTO)
+
+
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Setup climate entities."""
+    runtime_data = entry.runtime_data
+    coordinator = runtime_data.coordinator
+
+    entities = [
+        DaikinThermostatClimate(coordinator, entry),
+        DaikinDHWThermostat(coordinator, entry, dhw_type="manual"),
+        DaikinDHWThermostat(coordinator, entry, dhw_type="booster"),
+    ]
+
+    async_add_entities(entities)
+    _LOGGER.debug("Setup Daikin Thermostat Climate entities")
+
+
+class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
+    """Climate Entity for DHW Heat-up (Manual or Booster)."""
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(self, coordinator, entry, dhw_type="manual"):
+        super().__init__(coordinator)
+        # Type hint to indicate coordinator has data_manager attribute
+        self.coordinator: Any = coordinator  # Coordinator with data_manager attribute
+        self._entry = entry
+        self._dhw_type = dhw_type
+
+        # Set registers based on DHW type
+        if dhw_type == "booster":
+            self._hvac_mode_register = REGISTER_DHW_BOOSTER_HVAC_MODE
+            self._running_register = REGISTER_DHW_BOOSTER_RUNNING
+            self._temp_register = REGISTER_DHW_BOOSTER_TEMP
+            self._setpoint_register = REGISTER_DHW_BOOSTER_SETPOINT
+            self._unique_id_suffix = "dhw_booster_thermostat"
+            self._translation_key = "daikin_dhw_booster_thermostat"
+            self._write_register_func = (
+                self.coordinator.data_manager.write_holding_register
+            )
+        else:  # manual
+            self._hvac_mode_register = REGISTER_DHW_HVAC_MODE
+            self._running_register = REGISTER_DHW_RUNNING
+            self._temp_register = REGISTER_DHW_TEMP
+            self._setpoint_register = REGISTER_DHW_SETPOINT
+            self._unique_id_suffix = "dhw_manual_thermostat"
+            self._translation_key = "daikin_dhw_manual_thermostat"
+            self._write_register_func = (
+                self.coordinator.data_manager.write_coil_register
+            )
+
+        self._attr_unique_id = f"{DOMAIN}_{self._unique_id_suffix}"
+        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
+        self._attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
+        self._attr_min_temp = 30
+        self._attr_max_temp = 85
+        self._attr_target_temperature_step = 1
+        self._attr_device_info = CALCULATED_DEVICE_INFO
+        self._attr_translation_key = self._translation_key
+
+    def _get_register_data(self, register_name):
+        """Get register data without DOMAIN prefix."""
+        return get_coordinator_register_data(self.coordinator, register_name)
+
+    def _get_register_value(self, register_name, register_type):
+        """Get scaled value from a register."""
+        data = self._get_register_data(f"{DOMAIN}_{register_name}")
+        if data is None:
+            return None
+
+        raw_value = get_register_value(data)
+        return raw_value if raw_value is not None else None
+
+    @property
+    def hvac_mode(self):
+        data = self._get_register_data(f"{DOMAIN}_{self._hvac_mode_register}")
+        if data is None:
+            return HVACMode.OFF
+
+        val = get_register_value(data)
+        return HVACMode.HEAT if val == DHW_ON else HVACMode.OFF
+
+    @property
+    def hvac_action(self):
+        """Return current HVAC action."""
+        if self.hvac_mode == HVACMode.OFF:
+            return HVACAction.OFF
+
+        # Check if DHW is actually running
+        data = self._get_register_data(f"{DOMAIN}_{self._running_register}")
+        if data is None:
+            return HVACAction.IDLE
+
+        val = get_register_value(data)
+        return HVACAction.HEATING if val == DHW_ON else HVACAction.IDLE
+
+    @property
+    def current_temperature(self):
+        """Return current temperature."""
+        # Use DHW temperature as current temperature
+        return self._get_register_value(self._temp_register, INPUT_REGISTERS)
+
+    @property
+    def target_temperature(self):
+        """Return target temperature."""
+        return self._get_register_value(self._setpoint_register, HOLDING_REGISTERS)
+
+    async def async_set_hvac_mode(self, hvac_mode):
+        """Set HVAC mode."""
+        if hvac_mode == HVACMode.HEAT:
+            await safe_write_register(
+                self._write_register_func,
+                self._hvac_mode_register,
+                DHW_ON,
+                operation_name="turn on",
+                register_type=f"{self._dhw_type} DHW heat-up",
+                coordinator=self.coordinator,
+            )
+            _LOGGER.debug(f"Successfully turned on {self._dhw_type} DHW heat-up")
+        elif hvac_mode == HVACMode.OFF:
+            await safe_write_register(
+                self._write_register_func,
+                self._hvac_mode_register,
+                DHW_OFF,
+                operation_name="turn off",
+                register_type=f"{self._dhw_type} DHW heat-up",
+                coordinator=self.coordinator,
+            )
+            _LOGGER.debug(f"Successfully turned off {self._dhw_type} DHW heat-up")
+
+    async def async_set_temperature(self, **kwargs):
+        """Set target temperature."""
+        temperature = kwargs.get("temperature")
+        if temperature is None:
+            return
+
+        # Get scale factor from register config for DHW setpoint
+        data = self._get_register_data(f"{DOMAIN}_{self._setpoint_register}")
+        scale_factor = get_register_scale(data)
+
+        # Convert temperature to raw register value
+        raw_value = (
+            int(temperature / scale_factor) if scale_factor != 0 else int(temperature)
+        )
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            self._setpoint_register,
+            raw_value,
+            operation_name="set",
+            register_type=f"{self._dhw_type} DHW temperature",
+            coordinator=self.coordinator,
+        )
+        _LOGGER.debug(
+            f"Successfully set {self._dhw_type} DHW heat-up temperature to {temperature}°C (raw: {raw_value})"
+        )
+
+    async def async_turn_on(self):
+        """Turn on DHW heat-up."""
+        await self.async_set_hvac_mode(HVACMode.HEAT)
+
+    async def async_turn_off(self):
+        """Turn off DHW heat-up."""
+        await self.async_set_hvac_mode(HVACMode.OFF)

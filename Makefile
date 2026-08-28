@@ -1,7 +1,7 @@
 # Makefile for Daikin Altherma 4 Modbus Integration
 # Provides convenient commands for development, testing, and code quality
 
-.PHONY: help install install-dev test test-unit test-integration test-all test-coverage lint format security clean docs benchmark hassfest
+.PHONY: help install install-dev test test-unit test-integration test-all test-coverage lint format security clean docs benchmark hassfest test-platform-modules test-e2e test-slow test-parallel test-fast
 
 # Default target
 help:
@@ -13,12 +13,11 @@ help:
 	@echo ""
 	@echo "🧪 Testing:"
 	@echo "  test          Run all tests with coverage"
+	@echo "  test-fast      Run fast tests without coverage"
 	@echo "  test-unit     Run unit tests only"
 	@echo "  test-integration Run integration tests only"
-	@echo "  test-config-flow Run config flow tests only"
-	@echo "  test-options-flow Run options flow tests only"
-	@echo "  test-setup-entry Run setup entry tests only"
-	@echo "  test-unload-entry Run unload entry tests only"
+	@echo "  test-platform-modules Run platform module contract tests"
+	@echo "  test-e2e       Run Docker E2E test for HA boot"
 	@echo "  test-coverage  Generate detailed coverage report"
 	@echo "  test-slow      Run slow tests (if any)"
 	@echo "  test-parallel  Run tests in parallel"
@@ -56,7 +55,11 @@ install-dev:
 # Testing
 test:
 	@echo "🧪 Running all tests with coverage..."
-	pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=html --cov-report=term-missing
+	pytest -m "unit or integration or slow" --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=html --cov-report=term-missing
+
+test-fast:
+	@echo "⚡ Running fast tests without coverage..."
+	pytest -x --tb=short -m "not slow"
 
 test-unit:
 	@echo "🧪 Running unit tests..."
@@ -66,21 +69,13 @@ test-integration:
 	@echo "🧪 Running integration tests..."
 	pytest -m "integration" --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=term-missing
 
-test-config-flow:
-	@echo "🧪 Running config flow tests..."
-	pytest -m "config_flow" --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=term-missing
+test-platform-modules:
+	@echo "🧪 Running platform module contract tests..."
+	pytest tests/integration/test_platform_modules.py -v
 
-test-options-flow:
-	@echo "🧪 Running options flow tests..."
-	pytest -m "options_flow" --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=term-missing
-
-test-setup-entry:
-	@echo "🧪 Running setup entry tests..."
-	pytest -m "setup_entry" --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=term-missing
-
-test-unload-entry:
-	@echo "🧪 Running unload entry tests..."
-	pytest -m "unload_entry" --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=term-missing
+test-e2e:
+	@echo "🚀 Running Docker E2E test for HA boot..."
+	HA_DOCKER_DEMO_TESTS=1 pytest tests/integration/test_ha_docker_demo_mode.py -v
 
 test-coverage:
 	@echo "📊 Generating detailed coverage report..."
@@ -95,7 +90,7 @@ test-parallel:
 	@echo "⚡ Running tests in parallel..."
 	pytest -n auto --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=term-missing
 
-test-all: test-unit test-integration test-config-flow test-options-flow test-setup-entry test-unload-entry
+test-all: test-unit test-integration test-platform-modules
 	@echo "✅ All test suites completed!"
 
 # Code Quality
@@ -105,7 +100,7 @@ lint:
 	ruff check --select I .
 
 format:
-	@echo "🎨 Formatting code with Ruff..."
+	@echo "✏️ Formatting code with Ruff..."
 	ruff format .
 
 format-check:
@@ -113,20 +108,17 @@ format-check:
 	ruff format --check .
 
 security:
-	@echo "🔒 Running all security checks..."
-	$(MAKE) safety
-	$(MAKE) bandit
+	@echo "🔒 Running security checks..."
+	pip-audit -r requirements-dev.txt --progress-spinner off \
+	  --ignore-vuln PYSEC-2026-3552 \
+	  --ignore-vuln PYSEC-2026-3553 \
+	  --ignore-vuln PYSEC-2026-3554
+	@echo "   Note: PYSEC-2026-3552/3553/3554 (cryptography<50) are accepted"
+	@echo "   until Home Assistant lifts its exact pin 'cryptography==48.0.1'."
 
 safety:
-	@echo "🔒 Checking dependency vulnerabilities..."
-	@echo "⚠️  Safety CLI requires authentication for scan command"
-	@echo "📋 Using legacy check command for compatibility..."
-	@echo "🔍 System dependencies (non-impact on integration):"
-	@echo "   - beaker 1.12.1 (4 CVEs) - Web framework (not used)"
-	@echo "   - pip 25.1.1 (2 CVEs) - Package manager (system)"
-	@echo "   - pycrypto 2.6.1 (1 CVE) - Legacy crypto (not used)"
-	@echo "✅ No integration-specific vulnerabilities found"
-	@echo "📋 Note: These are system-level dependencies, not part of our integration"
+	@echo "⚠️  Checking dependency vulnerabilities..."
+	safety check --json
 
 bandit:
 	@echo "🔒 Running security linter..."

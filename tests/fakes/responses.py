@@ -73,7 +73,8 @@ def generate_demo_register_data():
 
     # Discrete inputs (addresses 0-26)
     discrete_inputs = [False] * 27
-    discrete_inputs[1] = False  # Shut-off valve
+    discrete_inputs[1] = True  # Shut-off valve
+    discrete_inputs[2] = False  # Second discrete input
     discrete_inputs[11] = True  # Compressor running
     discrete_inputs[19] = True  # DHW running
     discrete_inputs[20] = True  # Main zone running
@@ -82,7 +83,7 @@ def generate_demo_register_data():
     # Coils (addresses 0-3)
     coils = [False] * 4
     coils[1] = True  # DHW ON
-    coils[2] = True  # Main zone ON
+    coils[2] = False  # Main zone OFF
     coils[3] = False  # Additional zone OFF
 
     return {

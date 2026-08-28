@@ -2,13 +2,17 @@ import logging
 
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from .config_entry_utils import entry_data_value, entry_value
-from .const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
-from .coordinator_manager import CoordinatorManager, UnifiedCoordinator
-from .modbus_client import RealModbusTcpClient
-from .repair import async_create_connection_issue, async_delete_connection_issue
-from .runtime_data import RuntimeData
-from .services import register_services
+from .config_flow import ConfigFlow as ConfigFlow
+from .core.const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
+from .integration.config_entry_utils import entry_data_value, entry_value
+from .integration.coordinator_manager import CoordinatorManager, UnifiedCoordinator
+from .integration.repair import (
+    async_create_connection_issue,
+    async_delete_connection_issue,
+)
+from .integration.runtime_data import RuntimeData
+from .integration.services import register_services
+from .modbus.modbus_client import RealModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
 

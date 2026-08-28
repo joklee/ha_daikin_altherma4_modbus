@@ -1,0 +1,5 @@
+"""Core module for Daikin Altherma 4 Modbus integration.
+
+Submodules are imported directly where needed to avoid circular imports
+(e.g. common.helpers -> core.data_types -> core -> modbus -> common.helpers).
+"""
