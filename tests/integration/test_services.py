@@ -259,6 +259,7 @@ import pytest
 
 pytestmark = [pytest.mark.ha]
 import voluptuous as vol
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.service import ServiceCall, ServiceValidationError
 
@@ -338,7 +339,7 @@ def mock_config_entry():
     """Create a mock config entry."""
     entry = MagicMock()
     entry.entry_id = "test_entry_id"
-    entry.state = "loaded"
+    entry.state = ConfigEntryState.LOADED
     return entry
 
 
@@ -458,6 +459,7 @@ class TestSetOperationModeService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_OPERATION_MODE,
             data={
@@ -483,6 +485,7 @@ class TestSetOperationModeService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_OPERATION_MODE,
             data={
@@ -501,11 +504,12 @@ class TestSetOperationModeService:
         """Test service with entry not loaded."""
 
         # Setup
-        mock_config_entry.state = "not_loaded"
+        mock_config_entry.state = ConfigEntryState.NOT_LOADED
         hass.config_entries.async_get_entry.return_value = mock_config_entry
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_OPERATION_MODE,
             data={
@@ -531,6 +535,7 @@ class TestSetOperationModeService:
 
         # Create service call with invalid mode
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_OPERATION_MODE,
             data={
@@ -560,6 +565,7 @@ class TestSetDHWStateService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_DHW_STATE,
             data={
@@ -585,6 +591,7 @@ class TestSetDHWStateService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_DHW_STATE,
             data={
@@ -607,6 +614,7 @@ class TestSetDHWStateService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_DHW_STATE,
             data={
@@ -636,6 +644,7 @@ class TestSetMainZoneStateService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_MAIN_ZONE_STATE,
             data={
@@ -661,6 +670,7 @@ class TestSetMainZoneStateService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_MAIN_ZONE_STATE,
             data={
@@ -690,6 +700,7 @@ class TestSetAdditionalZoneStateService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_ADDITIONAL_ZONE_STATE,
             data={
@@ -715,6 +726,7 @@ class TestSetAdditionalZoneStateService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_ADDITIONAL_ZONE_STATE,
             data={
@@ -846,6 +858,7 @@ class TestSetSmartGridModeService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_SMART_GRID_MODE,
             data={
@@ -871,6 +884,7 @@ class TestSetSmartGridModeService:
 
         # Create service call
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_SMART_GRID_MODE,
             data={
@@ -896,6 +910,7 @@ class TestSetSmartGridModeService:
 
         # Create service call with invalid mode
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_SMART_GRID_MODE,
             data={
@@ -945,6 +960,7 @@ class TestServiceSchemasExtended:
 
         # Create service call with missing smart_grid_mode
         call = ServiceCall(
+            hass=hass,
             domain=DOMAIN,
             service=SERVICE_SET_SMART_GRID_MODE,
             data={

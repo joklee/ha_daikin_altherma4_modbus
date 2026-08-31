@@ -1,8 +1,17 @@
 """Pytest configuration for ha_daikin_altherma4_modbus tests.
 
-Marker definitions and the bulk of the Home Assistant stubbing now live in
-``pytest.ini`` and ``tests.fixtures.homeassistant`` respectively; this file
-keeps the session-level sys.path setup and triggers the stub installation.
+Marker definitions live in ``pytest.ini``; this file keeps the
+session-level sys.path setup and auto-tags collected tests with the
+marker matching their directory.
+
+The test environment relies on the real installed Home Assistant
+distribution together with ``pytest-homeassistant-custom-component``
+(see ``requirements-test.txt``).  The former global ``homeassistant``
+stub installation is intentionally NOT performed here so that tests
+exercise the real Home Assistant APIs.  Any test that needs module-level
+fakes must install them test-locally (e.g. via
+``monkeypatch.setitem(sys.modules, ...)``) so they are reverted
+automatically after the test.
 """
 
 import sys
@@ -15,11 +24,21 @@ PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# Importing the fixtures module installs the ``homeassistant.*`` stubs into
-# sys.modules before pytest collects any test module.
-from tests.fixtures.homeassistant import install_homeassistant_stubs
+# Home Assistant's integration loader
+# (homeassistant.loader._get_custom_components) discovers custom
+# integrations by importing the ``custom_components`` package and scanning
+# every directory listed in ``custom_components.__path__``.
+#
+# When the integration is installed as an editable (PEP 660) distribution
+# -- e.g. via ``pip install -e .`` -- the meta-path finder exposes a
+# synthetic ``__editable__...finder.__path_hook__`` entry that is not a
+# real filesystem directory, and HA fails with ``FileNotFoundError`` while
+# iterating it.  Normalize ``__path__`` to the repository checkout so that
+# discovery always operates on the real files, independent of the local
+# pip install state.
+import custom_components
 
-install_homeassistant_stubs()
+custom_components.__path__ = [str(PROJECT_ROOT / "custom_components")]
 
 # Every collected test file lives below one of these sub-directories of
 # ``tests/``. Tagging each test with the matching marker lets the suite be
