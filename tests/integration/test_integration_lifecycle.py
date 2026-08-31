@@ -4,7 +4,7 @@ import importlib
 import sys
 import types
 from pathlib import Path
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -31,15 +31,12 @@ def _install_fake_package(monkeypatch) -> str:
 
 
 def _load_integration_module(monkeypatch):
-    """Load integration module with mocked dependencies."""
-    # Set up homeassistant mocks first
-    homeassistant = types.ModuleType("homeassistant")
-    monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
+    """Load integration module with mocked dependencies.
 
-    exceptions_module = types.ModuleType("homeassistant.exceptions")
-    exceptions_module.ConfigEntryNotReady = Exception
-    monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
-
+    Only integration-internal modules (const, coordinator_manager,
+    modbus_client, config_entry_utils, repair, runtime_data, services) are
+    replaced; Home Assistant is used from the real installed distribution.
+    """
     package_name = _install_fake_package(monkeypatch)
     const_name = f"{package_name}.const"
     coordinator_manager_name = f"{package_name}.integration.coordinator_manager"
@@ -188,9 +185,10 @@ def _load_integration_module(monkeypatch):
 
     # Mock repair module
     repair_module = types.ModuleType(repair_name)
-    repair_module.async_create_connection_issue = AsyncMock()
+    # Production defines these as sync functions called without await.
+    repair_module.async_create_connection_issue = MagicMock()
     repair_module.async_delete_connection_issue = lambda hass, entry: None
-    repair_module.async_create_abnormality_issue = AsyncMock()
+    repair_module.async_create_abnormality_issue = MagicMock()
     repair_module.async_delete_abnormality_issue = lambda hass, entry: None
     sys.modules[repair_name] = repair_module
 
@@ -244,18 +242,28 @@ async def test_async_setup_entry_connection_failure(monkeypatch):
     """Test async_setup_entry with connection failure."""
     integration_module = _load_integration_module(monkeypatch)
 
-    # Mock modbus client to fail connection
-    modbus_client_module = sys.modules[
-        "custom_components.ha_daikin_altherma4_modbus.modbus.modbus_client"
-    ]
+    # Replace the RealModbusTcpClient referenced by async_setup_entry with a
+    # client whose connect() never succeeds, so the connection test during
+    # setup raises ConfigEntryNotReady.
+    class FailingModbusClient:
+        def __init__(self, host, port=502):
+            self.host = host
+            self.port = port
+            self.connected = False
 
-    original_client = modbus_client_module.MockModbusTcpClient
+        @classmethod
+        async def create(cls, host, port=502, timeout=10):
+            return cls(host, port)
 
-    class FailingModbusClient(original_client):
         async def connect(self):
+            self.connected = False
             return False
 
-    modbus_client_module.MockModbusTcpClient = FailingModbusClient
+        @classmethod
+        async def async_close_cached_client(cls, host, port):
+            pass
+
+    monkeypatch.setattr(integration_module, "RealModbusTcpClient", FailingModbusClient)
 
     hass = types.SimpleNamespace()
     hass.config_entries = types.SimpleNamespace()
