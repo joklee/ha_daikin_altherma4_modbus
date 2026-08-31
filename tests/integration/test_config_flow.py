@@ -1243,7 +1243,9 @@ async def test_config_flow_reauth_success(monkeypatch):
     # Mock the hass.config_entries module
     updated_entries = []
 
-    async def mock_update_entry(entry, unique_id=None, data=None, options=None):
+    # The real HA API ConfigEntries.async_update_entry is a @callback (sync
+    # function); a coroutine here would never be awaited by the flow.
+    def mock_update_entry(entry, unique_id=None, data=None, options=None):
         if data:
             entry.data = data
         if options:

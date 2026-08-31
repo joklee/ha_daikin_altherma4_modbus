@@ -450,7 +450,9 @@ def _load_integration_module(monkeypatch):
 
     services_name = f"{package_name}.integration.services"
     services_module = types.ModuleType(services_name)
-    services_module.register_services = AsyncMock()
+    # Production calls register_services(hass) synchronously (a plain def),
+    # so the mock must not be an AsyncMock.
+    services_module.register_services = Mock()
     monkeypatch.setitem(sys.modules, services_name, services_module)
 
     return importlib.import_module(package_name), FakeCoordinatorManager
