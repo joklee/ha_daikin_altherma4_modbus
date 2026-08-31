@@ -7,7 +7,6 @@ Covers:
 * last-triggered timestamp tracking
 """
 
-import importlib
 import importlib.util
 import os
 import sys
@@ -23,22 +22,6 @@ from custom_components.ha_daikin_altherma4_modbus.core.mapping_transform import 
 from custom_components.ha_daikin_altherma4_modbus.core.register_types import (
     INT16,
 )
-
-
-def _ensure_homeassistant_stubs() -> None:
-    """Ensure homeassistant stubs are available.
-
-    The stubs are installed by ``tests/fixtures/homeassistant.py`` at session
-    start; this fallback only guards against running a single test outside the
-    pytest session.
-    """
-    if "homeassistant" not in sys.modules:
-        from tests.fixtures.homeassistant import install_homeassistant_stubs
-
-        install_homeassistant_stubs()
-
-
-_ensure_homeassistant_stubs()
 
 
 def _load_mapping_module(monkeypatch):
@@ -200,10 +183,6 @@ def _load_mapping_module(monkeypatch):
 
 class TestSignedConversion:
     """Tests for signed register conversion in mapping_transform."""
-
-    def setup_method(self):
-        """Ensure stubs are available before each test."""
-        _ensure_homeassistant_stubs()
 
     def test_apply_register_processing_signed_conversion(self, monkeypatch):
         """Test that signed registers are converted from unsigned to signed."""
