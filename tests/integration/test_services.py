@@ -89,13 +89,25 @@ def mock_runtime_data():
 class TestServiceSetup:
     """Test service setup and registration."""
 
-    def test_async_setup_registers_services(self, hass):
+    def test_async_setup_registers_services(self, hass, monkeypatch):
         """Test that register_services registers services correctly."""
-        from custom_components.ha_daikin_altherma4_modbus.integration.services import (
-            register_services,
+        # Ensure a fresh services module: a previous test module may have
+        # patched integration.services in sys.modules (e.g. test_config_model
+        # replaces register_services with a Mock), which would otherwise leave
+        # HAS_HA in a stale/False state and skip registration entirely.
+        import sys
+
+        monkeypatch.delitem(
+            sys.modules,
+            "custom_components.ha_daikin_altherma4_modbus.integration.services",
+            raising=False,
+        )
+        from custom_components.ha_daikin_altherma4_modbus.integration import (
+            services as fresh_services,
         )
 
-        # Register services
+        assert fresh_services.HAS_HA, "expected real Home Assistant import"
+        register_services = fresh_services.register_services
         register_services(hass)
 
         assert hass.services.async_register.call_count == 15
