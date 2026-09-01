@@ -11,8 +11,40 @@ import tempfile
 import types
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
-import pytest
+from homeassistant import config_entries
+from homeassistant.const import CONF_HOST, CONF_PORT
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.ha_daikin_altherma4_modbus.core.const import DOMAIN
+from custom_components.ha_daikin_altherma4_modbus.integration.config_flow import (
+    ConfigFlow,
+    OptionsFlow,
+)
+from custom_components.ha_daikin_altherma4_modbus.modbus.modbus_client import (
+    RealModbusTcpClient,
+)
+
+
+class _FakeModbusClient:
+    """Minimal Modbus client double for config-flow connection tests."""
+
+    def __init__(self, connected: bool = True) -> None:
+        self._connected = connected
+
+    @property
+    def connected(self) -> bool:
+        return self._connected
+
+    async def connect(self) -> None:
+        """Keep connection state controlled by the constructor."""
+
+    async def disconnect(self) -> None:
+        self._connected = False
+
+    async def read_input_registers(self, address: int, count: int):
+        return type("Response", (), {"registers": [0] * count})()
 
 
 def _reset_modules(*names: str) -> None:
@@ -237,25 +269,24 @@ def _load_config_flow_module(monkeypatch, connection_success=True):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_success(monkeypatch):
+async def test_config_flow_success(hass, enable_custom_integrations):
     """Test successful config flow execution."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "192.168.1.100",
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "192.168.1.100",
+            CONF_PORT: 502,
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "electric_power_sensor": "sensor.power",
             "demo_mode": True,
-        }
+        },
     )
 
     assert result["type"] == "create_entry"
     assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
-    assert result["data"] == {"host": "192.168.1.100", "port": 502}
+    assert result["data"] == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
     assert result["options"] == {
         "scan_interval": 15,
         "slow_scan_interval": 300,
@@ -265,77 +296,85 @@ async def test_config_flow_success(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_invalid_host(monkeypatch):
+async def test_config_flow_invalid_host(hass, enable_custom_integrations):
     """Test config flow with invalid host."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "invalid host with spaces",
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "invalid host with spaces",
+            CONF_PORT: 502,
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
     assert "errors" in result
-    assert result["errors"]["host"] == "invalid_host"
+    assert result["errors"][CONF_HOST] == "invalid_host"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_connection_error(monkeypatch):
+async def test_config_flow_connection_error(hass, enable_custom_integrations):
     """Test config flow with connection error - connection test fails."""
-    # Load module with connection_success=False to simulate connection failure
-    config_flow_module = _load_config_flow_module(monkeypatch, connection_success=False)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "192.168.1.100",
-            "port": 502,
-            "scan_interval": 15,
-            "slow_scan_interval": 300,
-            "demo_mode": False,  # Not demo mode, so connection test runs
-        }
-    )
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=False)),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data={
+                CONF_HOST: "192.168.1.100",
+                CONF_PORT: 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "demo_mode": False,  # Not demo mode, so connection test runs
+            },
+        )
 
     assert result["type"] == "form"
     assert "errors" in result
-    assert result["errors"]["host"] == "cannot_connect"
+    assert result["errors"][CONF_HOST] == "cannot_connect"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_connection_success_demo_mode(monkeypatch):
+async def test_config_flow_connection_success_demo_mode(
+    hass, enable_custom_integrations
+):
     """Test config flow skips connection test in demo mode."""
-    # Even with connection_success=False, demo mode should bypass connection test
-    config_flow_module = _load_config_flow_module(monkeypatch, connection_success=False)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "192.168.1.100",
-            "port": 502,
-            "scan_interval": 15,
-            "slow_scan_interval": 300,
-            "demo_mode": True,  # Demo mode skips connection test
-        }
-    )
+    # Even when the Modbus connection would fail, demo mode should bypass the
+    # connection test entirely.
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(side_effect=ConnectionError("device not reachable")),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data={
+                CONF_HOST: "192.168.1.100",
+                CONF_PORT: 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "demo_mode": True,  # Demo mode skips connection test
+            },
+        )
 
     assert result["type"] == "create_entry"
     assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
 
 
 @pytest.mark.asyncio
-async def test_options_flow(monkeypatch):
+async def test_options_flow(hass, enable_custom_integrations):
     """Test options flow execution."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-
-    # Create a mock config entry
-    config_entry = SimpleNamespace(
-        entry_id="test_entry_1",
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={
             "scan_interval": 15,
             "slow_scan_interval": 300,
@@ -343,9 +382,11 @@ async def test_options_flow(monkeypatch):
             "electric_power_sensor": "existing_sensor",
         },
     )
+    entry.add_to_hass(hass)
 
-    # Create options flow instance
-    options_flow = config_flow_module.OptionsFlow(config_entry)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == "form"
+    assert result["step_id"] == "init"
 
     # Mock user input with updated values
     user_input = {
@@ -356,7 +397,9 @@ async def test_options_flow(monkeypatch):
     }
 
     # Execute the options step
-    result = await options_flow.async_step_init(user_input)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input
+    )
 
     # Verify successful creation of entry
     assert result["type"] == "create_entry"
@@ -371,20 +414,22 @@ async def test_options_flow(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_options_flow_validation_errors(monkeypatch):
+async def test_options_flow_validation_errors(hass, enable_custom_integrations):
     """Test options flow validation errors."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-
-    config_entry = SimpleNamespace(
-        entry_id="test_entry_1",
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "demo_mode": False,
         },
     )
+    entry.add_to_hass(hass)
 
-    options_flow = config_flow_module.OptionsFlow(config_entry)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == "form"
 
     # Test invalid scan_interval (<= 0)
     user_input = {
@@ -393,7 +438,9 @@ async def test_options_flow_validation_errors(monkeypatch):
         "demo_mode": False,
     }
 
-    result = await options_flow.async_step_init(user_input)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input
+    )
 
     # Should return form with errors
     assert result["type"] == "form"
@@ -408,7 +455,9 @@ async def test_options_flow_validation_errors(monkeypatch):
         "demo_mode": False,
     }
 
-    result = await options_flow.async_step_init(user_input)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input
+    )
 
     # Should return form with errors
     assert result["type"] == "form"
@@ -418,12 +467,13 @@ async def test_options_flow_validation_errors(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_show_form_no_input(monkeypatch):
+async def test_config_flow_show_form_no_input(hass, enable_custom_integrations):
     """Test config flow shows form when no user input provided."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(None)
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data=None,
+    )
 
     assert result["type"] == "form"
     assert result["step_id"] == "user"
@@ -432,25 +482,31 @@ async def test_config_flow_show_form_no_input(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_empty_electric_power_sensor(monkeypatch):
+async def test_config_flow_empty_electric_power_sensor(
+    hass, enable_custom_integrations
+):
     """Test config flow excludes empty electric_power_sensor from options."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "192.168.1.100",
-            "port": 502,
-            "scan_interval": 15,
-            "slow_scan_interval": 300,
-            "electric_power_sensor": "",  # Empty string
-            "demo_mode": False,
-        }
-    )
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data={
+                CONF_HOST: "192.168.1.100",
+                CONF_PORT: 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "electric_power_sensor": "",  # Empty string
+                "demo_mode": False,
+            },
+        )
 
     assert result["type"] == "create_entry"
     assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
-    assert result["data"] == {"host": "192.168.1.100", "port": 502}
+    assert result["data"] == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
     # Empty electric_power_sensor should not be in options
     assert "electric_power_sensor" not in result["options"]
     assert result["options"]["scan_interval"] == 15
@@ -458,59 +514,56 @@ async def test_config_flow_empty_electric_power_sensor(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_invalid_port_low(monkeypatch):
+async def test_config_flow_invalid_port_low(hass, enable_custom_integrations):
     """Test config flow with port < 1."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "192.168.1.100",
-            "port": 0,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "192.168.1.100",
+            CONF_PORT: 0,
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
-    assert result["errors"]["port"] == "invalid_port"
+    assert result["errors"][CONF_PORT] == "invalid_port"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_invalid_port_high(monkeypatch):
+async def test_config_flow_invalid_port_high(hass, enable_custom_integrations):
     """Test config flow with port > 65535."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "192.168.1.100",
-            "port": 65536,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "192.168.1.100",
+            CONF_PORT: 65536,
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
-    assert result["errors"]["port"] == "invalid_port"
+    assert result["errors"][CONF_PORT] == "invalid_port"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_invalid_scan_interval_zero(monkeypatch):
+async def test_config_flow_invalid_scan_interval_zero(hass, enable_custom_integrations):
     """Test config flow with scan_interval = 0."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "192.168.1.100",
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "192.168.1.100",
+            CONF_PORT: 502,
             "scan_interval": 0,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
@@ -518,19 +571,20 @@ async def test_config_flow_invalid_scan_interval_zero(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_invalid_scan_interval_negative(monkeypatch):
+async def test_config_flow_invalid_scan_interval_negative(
+    hass, enable_custom_integrations
+):
     """Test config flow with negative scan_interval."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "192.168.1.100",
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "192.168.1.100",
+            CONF_PORT: 502,
             "scan_interval": -5,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
@@ -538,19 +592,18 @@ async def test_config_flow_invalid_scan_interval_negative(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_slow_less_than_scan(monkeypatch):
+async def test_config_flow_slow_less_than_scan(hass, enable_custom_integrations):
     """Test config flow with slow_scan_interval < scan_interval."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "192.168.1.100",
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "192.168.1.100",
+            CONF_PORT: 502,
             "scan_interval": 30,
             "slow_scan_interval": 20,  # Less than scan_interval
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
@@ -558,12 +611,14 @@ async def test_config_flow_slow_less_than_scan(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_options_flow_show_form_with_current_values(monkeypatch):
+async def test_options_flow_show_form_with_current_values(
+    hass, enable_custom_integrations
+):
     """Test that options flow shows form with current values."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-
-    config_entry = SimpleNamespace(
-        entry_id="test_entry_1",
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={
             "scan_interval": 25,
             "slow_scan_interval": 500,
@@ -571,11 +626,10 @@ async def test_options_flow_show_form_with_current_values(monkeypatch):
             "electric_power_sensor": "test_sensor",
         },
     )
-
-    options_flow = config_flow_module.OptionsFlow(config_entry)
+    entry.add_to_hass(hass)
 
     # Call without user input to show form
-    result = await options_flow.async_step_init(None)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
 
     # Verify form is shown
     assert result["type"] == "form"
@@ -590,12 +644,14 @@ async def test_options_flow_show_form_with_current_values(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_options_flow_empty_electric_power_sensor(monkeypatch):
+async def test_options_flow_empty_electric_power_sensor(
+    hass, enable_custom_integrations
+):
     """Test that options flow excludes empty electric_power_sensor from options."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-
-    config_entry = SimpleNamespace(
-        entry_id="test_entry_1",
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={
             "scan_interval": 15,
             "slow_scan_interval": 300,
@@ -603,8 +659,10 @@ async def test_options_flow_empty_electric_power_sensor(monkeypatch):
             "electric_power_sensor": "existing_sensor",
         },
     )
+    entry.add_to_hass(hass)
 
-    options_flow = config_flow_module.OptionsFlow(config_entry)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == "form"
 
     # Provide empty electric_power_sensor
     user_input = {
@@ -614,7 +672,9 @@ async def test_options_flow_empty_electric_power_sensor(monkeypatch):
         "electric_power_sensor": "",  # Empty string
     }
 
-    result = await options_flow.async_step_init(user_input)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input
+    )
 
     # Verify successful creation of entry
     assert result["type"] == "create_entry"
@@ -625,425 +685,278 @@ async def test_options_flow_empty_electric_power_sensor(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_ipv6_host(monkeypatch):
+async def test_config_flow_ipv6_host(hass, enable_custom_integrations):
     """Test config flow with IPv6 address."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "::1",  # IPv6 localhost
-            "port": 502,
-            "scan_interval": 15,
-            "slow_scan_interval": 300,
-            "demo_mode": False,
-        }
-    )
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data={
+                CONF_HOST: "::1",  # IPv6 localhost
+                CONF_PORT: 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "demo_mode": False,
+            },
+        )
 
     assert result["type"] == "create_entry"
-    assert result["data"]["host"] == "::1"
+    assert result["data"][CONF_HOST] == "::1"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_valid_hostname(monkeypatch):
+async def test_config_flow_valid_hostname(hass, enable_custom_integrations):
     """Test config flow with valid hostname."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "heatpump.local",
-            "port": 502,
-            "scan_interval": 15,
-            "slow_scan_interval": 300,
-            "demo_mode": False,
-        }
-    )
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data={
+                CONF_HOST: "heatpump.local",
+                CONF_PORT: 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "demo_mode": False,
+            },
+        )
 
     assert result["type"] == "create_entry"
-    assert result["data"]["host"] == "heatpump.local"
+    assert result["data"][CONF_HOST] == "heatpump.local"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_empty_host(monkeypatch):
+async def test_config_flow_empty_host(hass, enable_custom_integrations):
     """Test config flow with empty host."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "",
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "",
+            CONF_PORT: 502,
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
-    assert result["errors"]["host"] == "invalid_host"
+    assert result["errors"][CONF_HOST] == "invalid_host"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_hostname_too_long(monkeypatch):
+async def test_config_flow_hostname_too_long(hass, enable_custom_integrations):
     """Test config flow with hostname exceeding 253 chars."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "a" * 254,  # Too long
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "a" * 254,  # Too long
+            CONF_PORT: 502,
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
-    assert result["errors"]["host"] == "invalid_host"
+    assert result["errors"][CONF_HOST] == "invalid_host"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_hostname_hyphen_edge_cases(monkeypatch):
+async def test_config_flow_hostname_hyphen_edge_cases(hass, enable_custom_integrations):
     """Test config flow with hostname starting/ending with hyphen."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
     # Hostname starting with hyphen
-    result = await flow.async_step_user(
-        {
-            "host": "-invalid.local",
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "-invalid.local",
+            CONF_PORT: 502,
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
-    assert result["errors"]["host"] == "invalid_host"
+    assert result["errors"][CONF_HOST] == "invalid_host"
 
     # Hostname ending with hyphen
-    result = await flow.async_step_user(
-        {
-            "host": "invalid-.local",
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "invalid-.local",
+            CONF_PORT: 502,
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
-    assert result["errors"]["host"] == "invalid_host"
+    assert result["errors"][CONF_HOST] == "invalid_host"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_hostname_empty_label(monkeypatch):
+async def test_config_flow_hostname_empty_label(hass, enable_custom_integrations):
     """Test config flow with empty label in hostname."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "invalid..host.local",  # Empty label between dots
-            "port": 502,
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+        data={
+            CONF_HOST: "invalid..host.local",  # Empty label between dots
+            CONF_PORT: 502,
             "scan_interval": 15,
             "slow_scan_interval": 300,
             "demo_mode": False,
-        }
+        },
     )
 
     assert result["type"] == "form"
-    assert result["errors"]["host"] == "invalid_host"
+    assert result["errors"][CONF_HOST] == "invalid_host"
 
 
 @pytest.mark.asyncio
-async def test_async_get_options_flow(monkeypatch):
+async def test_async_get_options_flow(hass, enable_custom_integrations):
     """Test that async_get_options_flow returns OptionsFlow instance."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-
-    config_entry = SimpleNamespace(
-        entry_id="test_entry_1",
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={"scan_interval": 15},
     )
 
-    flow = config_flow_module.ConfigFlow()
+    flow = ConfigFlow()
     options_flow = flow.async_get_options_flow(config_entry)
 
-    assert isinstance(options_flow, config_flow_module.OptionsFlow)
+    assert isinstance(options_flow, OptionsFlow)
     assert options_flow._config_entry == config_entry
 
 
 @pytest.mark.asyncio
-async def test_config_flow_connection_read_register_exception(monkeypatch):
+async def test_config_flow_connection_read_register_exception(
+    hass, enable_custom_integrations
+):
     """Test config flow when read_input_registers raises but connection succeeds."""
-    # Load module with a mock that raises on read_input_registers but connects successfully
-    _install_common_homeassistant_stubs(monkeypatch)
-    package_name = _install_fake_package(monkeypatch)
 
-    # Mock core.const module
-    core_const_name = f"{package_name}.core.const"
-    core_const_module = types.ModuleType(core_const_name)
-    core_const_module.DOMAIN = "ha_daikin_altherma4_modbus"
-    core_const_module.SLOW_SCAN_INTERVAL = 600
-    core_const_module.NORMAL_SCAN_INTERVAL = 10
-    monkeypatch.setitem(sys.modules, core_const_name, core_const_module)
+    class _FakeModbusClientReadError(_FakeModbusClient):
+        async def read_input_registers(self, address: int, count: int):
+            raise ConnectionError("Read failed but connection is valid")
 
-    # Mock init module
-    init_module = types.ModuleType(package_name)
-    init_module.NORMAL_SCAN_INTERVAL = 10
-    monkeypatch.setitem(sys.modules, package_name, init_module)
-
-    # Mock config entry utils
-    config_entry_utils_name = f"{package_name}.integration.config_entry_utils"
-    config_entry_utils_module = types.ModuleType(config_entry_utils_name)
-    config_entry_utils_module.entry_value = lambda entry, key, default=None: (
-        entry.options.get(key, default)
-    )
-    config_entry_utils_module.entry_data_value = lambda entry, key, default=None: (
-        entry.data.get(key, default)
-    )
-    monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
-
-    # Mock modbus_client with read_input_registers that raises exception
-    modbus_client_name = f"{package_name}.modbus.modbus_client"
-    modbus_client_module = types.ModuleType(modbus_client_name)
-
-    class FakeModbusClientWithReadError:
-        def __init__(self, host, port, timeout=10):
-            self.host = host
-            self.port = port
-            self._connected = False
-
-        @classmethod
-        async def create(cls, host, port, timeout=10):
-            return cls(host, port, timeout)
-
-        async def connect(self):
-            self._connected = True
-
-        async def disconnect(self):
-            self._connected = False
-
-        @property
-        def connected(self):
-            return self._connected
-
-        async def read_input_registers(self, address, count):
-            raise Exception("Read failed but connection is valid")
-
-    modbus_client_module.RealModbusTcpClient = FakeModbusClientWithReadError
-    monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
-
-    # Load config flow module
-    config_flow_path = (
-        Path(__file__).resolve().parents[2]
-        / "custom_components"
-        / "ha_daikin_altherma4_modbus"
-        / "integration"
-        / "config_flow.py"
-    )
-    with open(config_flow_path, "r") as f:
-        content = f.read()
-
-    content = content.replace(
-        "from ..core.const import (",
-        f"from {core_const_name} import (",
-    )
-    content = content.replace(
-        "from .config_entry_utils import (",
-        f"from {config_entry_utils_name} import (",
-    )
-    content = content.replace(
-        "from ..modbus.modbus_client import RealModbusTcpClient",
-        f"from {modbus_client_name} import RealModbusTcpClient",
-    )
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp_file:
-        tmp_file.write(content)
-        tmp_file_path = tmp_file.name
-
-    try:
-        spec = importlib.util.spec_from_file_location(
-            "config_flow_read_error", tmp_file_path
-        )
-        config_flow_module = importlib.util.module_from_spec(spec)
-        module_name = f"{package_name}.integration.config_flow_read_error"
-        sys.modules[module_name] = config_flow_module
-        spec.loader.exec_module(config_flow_module)
-
-        # Add mock methods for unique ID handling
-        async def mock_async_set_unique_id(self, unique_id):
-            pass
-
-        def mock_abort_if_unique_id_configured(self):
-            pass
-
-        config_flow_module.ConfigFlow.async_set_unique_id = mock_async_set_unique_id
-        config_flow_module.ConfigFlow._abort_if_unique_id_configured = (
-            mock_abort_if_unique_id_configured
-        )
-
-        flow = config_flow_module.ConfigFlow()
-        result = await flow.async_step_user(
-            {
-                "host": "192.168.1.100",
-                "port": 502,
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClientReadError(connected=True)),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data={
+                CONF_HOST: "192.168.1.100",
+                CONF_PORT: 502,
                 "scan_interval": 15,
                 "slow_scan_interval": 300,
                 "demo_mode": False,
-            }
+            },
         )
 
-        # Should still create entry even if read_input_registers raises
-        assert result["type"] == "create_entry"
-        assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
-    finally:
-        os.unlink(tmp_file_path)
+    # Should still create entry even if read_input_registers raises
+    assert result["type"] == "create_entry"
+    assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_connection_client_create_exception(monkeypatch):
+async def test_config_flow_connection_client_create_exception(
+    hass, enable_custom_integrations
+):
     """Test config flow when RealModbusTcpClient.create raises exception."""
-    _install_common_homeassistant_stubs(monkeypatch)
-    package_name = _install_fake_package(monkeypatch)
-
-    core_const_name = f"{package_name}.core.const"
-    core_const_module = types.ModuleType(core_const_name)
-    core_const_module.DOMAIN = "ha_daikin_altherma4_modbus"
-    core_const_module.SLOW_SCAN_INTERVAL = 600
-    core_const_module.NORMAL_SCAN_INTERVAL = 10
-    monkeypatch.setitem(sys.modules, core_const_name, core_const_module)
-
-    init_module = types.ModuleType(package_name)
-    init_module.NORMAL_SCAN_INTERVAL = 10
-    monkeypatch.setitem(sys.modules, package_name, init_module)
-
-    config_entry_utils_name = f"{package_name}.integration.config_entry_utils"
-    config_entry_utils_module = types.ModuleType(config_entry_utils_name)
-    config_entry_utils_module.entry_value = lambda entry, key, default=None: (
-        entry.options.get(key, default)
-    )
-    config_entry_utils_module.entry_data_value = lambda entry, key, default=None: (
-        entry.data.get(key, default)
-    )
-    monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
-
-    modbus_client_name = f"{package_name}.modbus.modbus_client"
-    modbus_client_module = types.ModuleType(modbus_client_name)
-
-    class FakeModbusClientCreateError:
-        @classmethod
-        async def create(cls, host, port, timeout=10):
-            raise ConnectionError("Failed to create client")
-
-    modbus_client_module.RealModbusTcpClient = FakeModbusClientCreateError
-    monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
-
-    config_flow_path = (
-        Path(__file__).resolve().parents[2]
-        / "custom_components"
-        / "ha_daikin_altherma4_modbus"
-        / "integration"
-        / "config_flow.py"
-    )
-    with open(config_flow_path, "r") as f:
-        content = f.read()
-
-    content = content.replace(
-        "from ..core.const import (",
-        f"from {core_const_name} import (",
-    )
-    content = content.replace(
-        "from .config_entry_utils import (",
-        f"from {config_entry_utils_name} import (",
-    )
-    content = content.replace(
-        "from ..modbus.modbus_client import RealModbusTcpClient",
-        f"from {modbus_client_name} import RealModbusTcpClient",
-    )
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tmp_file:
-        tmp_file.write(content)
-        tmp_file_path = tmp_file.name
-
-    try:
-        spec = importlib.util.spec_from_file_location(
-            "config_flow_create_error", tmp_file_path
-        )
-        config_flow_module = importlib.util.module_from_spec(spec)
-        module_name = f"{package_name}.integration.config_flow_create_error"
-        sys.modules[module_name] = config_flow_module
-        spec.loader.exec_module(config_flow_module)
-
-        flow = config_flow_module.ConfigFlow()
-        result = await flow.async_step_user(
-            {
-                "host": "192.168.1.100",
-                "port": 502,
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(side_effect=ConnectionError("Failed to create client")),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data={
+                CONF_HOST: "192.168.1.100",
+                CONF_PORT: 502,
                 "scan_interval": 15,
                 "slow_scan_interval": 300,
                 "demo_mode": False,
-            }
+            },
         )
 
-        # Should return form with connection error
-        assert result["type"] == "form"
-        assert "errors" in result
-        assert result["errors"]["host"] == "cannot_connect"
-    finally:
-        os.unlink(tmp_file_path)
+    # Should return form with connection error
+    assert result["type"] == "form"
+    assert "errors" in result
+    assert result["errors"][CONF_HOST] == "cannot_connect"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_single_label_hostname(monkeypatch):
+async def test_config_flow_single_label_hostname(hass, enable_custom_integrations):
     """Test config flow with single label hostname."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "localhost",
-            "port": 502,
-            "scan_interval": 15,
-            "slow_scan_interval": 300,
-            "demo_mode": False,
-        }
-    )
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data={
+                CONF_HOST: "localhost",
+                CONF_PORT: 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "demo_mode": False,
+            },
+        )
 
     assert result["type"] == "create_entry"
-    assert result["data"]["host"] == "localhost"
+    assert result["data"][CONF_HOST] == "localhost"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_hostname_with_only_numbers(monkeypatch):
+async def test_config_flow_hostname_with_only_numbers(hass, enable_custom_integrations):
     """Test config flow with hostname containing only numbers."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-    flow = config_flow_module.ConfigFlow()
-
-    result = await flow.async_step_user(
-        {
-            "host": "123456",
-            "port": 502,
-            "scan_interval": 15,
-            "slow_scan_interval": 300,
-            "demo_mode": False,
-        }
-    )
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+            data={
+                CONF_HOST: "123456",
+                CONF_PORT: 502,
+                "scan_interval": 15,
+                "slow_scan_interval": 300,
+                "demo_mode": False,
+            },
+        )
 
     assert result["type"] == "create_entry"
-    assert result["data"]["host"] == "123456"
+    assert result["data"][CONF_HOST] == "123456"
 
 
 @pytest.mark.asyncio
-async def test_options_flow_missing_keys_in_input(monkeypatch):
+async def test_options_flow_missing_keys_in_input(hass, enable_custom_integrations):
     """Test options flow when some keys are missing from user input."""
-    config_flow_module = _load_config_flow_module(monkeypatch)
-
-    config_entry = SimpleNamespace(
-        entry_id="test_entry_1",
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={
             "scan_interval": 15,
             "slow_scan_interval": 300,
@@ -1051,8 +964,10 @@ async def test_options_flow_missing_keys_in_input(monkeypatch):
             "electric_power_sensor": "existing_sensor",
         },
     )
+    entry.add_to_hass(hass)
 
-    options_flow = config_flow_module.OptionsFlow(config_entry)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == "form"
 
     # Provide partial input (missing electric_power_sensor)
     user_input = {
@@ -1062,15 +977,18 @@ async def test_options_flow_missing_keys_in_input(monkeypatch):
         # electric_power_sensor is missing
     }
 
-    result = await options_flow.async_step_init(user_input)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input
+    )
 
     # Should still create entry with provided values
     assert result["type"] == "create_entry"
     assert result["data"]["scan_interval"] == 20
     assert result["data"]["slow_scan_interval"] == 400
     assert result["data"]["demo_mode"] is True
-    # Missing electric_power_sensor should not be in result
-    assert "electric_power_sensor" not in result["data"]
+    # The real HA flow applies the options schema, which fills missing keys
+    # with the current option values used as form defaults.
+    assert result["data"]["electric_power_sensor"] == "existing_sensor"
 
 
 @pytest.mark.asyncio
