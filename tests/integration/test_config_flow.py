@@ -785,7 +785,7 @@ async def test_config_flow_reauth_shows_form(hass, enable_custom_integrations):
     entry = MockConfigEntry(
         domain=DOMAIN,
         unique_id="192.168.1.100:502",
-        data={CONF_HOST: "192.1168.1.100", CONF_PORT: 502},
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={"scan_interval": 15},
     )
     entry.add_to_hass(hass)
