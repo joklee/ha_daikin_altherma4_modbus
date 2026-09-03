@@ -974,6 +974,52 @@ async def test_config_flow_reconfigure_success(hass, enable_custom_integrations)
 
 
 @pytest.mark.asyncio
+async def test_config_flow_reconfigure_preserves_unknown_options(
+    hass, enable_custom_integrations
+):
+    """Test reconfigure flow preserves options the integration does not know."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={
+            "scan_interval": 15,
+            "slow_scan_interval": 300,
+            "demo_mode": False,
+            "electric_power_sensor": "sensor.power",
+            "some_future_option": "keep-me",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    with mock.patch.object(hass.config_entries, "async_reload", new=mock.AsyncMock()):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "demo_mode": True,
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reconfigure_successful"
+    # Unknown/future options survive the reconfigure merge.
+    assert entry.options["some_future_option"] == "keep-me"
+    # Known options are preserved when not provided and updated when provided.
+    assert entry.options["electric_power_sensor"] == "sensor.power"
+    assert entry.options["scan_interval"] == 20
+    assert entry.options["slow_scan_interval"] == 400
+    assert entry.options["demo_mode"] is True
+
+
+@pytest.mark.asyncio
 async def test_config_flow_reconfigure_validation_error(
     hass, enable_custom_integrations
 ):
