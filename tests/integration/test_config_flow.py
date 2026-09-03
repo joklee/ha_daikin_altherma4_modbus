@@ -863,6 +863,48 @@ async def test_config_flow_reauth_invalid_host(hass, enable_custom_integrations)
 
 
 @pytest.mark.asyncio
+async def test_config_flow_reauth_connection_error(hass, enable_custom_integrations):
+    """Test reauth flow with connection error keeps the entry unchanged."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry.add_to_hass(hass)
+
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=False)),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "demo_mode": False,  # Not demo mode, so connection test runs
+            },
+        )
+
+    # Flow stays open with the connection error.
+    assert result["type"] == "form"
+    assert result["step_id"] == "reauth"
+    assert result["errors"][CONF_HOST] == "cannot_connect"
+
+    # Existing working configuration must not be overwritten.
+    assert entry.data == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
+    assert entry.options == {"scan_interval": 15}
+    assert entry.unique_id == "192.168.1.100:502"
+
+
+@pytest.mark.asyncio
 async def test_config_flow_reconfigure_shows_form(hass, enable_custom_integrations):
     """Test reconfigure flow shows form."""
     entry = MockConfigEntry(
