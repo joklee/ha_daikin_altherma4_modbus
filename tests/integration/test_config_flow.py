@@ -863,6 +863,149 @@ async def test_config_flow_reauth_invalid_host(hass, enable_custom_integrations)
 
 
 @pytest.mark.asyncio
+async def test_config_flow_reconfigure_shows_form(hass, enable_custom_integrations):
+    """Test reconfigure flow shows form."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_RECONFIGURE,
+            "entry_id": entry.entry_id,
+        },
+    )
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "reconfigure"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reconfigure_success(hass, enable_custom_integrations):
+    """Test reconfigure flow updates data, options and unique_id, then reloads."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15, "electric_power_sensor": "sensor.power"},
+    )
+    entry.add_to_hass(hass)
+
+    # Reload would load the whole integration; it is only asserted here.
+    with mock.patch.object(
+        hass.config_entries, "async_reload", new=mock.AsyncMock()
+    ) as reload_mock:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "demo_mode": True,
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry.options == {
+        "electric_power_sensor": "sensor.power",
+        "scan_interval": 20,
+        "slow_scan_interval": 400,
+        "demo_mode": True,
+    }
+    assert entry.unique_id == "192.168.1.200:502"
+    reload_mock.assert_awaited_once_with(entry.entry_id)
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reconfigure_validation_error(
+    hass, enable_custom_integrations
+):
+    """Test reconfigure flow with invalid input keeps the entry unchanged."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_RECONFIGURE,
+            "entry_id": entry.entry_id,
+        },
+        data={
+            CONF_HOST: "invalid host with spaces",
+            CONF_PORT: 502,
+            "scan_interval": 20,
+            "slow_scan_interval": 400,
+            "demo_mode": False,
+        },
+    )
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "reconfigure"
+    assert "errors" in result
+    assert result["errors"][CONF_HOST] == "invalid_host"
+    assert entry.data[CONF_HOST] == "192.168.1.100"
+    assert entry.unique_id == "192.168.1.100:502"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reconfigure_connection_error(
+    hass, enable_custom_integrations
+):
+    """Test reconfigure flow with connection error keeps the entry unchanged."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry.add_to_hass(hass)
+
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=False)),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "demo_mode": False,  # Not demo mode, so connection test runs
+            },
+        )
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "reconfigure"
+    assert "errors" in result
+    assert result["errors"][CONF_HOST] == "cannot_connect"
+    assert entry.data[CONF_HOST] == "192.168.1.100"
+    assert entry.unique_id == "192.168.1.100:502"
+
+
+@pytest.mark.asyncio
 async def test_config_flow_unique_id_prevents_duplicates(
     hass, enable_custom_integrations
 ):
