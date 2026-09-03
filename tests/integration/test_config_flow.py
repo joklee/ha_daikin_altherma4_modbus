@@ -811,7 +811,9 @@ async def test_config_flow_reauth_success(hass, enable_custom_integrations):
     entry.add_to_hass(hass)
 
     # Reload would load the whole integration; it is only asserted here.
-    with mock.patch.object(hass.config_entries, "async_reload", new=mock.AsyncMock()):
+    with mock.patch.object(
+        hass.config_entries, "async_reload", new=mock.AsyncMock()
+    ) as reload_mock:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={
@@ -831,6 +833,7 @@ async def test_config_flow_reauth_success(hass, enable_custom_integrations):
     assert result["reason"] == "reauth_successful"
     assert entry.data[CONF_HOST] == "192.168.1.200"
     assert entry.options["scan_interval"] == 20
+    reload_mock.assert_awaited_once_with(entry.entry_id)
 
 
 @pytest.mark.asyncio
