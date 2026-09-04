@@ -963,7 +963,7 @@ async def test_config_flow_reauth_connection_success(
 
 
 @pytest.mark.asyncio
-async def test_config_flow_reauth_duplicate_unique_id(
+async def test_config_flow_reauth_duplicate_host_port(
     hass, enable_custom_integrations
 ):
     """Test reauth aborts when the target host/port already exists.
@@ -1400,7 +1400,7 @@ async def test_config_flow_reconfigure_connection_error(
 
 
 @pytest.mark.asyncio
-async def test_config_flow_reconfigure_duplicate_unique_id(
+async def test_config_flow_reconfigure_duplicate_host_port(
     hass, enable_custom_integrations
 ):
     """Test reconfigure aborts when the target host/port already exists."""
