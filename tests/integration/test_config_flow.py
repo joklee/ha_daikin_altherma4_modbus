@@ -921,6 +921,48 @@ async def test_config_flow_reauth_empty_electric_power_sensor_not_written(
 
 
 @pytest.mark.asyncio
+async def test_config_flow_reauth_connection_success(
+    hass, enable_custom_integrations
+):
+    """Test reauth flow with demo_mode=False and a successful connection test."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry.add_to_hass(hass)
+
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    ), mock.patch.object(
+        hass.config_entries, "async_reload", new=mock.AsyncMock()
+    ) as reload_mock:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "demo_mode": False,  # Not demo mode, so connection test runs
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_HOST] == "192.168.1.200"
+    assert entry.options["scan_interval"] == 20
+    reload_mock.assert_awaited_once_with(entry.entry_id)
+
+
+@pytest.mark.asyncio
 async def test_config_flow_reauth_invalid_host(hass, enable_custom_integrations):
     """Test reauth flow with invalid host."""
     entry = MockConfigEntry(
@@ -1101,6 +1143,132 @@ async def test_config_flow_reconfigure_preserves_unknown_options(
     assert entry.options["scan_interval"] == 20
     assert entry.options["slow_scan_interval"] == 400
     assert entry.options["demo_mode"] is True
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reconfigure_connection_success_not_demo(
+    hass, enable_custom_integrations
+):
+    """Test reconfigure flow with demo_mode=False and a successful connection."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15, "electric_power_sensor": "sensor.power"},
+    )
+    entry.add_to_hass(hass)
+
+    with mock.patch.object(
+        RealModbusTcpClient,
+        "create",
+        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    ), mock.patch.object(
+        hass.config_entries, "async_reload", new=mock.AsyncMock()
+    ) as reload_mock:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "demo_mode": False,  # Not demo mode, so connection test runs
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry.options["scan_interval"] == 20
+    assert entry.options["electric_power_sensor"] == "sensor.power"
+    assert entry.unique_id == "192.168.1.200:502"
+    reload_mock.assert_awaited_once_with(entry.entry_id)
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reconfigure_empty_electric_power_sensor_preserves_existing(
+    hass, enable_custom_integrations
+):
+    """Test reconfigure flow with an empty sensor input keeps the existing one.
+
+    Unlike reauth (which rebuilds options from scratch), reconfigure merges
+    into a copy of the existing options and only overwrites
+    electric_power_sensor when a non-empty value is provided. An explicit
+    empty string must therefore not clear a previously configured sensor.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15, "electric_power_sensor": "sensor.power"},
+    )
+    entry.add_to_hass(hass)
+
+    with mock.patch.object(hass.config_entries, "async_reload", new=mock.AsyncMock()):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "electric_power_sensor": "",
+                "demo_mode": True,
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reconfigure_successful"
+    # An explicit empty string does not clear the existing sensor.
+    assert entry.options["electric_power_sensor"] == "sensor.power"
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reconfigure_updates_electric_power_sensor(
+    hass, enable_custom_integrations
+):
+    """Test reconfigure flow writes a non-empty electric power sensor.
+
+    Complements the empty-sensor test above: a non-empty value must
+    overwrite a previously configured sensor in the merged options.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15, "electric_power_sensor": "sensor.power"},
+    )
+    entry.add_to_hass(hass)
+
+    with mock.patch.object(hass.config_entries, "async_reload", new=mock.AsyncMock()):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "electric_power_sensor": "  sensor.new  ",  # stripped before writing
+                "demo_mode": True,
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reconfigure_successful"
+    # A non-empty value overwrites the previously configured sensor.
+    assert entry.options["electric_power_sensor"] == "sensor.new"
 
 
 @pytest.mark.asyncio
