@@ -810,9 +810,9 @@ async def test_config_flow_reauth_success(hass, enable_custom_integrations):
     )
     entry.add_to_hass(hass)
 
-    # Reload would load the whole integration; it is only asserted here.
+    # Schedule-reload would load the whole integration; only assert the call.
     with mock.patch.object(
-        hass.config_entries, "async_reload", new=mock.AsyncMock()
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
     ) as reload_mock:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -833,7 +833,7 @@ async def test_config_flow_reauth_success(hass, enable_custom_integrations):
     assert result["reason"] == "reauth_successful"
     assert entry.data[CONF_HOST] == "192.168.1.200"
     assert entry.options["scan_interval"] == 20
-    reload_mock.assert_awaited_once_with(entry.entry_id)
+    reload_mock.assert_called_once_with(entry.entry_id)
 
 
 @pytest.mark.asyncio
@@ -849,9 +849,9 @@ async def test_config_flow_reauth_sets_new_electric_power_sensor(
     )
     entry.add_to_hass(hass)
 
-    # Reload would load the whole integration; it is only asserted here.
+    # Schedule-reload would load the whole integration; only assert the call.
     with mock.patch.object(
-        hass.config_entries, "async_reload", new=mock.AsyncMock()
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
     ) as reload_mock:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -872,7 +872,7 @@ async def test_config_flow_reauth_sets_new_electric_power_sensor(
     assert result["type"] == "abort"
     assert result["reason"] == "reauth_successful"
     assert entry.options["electric_power_sensor"] == "sensor.new"
-    reload_mock.assert_awaited_once_with(entry.entry_id)
+    reload_mock.assert_called_once_with(entry.entry_id)
 
 
 @pytest.mark.asyncio
@@ -889,7 +889,7 @@ async def test_config_flow_reauth_empty_electric_power_sensor_not_written(
     entry.add_to_hass(hass)
 
     with mock.patch.object(
-        hass.config_entries, "async_reload", new=mock.AsyncMock()
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
     ) as reload_mock:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -917,7 +917,7 @@ async def test_config_flow_reauth_empty_electric_power_sensor_not_written(
         "slow_scan_interval": 400,
         "demo_mode": True,
     }
-    reload_mock.assert_awaited_once_with(entry.entry_id)
+    reload_mock.assert_called_once_with(entry.entry_id)
 
 
 @pytest.mark.asyncio
@@ -938,7 +938,7 @@ async def test_config_flow_reauth_connection_success(
         "create",
         new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
     ), mock.patch.object(
-        hass.config_entries, "async_reload", new=mock.AsyncMock()
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
     ) as reload_mock:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -959,7 +959,7 @@ async def test_config_flow_reauth_connection_success(
     assert result["reason"] == "reauth_successful"
     assert entry.data[CONF_HOST] == "192.168.1.200"
     assert entry.options["scan_interval"] == 20
-    reload_mock.assert_awaited_once_with(entry.entry_id)
+    reload_mock.assert_called_once_with(entry.entry_id)
 
 
 @pytest.mark.asyncio
@@ -988,7 +988,7 @@ async def test_config_flow_reauth_duplicate_host_port(
     entry_b.add_to_hass(hass)
 
     with mock.patch.object(
-        hass.config_entries, "async_reload", new=mock.AsyncMock()
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
     ) as reload_mock:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -1010,7 +1010,7 @@ async def test_config_flow_reauth_duplicate_host_port(
     # Neither entry may have been modified.
     assert entry_a.data == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
     assert entry_b.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
-    reload_mock.assert_not_awaited()
+    reload_mock.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -1118,9 +1118,9 @@ async def test_config_flow_reconfigure_success(hass, enable_custom_integrations)
     )
     entry.add_to_hass(hass)
 
-    # Reload would load the whole integration; it is only asserted here.
+    # Schedule-reload would load the whole integration; only assert the call.
     with mock.patch.object(
-        hass.config_entries, "async_reload", new=mock.AsyncMock()
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
     ) as reload_mock:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -1147,7 +1147,7 @@ async def test_config_flow_reconfigure_success(hass, enable_custom_integrations)
         "demo_mode": True,
     }
     assert entry.unique_id == "192.168.1.200:502"
-    reload_mock.assert_awaited_once_with(entry.entry_id)
+    reload_mock.assert_called_once_with(entry.entry_id)
 
 
 @pytest.mark.asyncio
@@ -1169,7 +1169,9 @@ async def test_config_flow_reconfigure_preserves_unknown_options(
     )
     entry.add_to_hass(hass)
 
-    with mock.patch.object(hass.config_entries, "async_reload", new=mock.AsyncMock()):
+    with mock.patch.object(
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
+    ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={
@@ -1214,7 +1216,7 @@ async def test_config_flow_reconfigure_connection_success_not_demo(
         "create",
         new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
     ), mock.patch.object(
-        hass.config_entries, "async_reload", new=mock.AsyncMock()
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
     ) as reload_mock:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -1237,7 +1239,7 @@ async def test_config_flow_reconfigure_connection_success_not_demo(
     assert entry.options["scan_interval"] == 20
     assert entry.options["electric_power_sensor"] == "sensor.power"
     assert entry.unique_id == "192.168.1.200:502"
-    reload_mock.assert_awaited_once_with(entry.entry_id)
+    reload_mock.assert_called_once_with(entry.entry_id)
 
 
 @pytest.mark.asyncio
@@ -1259,7 +1261,9 @@ async def test_config_flow_reconfigure_empty_electric_power_sensor_preserves_exi
     )
     entry.add_to_hass(hass)
 
-    with mock.patch.object(hass.config_entries, "async_reload", new=mock.AsyncMock()):
+    with mock.patch.object(
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
+    ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={
@@ -1299,7 +1303,9 @@ async def test_config_flow_reconfigure_updates_electric_power_sensor(
     )
     entry.add_to_hass(hass)
 
-    with mock.patch.object(hass.config_entries, "async_reload", new=mock.AsyncMock()):
+    with mock.patch.object(
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
+    ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={
@@ -1419,9 +1425,9 @@ async def test_config_flow_reconfigure_duplicate_host_port(
     entry_a.add_to_hass(hass)
     entry_b.add_to_hass(hass)
 
-    # Reload would load the whole integration; it is only asserted here.
+    # Schedule-reload would load the whole integration; only assert the call.
     with mock.patch.object(
-        hass.config_entries, "async_reload", new=mock.AsyncMock()
+        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
     ) as reload_mock:
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -1443,7 +1449,7 @@ async def test_config_flow_reconfigure_duplicate_host_port(
     # Neither entry may have been modified.
     assert entry_a.data == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
     assert entry_b.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
-    reload_mock.assert_not_awaited()
+    reload_mock.assert_not_called()
 
 
 @pytest.mark.asyncio

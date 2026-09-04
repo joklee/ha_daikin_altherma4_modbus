@@ -292,11 +292,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # (prevents two entries sharing the same unique_id "host:port")
             self._async_abort_entries_match({CONF_HOST: host, CONF_PORT: port})
 
-            # Update the config entry data and options
-            new_data = {
-                CONF_HOST: host,
-                CONF_PORT: port,
-            }
             new_options = {
                 "scan_interval": scan_interval,
                 "slow_scan_interval": slow_scan_interval,
@@ -306,14 +301,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if electric_power_sensor:
                 new_options["electric_power_sensor"] = electric_power_sensor
 
-            self.hass.config_entries.async_update_entry(
+            # data_updates preserves unknown data keys on the entry
+            return self.async_update_reload_and_abort(
                 config_entry,
                 unique_id=_connection_unique_id(host, port),
-                data=new_data,
+                data_updates={
+                    CONF_HOST: host,
+                    CONF_PORT: port,
+                },
                 options=new_options,
+                reason="reauth_successful",
             )
-            await self.hass.config_entries.async_reload(config_entry.entry_id)
-            return self.async_abort(reason="reauth_successful")
 
         return self.async_show_form(
             step_id="reauth",
@@ -371,10 +369,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # (prevents two entries sharing the same unique_id "host:port")
             self._async_abort_entries_match({CONF_HOST: host, CONF_PORT: port})
 
-            new_data = {
-                CONF_HOST: host,
-                CONF_PORT: port,
-            }
             new_options = dict(reconfigure_entry.options)
             new_options["scan_interval"] = scan_interval
             new_options["slow_scan_interval"] = slow_scan_interval
@@ -383,14 +377,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if electric_power_sensor:
                 new_options["electric_power_sensor"] = electric_power_sensor
 
-            self.hass.config_entries.async_update_entry(
+            # data_updates preserves unknown data keys on the entry
+            return self.async_update_reload_and_abort(
                 reconfigure_entry,
                 unique_id=_connection_unique_id(host, port),
-                data=new_data,
+                data_updates={
+                    CONF_HOST: host,
+                    CONF_PORT: port,
+                },
                 options=new_options,
+                reason="reconfigure_successful",
             )
-            await self.hass.config_entries.async_reload(reconfigure_entry.entry_id)
-            return self.async_abort(reason="reconfigure_successful")
 
         return self.async_show_form(
             step_id="reconfigure",
