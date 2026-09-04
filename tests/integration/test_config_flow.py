@@ -921,9 +921,7 @@ async def test_config_flow_reauth_empty_electric_power_sensor_not_written(
 
 
 @pytest.mark.asyncio
-async def test_config_flow_reauth_connection_success(
-    hass, enable_custom_integrations
-):
+async def test_config_flow_reauth_connection_success(hass, enable_custom_integrations):
     """Test reauth flow with demo_mode=False and a successful connection test."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -933,13 +931,16 @@ async def test_config_flow_reauth_connection_success(
     )
     entry.add_to_hass(hass)
 
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
-    ), mock.patch.object(
-        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
-    ) as reload_mock:
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "create",
+            new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+        ),
+        mock.patch.object(
+            hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
+        ) as reload_mock,
+    ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={
@@ -963,9 +964,7 @@ async def test_config_flow_reauth_connection_success(
 
 
 @pytest.mark.asyncio
-async def test_config_flow_reauth_duplicate_host_port(
-    hass, enable_custom_integrations
-):
+async def test_config_flow_reauth_duplicate_host_port(hass, enable_custom_integrations):
     """Test reauth aborts when the target host/port already exists.
 
     Reauth must not be able to give two entries the same identity
@@ -1211,13 +1210,16 @@ async def test_config_flow_reconfigure_connection_success_not_demo(
     )
     entry.add_to_hass(hass)
 
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
-    ), mock.patch.object(
-        hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
-    ) as reload_mock:
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "create",
+            new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+        ),
+        mock.patch.object(
+            hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
+        ) as reload_mock,
+    ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
             context={
