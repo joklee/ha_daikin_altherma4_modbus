@@ -963,6 +963,57 @@ async def test_config_flow_reauth_connection_success(
 
 
 @pytest.mark.asyncio
+async def test_config_flow_reauth_duplicate_unique_id(
+    hass, enable_custom_integrations
+):
+    """Test reauth aborts when the target host/port already exists.
+
+    Reauth must not be able to give two entries the same identity
+    (host:port) by reauthenticating one entry onto another entry's
+    connection details.
+    """
+    entry_a = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry_b = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.200:502",
+        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry_a.add_to_hass(hass)
+    entry_b.add_to_hass(hass)
+
+    with mock.patch.object(
+        hass.config_entries, "async_reload", new=mock.AsyncMock()
+    ) as reload_mock:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": entry_a.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",  # already used by entry_b
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "demo_mode": True,
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "already_configured"
+    # Neither entry may have been modified.
+    assert entry_a.data == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
+    assert entry_b.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    reload_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_config_flow_reauth_invalid_host(hass, enable_custom_integrations):
     """Test reauth flow with invalid host."""
     entry = MockConfigEntry(

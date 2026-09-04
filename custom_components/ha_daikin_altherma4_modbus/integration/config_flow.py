@@ -283,6 +283,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         errors={CONF_HOST: error_key},
                     )
 
+            # Abort if another config entry already uses this host/port
+            # (prevents two entries sharing the same unique_id "host:port")
+            self._async_abort_entries_match({CONF_HOST: host, CONF_PORT: port})
+
             # Update the config entry data and options
             new_data = {
                 CONF_HOST: host,
