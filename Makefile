@@ -1,7 +1,7 @@
 # Makefile for Daikin Altherma 4 Modbus Integration
 # Provides convenient commands for development, testing, and code quality
 
-.PHONY: help install install-dev test test-unit test-integration test-all test-coverage lint format security clean docs benchmark hassfest test-platform-modules test-e2e test-slow test-parallel test-fast
+.PHONY: help install install-dev test test-unit test-integration test-all test-coverage test-ha lint format security clean docs benchmark hassfest test-platform-modules test-e2e test-slow test-parallel test-fast
 
 # Default target
 help:
@@ -21,6 +21,7 @@ help:
 	@echo "  test-coverage  Generate detailed coverage report"
 	@echo "  test-slow      Run slow tests (if any)"
 	@echo "  test-parallel  Run tests in parallel"
+	@echo "  test-ha        Run real Home Assistant integration tests"
 	@echo ""
 	@echo "🔍 Code Quality:"
 	@echo "  lint          Run linting with Ruff"
@@ -81,6 +82,10 @@ test-coverage:
 	@echo "📊 Generating detailed coverage report..."
 	pytest --cov=custom_components/ha_daikin_altherma4_modbus --cov-report=html --cov-report=xml --cov-report=term-missing --cov-fail-under=25
 	@echo "📈 Coverage report generated in htmlcov/"
+
+test-ha:
+	@echo "🏠 Running real Home Assistant integration tests..."
+	pytest tests/ha/ -v
 
 test-slow:
 	@echo "🐌 Running slow tests..."

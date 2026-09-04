@@ -5,7 +5,7 @@ import sys
 import types
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -35,14 +35,8 @@ def _install_fake_package(monkeypatch) -> str:
 
 def _load_integration_module(monkeypatch):
     """Load integration module with mocked dependencies."""
-    # Set up homeassistant mocks first
-    homeassistant = types.ModuleType("homeassistant")
-    monkeypatch.setitem(sys.modules, "homeassistant", homeassistant)
-
-    exceptions_module = types.ModuleType("homeassistant.exceptions")
-    exceptions_module.ConfigEntryNotReady = Exception
-    monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
-
+    # Home Assistant is imported from the real installed distribution;
+    # only the integration's own submodules are mocked below.
     package_name = _install_fake_package(monkeypatch)
     const_name = f"{package_name}.core.const"
     coordinator_manager_name = f"{package_name}.integration.coordinator_manager"
@@ -172,7 +166,7 @@ def _load_integration_module(monkeypatch):
 
     # Mock services module (has HA dependencies)
     services_module = types.ModuleType(services_name)
-    services_module.register_services = AsyncMock()
+    services_module.register_services = MagicMock()
     monkeypatch.setitem(sys.modules, services_name, services_module)
 
     # Clear possible cache in sys.modules to ensure our mocks are picked up
@@ -241,6 +235,13 @@ async def test_demo_mode_installation(monkeypatch):
     gen = _load_integration_module(monkeypatch)
     integration, _manager_cls, _unified_cls, _client_cls = next(gen)
 
+    # The success path deletes a repair issue through the real issue
+    # registry, which a plain fake hass does not implement. Mock the
+    # integration seam instead of the issue registry internals.
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr(integration, "async_delete_connection_issue", MagicMock())
+
     hass = SimpleNamespace(
         data={},
         bus=SimpleNamespace(async_listen=lambda *a, **kw: lambda: None),
@@ -296,6 +297,11 @@ async def test_demo_mode_skips_connection_test(monkeypatch):
     """Test that demo mode skips the connection test."""
     gen = _load_integration_module(monkeypatch)
     integration, _manager_cls, _unified_cls, _client_cls = next(gen)
+
+    # See test_demo_mode_installation: mock the issue-registry seam.
+    from unittest.mock import MagicMock
+
+    monkeypatch.setattr(integration, "async_delete_connection_issue", MagicMock())
 
     hass = SimpleNamespace(
         data={},

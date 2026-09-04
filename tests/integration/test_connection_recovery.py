@@ -86,11 +86,13 @@ class _RecoverableClient:
         return FakeModbusResponse([False] * 4, address, count, is_bits=True)
 
 
-def _make_coordinator(fail_cls):
-    """Build a real DaikinAlthermaNormalCoordinator with a faked I/O boundary."""
-    hass = SimpleNamespace(
-        config_entries=SimpleNamespace(async_entries=lambda domain: [])
-    )
+def _make_coordinator(hass, fail_cls):
+    """Build a real DaikinAlthermaNormalCoordinator with a faked I/O boundary.
+
+    ``hass`` is the real Home Assistant test instance provided by
+    ``pytest-homeassistant-custom-component``; constructing the real
+    ``DataUpdateCoordinator`` requires its frame helper to be set up.
+    """
     coordinator = DaikinAlthermaNormalCoordinator(
         hass, "192.0.2.1", 502, scan_interval=10, demo_mode=False
     )
@@ -121,24 +123,6 @@ def _make_sensor(coordinator):
     )
 
 
-async def _refresh(coordinator):
-    """Test-harness refresh mirroring the real DataUpdateCoordinator lifecycle.
-
-    The ``homeassistant`` stub in this project does not implement
-    ``last_update_success`` or ``async_config_entry_first_refresh``; this small
-    wrapper reproduces exactly the semantics the real DUC applies, so the test
-    can observe the availability the integration relies on.
-    """
-    try:
-        data = await coordinator._async_update_data()
-    except Exception:  # UpdateFailed is ``Exception`` in the stub.
-        coordinator.last_update_success = False
-        raise
-    else:
-        coordinator.last_update_success = True
-        return data
-
-
 @pytest.mark.parametrize(
     "fail_cls",
     [
@@ -146,7 +130,7 @@ async def _refresh(coordinator):
         ModbusReadException,
     ],
 )
-async def test_connection_recovery_cycle(fail_cls):
+async def test_connection_recovery_cycle(fail_cls, hass):
     """A communication failure at the transport can be recovered from.
 
     Phase 1 - connected
@@ -172,10 +156,10 @@ async def test_connection_recovery_cycle(fail_cls):
     exercising the genuine input-register failure path.
     """
     # Phase 1 - connected
-    coordinator, client = _make_coordinator(fail_cls)
+    coordinator, client = _make_coordinator(hass, fail_cls)
     sensor = _make_sensor(coordinator)
 
-    await _refresh(coordinator)
+    await coordinator.async_refresh()
     assert coordinator.last_update_success is True
     assert coordinator.data.get("input_40") is not None
     assert sensor.available is True
@@ -186,7 +170,7 @@ async def test_connection_recovery_cycle(fail_cls):
 
     # The failure is swallowed by the repository: no UpdateFailed is raised
     # and the coordinator reports a successful (if empty) update.
-    await _refresh(coordinator)
+    await coordinator.async_refresh()
     assert "input_40" not in coordinator.data
 
     # Phase 3 - visible (entity-level) unavailability.
@@ -195,7 +179,7 @@ async def test_connection_recovery_cycle(fail_cls):
 
     # Phase 4 - reconnect: the transport is healthy again.
     client.fail = False
-    await _refresh(coordinator)
+    await coordinator.async_refresh()
 
     # Phase 5 - recovered.
     assert coordinator.last_update_success is True

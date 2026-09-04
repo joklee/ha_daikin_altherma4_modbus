@@ -7,18 +7,8 @@ from unittest.mock import Mock
 
 import pytest
 
-# Import shared test utilities
+from custom_components.ha_daikin_altherma4_modbus.core import const as const_module
 from tests.fakes.modbus import FakeModbusClient, FakeModbusResponse
-from tests.helpers.modules import (
-    load_const_module,
-    setup_project_paths,
-)
-
-# Set up paths
-project_root = setup_project_paths()
-
-# Load const module for constants access
-const_module = load_const_module(project_root)
 
 
 # Pytest fixtures

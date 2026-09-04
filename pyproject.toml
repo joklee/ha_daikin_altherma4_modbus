@@ -21,3 +21,6 @@ ignore = ["BLE001", "S102", "TRY002", "S110", "B017", "PLW0602", "ASYNC230"]
 "tests/test_mock_client_16bit.py" = ["E402", "I001"]
 # Ignore E402 for test file with late import after HA mock setup
 "tests/test_services.py" = ["E402"]
+# Ignore E402 for conftest: sys.path setup must run before importing
+# custom_components to normalize its __path__ for HA's integration loader
+"tests/conftest.py" = ["E402"]

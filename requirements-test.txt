@@ -7,6 +7,12 @@ pytest-asyncio>=0.21.0
 pytest-cov>=4.0.0
 pytest-mock>=3.10.0
 
+# Home Assistant integration test infrastructure (provides hass fixture,
+# MockConfigEntry, enable_custom_integrations, ...)
+# Note: pytest-homeassistant-custom-component pins a matching homeassistant
+# version as its own dependency; let pip resolve the consistent set.
+pytest-homeassistant-custom-component
+
 # Coverage reporting
 coverage>=7.0.0
 

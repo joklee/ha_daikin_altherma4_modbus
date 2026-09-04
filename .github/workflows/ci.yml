@@ -43,10 +43,14 @@ jobs:
           fi
 
       # 🧪 Set up Python environment
+      # Python 3.14 is required because pytest-homeassistant-custom-component
+      # >=0.13.354 pins homeassistant 2026.8.x, which needs >=3.14. On older
+      # Pythons pip silently resolves an outdated PHCC release with an old
+      # homeassistant pin that lacks newer APIs (e.g. ServiceValidationError).
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       # 📦 Install dependencies
       - name: Install dependencies
