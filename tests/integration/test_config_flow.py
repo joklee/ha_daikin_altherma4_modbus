@@ -837,6 +837,90 @@ async def test_config_flow_reauth_success(hass, enable_custom_integrations):
 
 
 @pytest.mark.asyncio
+async def test_config_flow_reauth_sets_new_electric_power_sensor(
+    hass, enable_custom_integrations
+):
+    """Test reauth flow writes a provided electric power sensor to options."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry.add_to_hass(hass)
+
+    # Reload would load the whole integration; it is only asserted here.
+    with mock.patch.object(
+        hass.config_entries, "async_reload", new=mock.AsyncMock()
+    ) as reload_mock:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "electric_power_sensor": "  sensor.new  ",  # stripped before writing
+                "demo_mode": True,
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert entry.options["electric_power_sensor"] == "sensor.new"
+    reload_mock.assert_awaited_once_with(entry.entry_id)
+
+
+@pytest.mark.asyncio
+async def test_config_flow_reauth_empty_electric_power_sensor_not_written(
+    hass, enable_custom_integrations
+):
+    """Test reauth flow does not write an empty electric power sensor."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15, "electric_power_sensor": "sensor.old"},
+    )
+    entry.add_to_hass(hass)
+
+    with mock.patch.object(
+        hass.config_entries, "async_reload", new=mock.AsyncMock()
+    ) as reload_mock:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_REAUTH,
+                "entry_id": entry.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "electric_power_sensor": "",
+                "demo_mode": True,
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    # Reauth rebuilds options from scratch: an empty sensor is not written and
+    # a previously configured sensor is dropped (unlike reconfigure, which
+    # copies existing options).
+    assert entry.options == {
+        "scan_interval": 20,
+        "slow_scan_interval": 400,
+        "demo_mode": True,
+    }
+    reload_mock.assert_awaited_once_with(entry.entry_id)
+
+
+@pytest.mark.asyncio
 async def test_config_flow_reauth_invalid_host(hass, enable_custom_integrations):
     """Test reauth flow with invalid host."""
     entry = MockConfigEntry(
