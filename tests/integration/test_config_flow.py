@@ -1181,6 +1181,53 @@ async def test_config_flow_reconfigure_connection_error(
 
 
 @pytest.mark.asyncio
+async def test_config_flow_reconfigure_duplicate_unique_id(
+    hass, enable_custom_integrations
+):
+    """Test reconfigure aborts when the target host/port already exists."""
+    entry_a = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.100:502",
+        data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry_b = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="192.168.1.200:502",
+        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502},
+        options={"scan_interval": 15},
+    )
+    entry_a.add_to_hass(hass)
+    entry_b.add_to_hass(hass)
+
+    # Reload would load the whole integration; it is only asserted here.
+    with mock.patch.object(
+        hass.config_entries, "async_reload", new=mock.AsyncMock()
+    ) as reload_mock:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={
+                "source": config_entries.SOURCE_RECONFIGURE,
+                "entry_id": entry_a.entry_id,
+            },
+            data={
+                CONF_HOST: "192.168.1.200",  # already used by entry_b
+                CONF_PORT: 502,
+                "scan_interval": 20,
+                "slow_scan_interval": 400,
+                "demo_mode": True,
+            },
+        )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "already_configured"
+    # Neither entry may have been modified.
+    assert entry_a.data == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
+    assert entry_b.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    reload_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_config_flow_unique_id_prevents_duplicates(
     hass, enable_custom_integrations
 ):
