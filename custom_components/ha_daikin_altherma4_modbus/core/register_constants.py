@@ -459,7 +459,6 @@ INPUT_REGISTERS = [
         register_name="input_68",
         data_type=INT16,
         unit="%",
-        device_class=SensorDeviceClass.SPEED,
         translation_key="input_68",
     ),
     SensorRegister(

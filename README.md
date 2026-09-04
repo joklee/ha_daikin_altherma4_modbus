@@ -241,7 +241,7 @@ You can change the host address and port via the reconfigure flow:
 |--------|---------|------|-------------|------------|-------------|
 | Bypass valve position | 66 | % | – | measurement | – |
 | Storage valve position | 67 | % | – | measurement | – |
-| Circulation pump speed | 68 | % | speed | measurement | – |
+| Circulation pump speed | 68 | % | – | measurement | – |
 | Mixed pump PWM | 69 | % | – | measurement | – |
 | Direct pump PWM | 70 | % | – | measurement | – |
 | Mixing valve position | 71 | % | – | measurement | – |
