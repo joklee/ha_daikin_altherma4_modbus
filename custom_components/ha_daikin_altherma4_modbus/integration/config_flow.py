@@ -93,6 +93,11 @@ def _is_valid_host(host: str) -> bool:
     return True
 
 
+def _connection_unique_id(host: str, port: int) -> str:
+    """Build the config entry unique_id from connection details."""
+    return f"{host}:{port}"
+
+
 def _build_reauth_schema(host: str, port: int) -> vol.Schema:
     """Build the schema for the reauth step."""
     return vol.Schema(
@@ -209,7 +214,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
 
             # Set unique ID to prevent duplicate entries for the same device
-            await self.async_set_unique_id(f"{host}:{port}")
+            await self.async_set_unique_id(_connection_unique_id(host, port))
             self._abort_if_unique_id_configured()
 
             data = {
@@ -303,7 +308,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             self.hass.config_entries.async_update_entry(
                 config_entry,
-                unique_id=f"{host}:{port}",
+                unique_id=_connection_unique_id(host, port),
                 data=new_data,
                 options=new_options,
             )
@@ -380,7 +385,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             self.hass.config_entries.async_update_entry(
                 reconfigure_entry,
-                unique_id=f"{host}:{port}",
+                unique_id=_connection_unique_id(host, port),
                 data=new_data,
                 options=new_options,
             )

@@ -13,6 +13,7 @@ except ImportError:
 from .config_entry_utils import entry_data_value
 from .config_flow import (
     _build_fix_schema,
+    _connection_unique_id,
     _is_valid_host,
     _test_connection,
 )
@@ -78,7 +79,7 @@ class ConnectionLostFixFlow(config_entries.ConfigFlow):
             }
             self.hass.config_entries.async_update_entry(
                 entry,
-                unique_id=f"{host}:{port}",
+                unique_id=_connection_unique_id(host, port),
                 data=new_data,
             )
             await self.hass.config_entries.async_reload(entry.entry_id)
