@@ -77,6 +77,37 @@ def _install_common_homeassistant_stubs(monkeypatch):
     voluptuous_module.Required = _identity
     voluptuous_module.Optional = _identity
     voluptuous_module.Schema = FakeSchema
+
+    def _coerce(target_type):
+        def _convert(value):
+            return target_type(value)
+
+        return _convert
+
+    class FakeRange:
+        def __init__(self, min=None, max=None):
+            self.min = min
+            self.max = max
+
+        def __call__(self, value):
+            if self.min is not None and value < self.min:
+                raise ValueError(f"value must be at least {self.min}")
+            if self.max is not None and value > self.max:
+                raise ValueError(f"value must be at most {self.max}")
+            return value
+
+    def _all(*validators):
+        def _apply(value):
+            result = value
+            for validator in validators:
+                result = validator(result)
+            return result
+
+        return _apply
+
+    voluptuous_module.All = _all
+    voluptuous_module.Coerce = _coerce
+    voluptuous_module.Range = FakeRange
     monkeypatch.setitem(sys.modules, "voluptuous", voluptuous_module)
 
 
@@ -104,6 +135,8 @@ def _load_config_flow_module(monkeypatch):
     const_module.DOMAIN = "ha_daikin_altherma4_modbus"
     const_module.SLOW_SCAN_INTERVAL = 600
     const_module.NORMAL_SCAN_INTERVAL = 10
+    const_module.CONF_UNIT_ID = "unit_id"
+    const_module.DEFAULT_UNIT_ID = 1
     monkeypatch.setitem(sys.modules, const_name, const_module)
 
     # Mock init module with NORMAL_SCAN_INTERVAL

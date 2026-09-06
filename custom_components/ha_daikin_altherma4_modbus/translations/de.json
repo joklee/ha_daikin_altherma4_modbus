@@ -10,7 +10,8 @@
           "scan_interval": "Scan-Intervall",
           "slow_scan_interval": "Langsames Scan-Intervall",
           "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID",
-          "demo_mode": "Demo-Modus"
+          "demo_mode": "Demo-Modus",
+          "unit_id": "Unit-ID"
         },
         "data_description": {
           "host": "IP-Adresse oder Hostname der Daikin Wärmepumpe",
@@ -18,7 +19,8 @@
           "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
           "slow_scan_interval": "Abfrageintervall in Sekunden für langsame Daten",
           "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
-          "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren"
+          "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren",
+          "unit_id": "Modbus-Unit-Adresse (Slave-ID) der Wärmepumpe, üblicherweise 1."
         }
       },
       "reauth": {
@@ -30,7 +32,8 @@
           "scan_interval": "Scan-Intervall",
           "slow_scan_interval": "Langsames Scan-Intervall",
           "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID",
-          "demo_mode": "Demo-Modus"
+          "demo_mode": "Demo-Modus",
+          "unit_id": "Unit-ID"
         },
         "data_description": {
           "host": "IP-Adresse oder Hostname der Daikin Wärmepumpe",
@@ -38,7 +41,8 @@
           "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
           "slow_scan_interval": "Abfrageintervall in Sekunden für langsame Daten",
           "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
-          "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren"
+          "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren",
+          "unit_id": "Modbus-Unit-Adresse (Slave-ID) der Wärmepumpe, üblicherweise 1."
         }
       },
       "reconfigure": {
@@ -50,7 +54,8 @@
           "scan_interval": "Scan-Intervall",
           "slow_scan_interval": "Langsames Scan-Intervall",
           "electric_power_sensor": "Externer elektrischer Leistungssensor Entitäts-ID",
-          "demo_mode": "Demo-Modus"
+          "demo_mode": "Demo-Modus",
+          "unit_id": "Unit-ID"
         },
         "data_description": {
           "host": "IP-Adresse oder Hostname der Daikin Wärmepumpe",
@@ -58,9 +63,13 @@
           "scan_interval": "Abfrageintervall in Sekunden für normale Daten",
           "slow_scan_interval": "Abfrageintervall in Sekunden für langsame Daten",
           "electric_power_sensor": "Optionale Entitäts-ID für externen Stromsensor",
-          "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren"
+          "demo_mode": "Demo-Modus ohne echte Verbindung aktivieren",
+          "unit_id": "Modbus-Unit-Adresse (Slave-ID) der Wärmepumpe, üblicherweise 1."
         }
       }
+    },
+    "error": {
+      "invalid_unit_id": "Die Unit-ID muss zwischen 1 und 247 liegen."
     }
   },
   "options": {

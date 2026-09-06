@@ -10,7 +10,8 @@
           "scan_interval": "Scan Interval",
           "slow_scan_interval": "Slow Scan Interval",
           "electric_power_sensor": "External Electric Power Sensor Entity ID",
-          "demo_mode": "Demo Mode"
+          "demo_mode": "Demo Mode",
+          "unit_id": "Unit ID"
         },
         "data_description": {
           "host": "IP address or hostname of the Daikin Altherma heat pump",
@@ -18,7 +19,8 @@
           "scan_interval": "Scan interval in seconds for normal data",
           "slow_scan_interval": "Scan interval in seconds for slow data",
           "electric_power_sensor": "Optional entity ID for external electric power sensor",
-          "demo_mode": "Enable demo mode without real connection"
+          "demo_mode": "Enable demo mode without real connection",
+          "unit_id": "Modbus unit address (slave ID) of the heat pump, usually 1."
         }
       },
       "reauth": {
@@ -30,7 +32,8 @@
           "scan_interval": "Scan Interval",
           "slow_scan_interval": "Slow Scan Interval",
           "electric_power_sensor": "External Electric Power Sensor Entity ID",
-          "demo_mode": "Demo Mode"
+          "demo_mode": "Demo Mode",
+          "unit_id": "Unit ID"
         },
         "data_description": {
           "host": "IP address or hostname of the Daikin Altherma heat pump",
@@ -38,7 +41,8 @@
           "scan_interval": "Scan interval in seconds for normal data",
           "slow_scan_interval": "Scan interval in seconds for slow data",
           "electric_power_sensor": "Optional entity ID for external electric power sensor",
-          "demo_mode": "Enable demo mode without real connection"
+          "demo_mode": "Enable demo mode without real connection",
+          "unit_id": "Modbus unit address (slave ID) of the heat pump, usually 1."
         }
       },
       "reconfigure": {
@@ -50,7 +54,8 @@
           "scan_interval": "Scan Interval",
           "slow_scan_interval": "Slow Scan Interval",
           "electric_power_sensor": "External Electric Power Sensor Entity ID",
-          "demo_mode": "Demo Mode"
+          "demo_mode": "Demo Mode",
+          "unit_id": "Unit ID"
         },
         "data_description": {
           "host": "IP address or hostname of the Daikin Altherma heat pump",
@@ -58,9 +63,13 @@
           "scan_interval": "Scan interval in seconds for normal data",
           "slow_scan_interval": "Scan interval in seconds for slow data",
           "electric_power_sensor": "Optional entity ID for external electric power sensor",
-          "demo_mode": "Enable demo mode without real connection"
+          "demo_mode": "Enable demo mode without real connection",
+          "unit_id": "Modbus unit address (slave ID) of the heat pump, usually 1."
         }
       }
+    },
+    "error": {
+      "invalid_unit_id": "Unit ID must be between 1 and 247."
     }
   },
   "options": {

@@ -10,6 +10,7 @@ except ImportError:
     CONF_HOST = "host"
     CONF_PORT = "port"
 
+from ..core.const import CONF_UNIT_ID, DEFAULT_UNIT_ID
 from .config_entry_utils import entry_data_value
 from .config_flow import (
     _build_fix_schema,
@@ -72,10 +73,13 @@ class ConnectionLostFixFlow(config_entries.ConfigFlow):
                     errors={CONF_HOST: error_key},
                 )
 
-            # Update the config entry
+            # Update the config entry.  ``unit_id`` is part of the connection
+            # identity: keep the configured value so a repair cannot silently
+            # reset it (the fix schema only edits host/port).
             new_data = {
                 CONF_HOST: host,
                 CONF_PORT: port,
+                CONF_UNIT_ID: entry_data_value(entry, "unit_id", DEFAULT_UNIT_ID),
             }
             self.hass.config_entries.async_update_entry(
                 entry,

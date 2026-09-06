@@ -3,7 +3,13 @@ import logging
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .config_flow import ConfigFlow as ConfigFlow
-from .core.const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
+from .core.const import (
+    CONF_UNIT_ID,
+    DEFAULT_UNIT_ID,
+    DOMAIN,
+    NORMAL_SCAN_INTERVAL,
+    SLOW_SCAN_INTERVAL,
+)
 from .integration.config_entry_utils import entry_data_value, entry_value
 from .integration.coordinator_manager import CoordinatorManager, UnifiedCoordinator
 from .integration.repair import (
@@ -15,6 +21,22 @@ from .integration.services import register_services
 from .modbus.modbus_client import RealModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_migrate_entry(hass, entry):
+    """Migrate a stored config entry to a newer version.
+
+    Version 2 introduces the Modbus unit id (``unit_id``) to the entry
+    ``data``.  Old version-1 entries receive the default unit id (1) while
+    every other value is preserved, so no reconfiguration is required.
+    The function is idempotent: calling it again on an already-migrated
+    entry is a no-op.
+    """
+    if entry.version < 2:
+        data = {**entry.data}
+        data.setdefault(CONF_UNIT_ID, DEFAULT_UNIT_ID)
+        hass.config_entries.async_update_entry(entry, data=data, version=2)
+    return True
 
 
 def _has_other_entry_for_endpoint(

@@ -10,7 +10,10 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.ha_daikin_altherma4_modbus.core.const import DOMAIN
+from custom_components.ha_daikin_altherma4_modbus.core.const import (
+    CONF_UNIT_ID,
+    DOMAIN,
+)
 from custom_components.ha_daikin_altherma4_modbus.integration import (
     config_flow as config_flow_module,
 )
@@ -61,7 +64,11 @@ async def test_config_flow_success(hass, enable_custom_integrations):
 
     assert result["type"] == "create_entry"
     assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
-    assert result["data"] == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
+    assert result["data"] == {
+        CONF_HOST: "192.168.1.100",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     assert result["options"] == {
         "scan_interval": 15,
         "slow_scan_interval": 300,
@@ -281,7 +288,11 @@ async def test_config_flow_empty_electric_power_sensor(
 
     assert result["type"] == "create_entry"
     assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
-    assert result["data"] == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
+    assert result["data"] == {
+        CONF_HOST: "192.168.1.100",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     # Empty electric_power_sensor should not be in options
     assert "electric_power_sensor" not in result["options"]
     assert result["options"]["scan_interval"] == 15
@@ -1138,7 +1149,11 @@ async def test_config_flow_reconfigure_success(hass, enable_custom_integrations)
 
     assert result["type"] == "abort"
     assert result["reason"] == "reconfigure_successful"
-    assert entry.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry.data == {
+        CONF_HOST: "192.168.1.200",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     assert entry.options == {
         "electric_power_sensor": "sensor.power",
         "scan_interval": 20,
@@ -1237,7 +1252,11 @@ async def test_config_flow_reconfigure_connection_success_not_demo(
 
     assert result["type"] == "abort"
     assert result["reason"] == "reconfigure_successful"
-    assert entry.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry.data == {
+        CONF_HOST: "192.168.1.200",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     assert entry.options["scan_interval"] == 20
     assert entry.options["electric_power_sensor"] == "sensor.power"
     assert entry.unique_id == "192.168.1.200:502"
@@ -1495,7 +1514,8 @@ def test_config_flow_registers_as_handler_for_domain():
     # Importing the module above registers the class in the HA handler registry.
     assert config_entries.HANDLERS.get(DOMAIN) is ConfigFlow
 
-    # Entries stored by HA/the Docker demo test use version 1 / minor_version
-    # 1; matching handler versions keep the boot-time migration a no-op.
-    assert ConfigFlow.VERSION == 1
+    # Since config schema version 2 the entry ``data`` carries ``unit_id``.
+    # Stored version-1 entries (existing installs, Docker demo test) are
+    # migrated at boot by ``async_migrate_entry`` without user interaction.
+    assert ConfigFlow.VERSION == 2
     assert ConfigFlow.MINOR_VERSION == 1
