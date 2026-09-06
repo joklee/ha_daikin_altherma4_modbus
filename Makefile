@@ -76,7 +76,7 @@ test-platform-modules:
 
 test-e2e:
 	@echo "🚀 Running Docker E2E test for HA boot..."
-	HA_DOCKER_DEMO_TESTS=1 pytest tests/integration/test_ha_docker_demo_mode.py -v
+	HA_DOCKER_DEMO_TESTS=1 pytest tests/integration/test_ha_docker_demo_mode.py -v -m slow -s --no-cov
 
 test-coverage:
 	@echo "📊 Generating detailed coverage report..."

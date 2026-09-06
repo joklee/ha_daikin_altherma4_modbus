@@ -12,14 +12,24 @@ It is marked ``slow`` (deselected by default) and additionally requires an
 explicit opt-in so that environments without Docker or registry access keep
 the suite green::
 
-    HA_DOCKER_DEMO_TESTS=1 pytest -m slow     # via pytest
+    HA_DOCKER_DEMO_TESTS=1 pytest -m slow --no-cov -s  # via pytest
     HA_DOCKER_DEMO_TESTS=1 python tests/integration/test_ha_docker_demo_mode.py
+
+The integration runs inside the Docker container, so no ``custom_components``
+code is imported in the pytest process. Pass ``--no-cov`` to avoid a
+``CoverageWarning: No data was collected`` warning from the global ``--cov``
+option in ``pytest.ini``.
+
+The test prints the integration log lines it found in the container. Pass
+``-s`` (or ``--capture=no``) so pytest does not swallow that output on a
+successful run; ``make test-e2e`` already includes it.
 """
 
 import json
 import os
 import shutil
 import subprocess
+import tempfile
 import time
 import uuid
 from pathlib import Path
@@ -153,7 +163,11 @@ def test_ha_docker_demo_mode():
         check=True,
     )
 
-    # Create minimal configuration.yaml
+    # Create a minimal configuration.yaml. The `logger` block enables debug
+    # logging for the integration so the integration's own log output (e.g.
+    # coordinator setup, demo data generation, register polling) actually
+    # appears in the Home Assistant container logs and is printed by this
+    # test below.
     subprocess.run(
         [
             "docker",
@@ -161,7 +175,13 @@ def test_ha_docker_demo_mode():
             temp_container,
             "sh",
             "-c",
-            "echo 'homeassistant:' > /config/configuration.yaml",
+            (
+                "echo 'homeassistant:' > /config/configuration.yaml && "
+                "echo 'logger:' >> /config/configuration.yaml && "
+                "echo '  logs:' >> /config/configuration.yaml && "
+                "echo '    custom_components.ha_daikin_altherma4_modbus: info' "
+                ">> /config/configuration.yaml"
+            ),
         ],
         check=True,
     )
@@ -280,31 +300,47 @@ def test_ha_docker_demo_mode():
             check=False,
         )
 
-        # Print all log lines mentioning the integration from stderr
-        stderr_lines = [
+        # Collect every log line mentioning the integration from both streams.
+        # Home Assistant normally writes its logs to stderr, but messages can
+        # also end up on stdout depending on the environment, so check both.
+        integration_lines = [
             line
-            for line in logs.stderr.splitlines()
+            for line in logs.stdout.splitlines() + logs.stderr.splitlines()
             if "ha_daikin_altherma4_modbus" in line
         ]
-        for line in stderr_lines:
-            print(f"  {line}")
 
-        # Only ERROR-level log lines in stderr indicate a failure.
+        # Print all integration log lines. Debug logging for the integration
+        # is enabled in configuration.yaml, so this includes coordinator
+        # setup, demo data generation and register polling messages.
+        print(f"--- Integration logs ({len(integration_lines)} lines) ---")
+        if integration_lines:
+            for line in integration_lines:
+                print(f"  {line}")
+        else:
+            print("  (no lines mentioning ha_daikin_altherma4_modbus found)")
+
+        # Always keep a copy of the log output for later inspection. pytest
+        # swallows stdout/stderr on a passing test unless ``-s`` is given, so
+        # the file is a reliable place to look even without ``-s``.
+        log_file = Path(tempfile.gettempdir()) / "ha_daikin_docker_integration_logs.txt"
+        log_file.write_text("\n".join(integration_lines) + "\n", encoding="utf-8")
+        print(f"Integration logs written to: {log_file}")
+
+        # Only ERROR/CRITICAL-level log lines indicate a failure.
         # WARNING lines (e.g., "custom integration not tested by HA") are
         # expected and confirm the integration was installed and started.
         error_lines = [
-            line for line in stderr_lines if "ERROR" in line or "CRITICAL" in line
+            line for line in integration_lines if "ERROR" in line or "CRITICAL" in line
         ]
         assert not error_lines, (
-            f"Integration errors found in stderr:\n{chr(10).join(error_lines)}"
+            f"Integration errors found in logs:\n{chr(10).join(error_lines)}"
         )
 
-        # Integration must be loaded successfully. The WARNING in stderr
+        # Integration must be loaded successfully. The WARNING in the logs
         # ("custom integration not tested by HA") confirms it was installed
-        # and started.
-        assert stderr_lines or "ha_daikin_altherma4_modbus" in logs.stdout, (
-            "Integration not found in Home Assistant logs"
-        )
+        # and started; with integration debug logging enabled, setup log
+        # lines are visible as well.
+        assert integration_lines, "Integration not found in Home Assistant logs"
 
         print("✓ Integration loaded successfully in Home Assistant Docker container")
 
