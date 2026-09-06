@@ -5,7 +5,7 @@ import logging
 import time
 from typing import Any
 
-from ..common.helpers import to_signed_16bit
+from ..common.helpers import get_register_config, to_signed_16bit
 from ..core.const import MAX_MODBUS_ADDRESS, MIN_MODBUS_ADDRESS
 from ..core.exceptions import (
     ModbusConnectionException,
@@ -246,9 +246,6 @@ class ModbusRegisterRepository:
         address = _validate_modbus_address(
             address, f"holding register address {register_name}"
         )
-
-        # Get register configuration to check if signed conversion is needed
-        from .common import get_register_config
 
         register_config = get_register_config(register_name)
 

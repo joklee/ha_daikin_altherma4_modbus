@@ -359,7 +359,7 @@ def get_register_config(register_name: str, register_list=None):
         Register configuration object or None if not found
     """
     if register_list is None:
-        from .register_constants import HOLDING_REGISTERS
+        from ..core.register_constants import HOLDING_REGISTERS
 
         register_list = HOLDING_REGISTERS
 
