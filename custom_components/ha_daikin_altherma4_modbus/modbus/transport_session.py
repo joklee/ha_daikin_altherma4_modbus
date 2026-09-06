@@ -1,6 +1,7 @@
 """Transport/session layer for Modbus connectivity."""
 
 import logging
+from typing import Any
 
 from ..core.exceptions import DaikinModbusException
 from .client_interface import ModbusClientInterface
@@ -12,10 +13,23 @@ _LOGGER = logging.getLogger(__name__)
 class ModbusTransportSession:
     """Owns Modbus client lifecycle for a single endpoint."""
 
-    def __init__(self, host: str, port: int, demo_mode: bool = False):
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        demo_mode: bool = False,
+        hass: Any | None = None,
+        entry: Any | None = None,
+        unit_id: int | None = None,
+    ):
         self.host = host
         self.port = port
         self.demo_mode = demo_mode
+        # Connection identity handed down for the HA-backed provider
+        # (used in Phase 3; optional so existing call sites keep working).
+        self.hass = hass
+        self.entry = entry
+        self.unit_id = unit_id
         self.client: ModbusClientInterface | None = None
 
     @staticmethod

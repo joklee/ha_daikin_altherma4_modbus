@@ -24,19 +24,23 @@ class CoordinatorManager:
         normal_interval: int = 10,
         slow_interval: int = 600,
         demo_mode: bool = False,
+        entry=None,
+        unit_id: int | None = None,
     ):
         """Initialize the coordinator manager."""
         self.hass = hass
         self.host = host
         self.port = port
         self.demo_mode = demo_mode
+        self.entry = entry
+        self.unit_id = unit_id
 
         # Create coordinators
         self.normal_coordinator = DaikinAlthermaNormalCoordinator(
-            hass, host, port, normal_interval, demo_mode
+            hass, host, port, normal_interval, demo_mode, entry, unit_id
         )
         self.slow_coordinator = DaikinAlthermaSlowCoordinator(
-            hass, host, port, slow_interval, demo_mode
+            hass, host, port, slow_interval, demo_mode, entry, unit_id
         )
 
         self.coordinators = {

@@ -163,16 +163,44 @@ Key details confirmed from the `2026.9.0` source:
 - `async_get_temporary_unit(hass, params, unit_id)` (async context manager)
   exists alongside for config flows that have no config entry yet.
 
-Port accordingly:
+Phase 3 is broken into small, independently verifiable steps so the
+production path stays green at every point. Each step keeps its own
+verification (tests + `ruff`) before moving on.
 
-- [ ] Port `modbus/connection_manager.py` and `modbus/transport_session.py`
-      to `async_get_unit` (import from `homeassistant.components.modbus`)
-- [ ] Connection sharing is handled by HA; drop our own `(host, port)` cache
-      and rely on `unit_id` selecting the unit
-- [ ] Keep the entry loaded across connection drops (no `ConfigEntryNotReady`
-      on transient loss); reserve it for setup-time failures
-- [ ] Tests: connect failure, reconnect, unload cleanup, two entries sharing
-      one `(host, port)` with different `unit_id` values
+- [x] **3.1 — Thread `hass`/`entry`/`unit_id` through the stack** (structural,
+      no behavior change): extend `ModbusDataManager` and
+      `ModbusTransportSession` with optional connection-identity fields so
+      existing `ModbusDataManager(host, port, demo_mode)` call sites and tests
+      keep working. Verify: full suite green, `ruff` clean.
+- [ ] **3.2 — Add an HA-backed unit provider** (parallel path, not yet active):
+      a function in `connection_manager` that calls `async_get_unit` (from
+      `homeassistant.components.modbus`) and wraps the returned unit in a
+      `ModbusConnectionClient`. Covered by a focused test mocking HA's
+      `async_get_unit`.
+- [ ] **3.3 — Switch `ModbusTransportSession` to the new path** (demo mode
+      kept): in `ensure_connection()`, when `hass`/`entry` are set and not
+      demo mode, obtain the client via the HA-backed provider (lazy, no I/O);
+      otherwise fall back to `RealModbusTcpClient`. `reconnect_with_new_client`
+      must not recreate a shared connection — `async_get_unit` returns the same
+      shared unit. Verify: existing session/repository/data-manager tests plus
+      a new sharing test.
+- [ ] **3.4 — Remove the own connection cache from `RealModbusTcpClient`:**
+      drop `_client_cache`, `_client_locks`, `_cache_lock`, `clear_cache`,
+      `safe_clear_cache`, `async_close_cached_client`, and the `create`
+      factory; the client holds one instance per session. Update the
+      `__init__.py` call sites that used them.
+- [ ] **3.5 — Rework setup / unload / config-flow logic:** in `__init__.py`,
+      replace the `create`+`connect` probe and `async_close_cached_client`
+      with `async_get_temporary_unit` + a first read (or lazy `async_get_unit`),
+      keep `ConfigEntryNotReady` only for structural/setup failures (no
+      reload on transient drops); unload relies on HA lifecycle. Port
+      `config_flow._test_connection` to the new path. Verify: integration
+      tests (`test_integration_lifecycle`, `test_demo_mode_installation`,
+      `test_unload_shared_endpoint`).
+- [ ] **3.6 — Cleanup & dependency check:** verify whether `manifest.json`
+      still needs `modbus-connection` directly once HA's `modbus` component is
+      the provider; check remaining direct `pymodbus` usage; consolidate
+      now-redundant tests/code.
 
 ### Phase 4 — Data manager, read & write paths
 

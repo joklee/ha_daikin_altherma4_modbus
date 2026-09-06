@@ -87,8 +87,17 @@ async def async_setup_entry(hass, entry):
                 hass, entry, f"Connection failed to {host}:{port}"
             )
             raise ConfigEntryNotReady(f"Connection failed to {host}:{port}") from err
+    unit_id = entry_data_value(entry, CONF_UNIT_ID, DEFAULT_UNIT_ID)
+
     manager = CoordinatorManager(
-        hass, host, port, scan_interval, slow_scan_interval, demo_mode
+        hass,
+        host,
+        port,
+        scan_interval,
+        slow_scan_interval,
+        demo_mode,
+        entry,
+        unit_id,
     )
     normal_coordinator = manager.get_coordinator("normal")
     slow_coordinator = manager.get_coordinator("slow")

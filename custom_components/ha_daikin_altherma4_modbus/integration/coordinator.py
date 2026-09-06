@@ -38,6 +38,8 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         port: int,
         scan_interval: int = NORMAL_SCAN_INTERVAL,
         demo_mode: bool = False,
+        entry=None,
+        unit_id: int | None = None,
     ):
         # Add jitter to scan interval
         update_interval = add_jitter(scan_interval, DEFAULT_JITTER)
@@ -54,9 +56,13 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         self.host = host
         self.port = port
         self.demo_mode = demo_mode
+        self.entry = entry
+        self.unit_id = unit_id
 
         # Data manager for input/discrete registers
-        self.data_manager = ModbusDataManager(host, port, demo_mode)
+        self.data_manager = ModbusDataManager(
+            host, port, demo_mode, hass, entry, unit_id
+        )
 
         self.data = {}
         self._connection_issue_created = False
@@ -115,6 +121,8 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         port: int,
         scan_interval: int = SLOW_SCAN_INTERVAL,
         demo_mode: bool = False,
+        entry=None,
+        unit_id: int | None = None,
     ):
         # Add jitter to scan interval
         update_interval = add_jitter(scan_interval, DEFAULT_JITTER)
@@ -131,9 +139,13 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         self.host = host
         self.port = port
         self.demo_mode = demo_mode
+        self.entry = entry
+        self.unit_id = unit_id
 
         # Data manager for coil/holding registers
-        self.data_manager = ModbusDataManager(host, port, demo_mode)
+        self.data_manager = ModbusDataManager(
+            host, port, demo_mode, hass, entry, unit_id
+        )
 
         self.data = {}
         self._connection_issue_created = False

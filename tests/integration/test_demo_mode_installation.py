@@ -94,7 +94,17 @@ def _load_integration_module(monkeypatch):
     class FakeCoordinatorManager:
         last_instance = None
 
-        def __init__(self, hass, host, port, normal_interval, slow_interval, demo_mode):
+        def __init__(
+            self,
+            hass,
+            host,
+            port,
+            normal_interval,
+            slow_interval,
+            demo_mode,
+            entry=None,
+            unit_id=None,
+        ):
             self.host = host
             self.port = port
             self.demo_mode = demo_mode
