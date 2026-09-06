@@ -177,7 +177,7 @@ verification (tests + `ruff`) before moving on.
       `homeassistant.components.modbus`) and wraps the returned unit in a
       `ModbusConnectionClient`. Covered by a focused test mocking HA's
       `async_get_unit`.
-- [ ] **3.3 — Switch `ModbusTransportSession` to the new path** (demo mode
+- [x] **3.3 — Switch `ModbusTransportSession` to the new path** (demo mode
       kept): in `ensure_connection()`, when `hass`/`entry` are set and not
       demo mode, obtain the client via the HA-backed provider (lazy, no I/O);
       otherwise fall back to `RealModbusTcpClient`. `reconnect_with_new_client`

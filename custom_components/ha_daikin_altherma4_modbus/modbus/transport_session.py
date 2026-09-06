@@ -5,7 +5,10 @@ from typing import Any
 
 from ..core.exceptions import DaikinModbusException
 from .client_interface import ModbusClientInterface
-from .connection_manager import ensure_modbus_connection
+from .connection_manager import (
+    async_get_ha_unit,
+    ensure_modbus_connection,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,7 +45,34 @@ class ModbusTransportSession:
         return False
 
     async def ensure_connection(self) -> ModbusClientInterface | None:
-        """Ensure we have an active client and return it."""
+        """Ensure we have an active client and return it.
+
+        On the HA-backed path the unit is lazy (no I/O): the first read opens
+        the shared connection and a dropped link reopens on the next request,
+        so we never force a connect here. On the legacy path we fall through to
+        the existing real/mock connection handling.
+        """
+        if self.client is not None:
+            return self.client
+
+        if self._ha_backed:
+            _LOGGER.debug(
+                "Obtaining HA-backed Modbus unit for %s:%s (unit %s)",
+                self.host,
+                self.port,
+                self.unit_id,
+            )
+            try:
+                self.client = await self._new_client()
+            except Exception:
+                _LOGGER.exception(
+                    "Unexpected error while obtaining HA-backed unit for %s:%s",
+                    self.host,
+                    self.port,
+                )
+                raise
+            return self.client
+
         if self.client is None:
             _LOGGER.debug("Creating Modbus client for %s:%s", self.host, self.port)
 
@@ -93,8 +123,27 @@ class ModbusTransportSession:
             raise
 
     async def reconnect_with_new_client(self) -> ModbusClientInterface | None:
-        """Force new client creation and reconnect."""
-        self.client = await ensure_modbus_connection(
+        """(Re)obtain the client, forcing a fresh handle.
+
+        On the HA-backed path this does not recreate the shared connection —
+        ``async_get_unit`` returns the same shared unit — but it refreshes the
+        facade handle. On the legacy path a new client is created.
+        """
+        self.client = await self._new_client()
+        return self.client
+
+    @property
+    def _ha_backed(self) -> bool:
+        """Whether this session should use the HA-backed provider."""
+        return bool(self.hass is not None and self.entry is not None)
+
+    async def _new_client(self) -> ModbusClientInterface:
+        """Return a new client via the HA provider or the legacy path."""
+        if self._ha_backed and not self.demo_mode:
+            unit_id = self.unit_id if self.unit_id is not None else 1
+            return await async_get_ha_unit(
+                self.hass, self.entry, self.host, self.port, unit_id
+            )
+        return await ensure_modbus_connection(
             None, self.host, self.port, self.demo_mode
         )
-        return self.client
