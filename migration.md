@@ -109,10 +109,68 @@ Executable documentation in `tests/modbus/test_modbus_connection_compat.py`
 
 ### Phase 3 — Connection lifecycle on the shared unit
 
+`async_get_unit` is a Home Assistant component API imported from
+`homeassistant.components.modbus` (not from the standalone
+`modbus-connection` PyPI package). **Confirmed present in the target version
+HA 2026.9** (verified against the `2026.9.0` tag of `home-assistant/core`):
+it is defined in `homeassistant/components/modbus/connection.py` and
+re-exported via `__all__` in that component's `__init__.py`.
+
+Actual signature (from the `2026.9.0` source, `connection.py`):
+
+```python
+@callback
+def async_get_unit(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    params: ModbusParams,   # ModbusTcpParams | ModbusUdpParams | ModbusTlsParams | ModbusSerialParams
+    unit_id: int,
+) -> ModbusUnit: ...
+```
+
+Usage:
+
+```python
+from homeassistant.components.modbus import async_get_unit
+from modbus_connection import ModbusTcpParams
+
+unit = async_get_unit(
+    hass,
+    entry,
+    ModbusTcpParams(host=entry.data[CONF_HOST], port=entry.data[CONF_PORT]),
+    entry.data[CONF_UNIT_ID],
+)
+```
+
+Key details confirmed from the `2026.9.0` source:
+
+- **`async_get_unit` is synchronous and `@callback`** — it performs **no I/O**
+  and makes no awaitable call. The first read opens the link; a dropped link
+  reopens on the next request. **Do not reload the entry when a connection
+  drops** — `ConfigEntryNotReady` must *not* be raised for a transient
+  connection loss.
+- **Lifecycle sharing is implemented in the component**: a `_SharedConnection`
+  holds the `ModbusConnection` plus a `consumers` counter, keyed by the
+  endpoint `(host, port)` and gated on identical `params`. `async_get_unit`
+  increments the count and registers `entry.async_on_unload(release)`; the
+  connection closes when the **last** holder's entry unloads. `unit_id`
+  selects the unit via `connection.for_unit(unit_id)`.
+- A device **already in use under different link settings** raises
+  `HomeAssistantError` (one connection cannot honour two baud rates).
+- The HA component imports `ModbusTcpParams` and `ModbusUnit` from the
+  standalone `modbus_connection` library — so the library version we pin must
+  be API-compatible with what the HA component expects.
+- `async_get_temporary_unit(hass, params, unit_id)` (async context manager)
+  exists alongside for config flows that have no config entry yet.
+
+Port accordingly:
+
 - [ ] Port `modbus/connection_manager.py` and `modbus/transport_session.py`
-      to `async_get_unit(hass, entry, ModbusTcpParams(host, port), unit_id)`
-- [ ] Connection sharing keyed by `(host, port)`; `unit_id` selects the unit
-- [ ] Preserve `ConfigEntryNotReady` semantics on setup failure
+      to `async_get_unit` (import from `homeassistant.components.modbus`)
+- [ ] Connection sharing is handled by HA; drop our own `(host, port)` cache
+      and rely on `unit_id` selecting the unit
+- [ ] Keep the entry loaded across connection drops (no `ConfigEntryNotReady`
+      on transient loss); reserve it for setup-time failures
 - [ ] Tests: connect failure, reconnect, unload cleanup, two entries sharing
       one `(host, port)` with different `unit_id` values
 
