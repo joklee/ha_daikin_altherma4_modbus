@@ -50,25 +50,50 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class ModbusConnectionClient(ModbusClientInterface):
-    """Adapt a shared ``ModbusConnection`` / ``ModbusUnit`` to the interface."""
+    """Adapt a shared ``ModbusConnection`` / ``ModbusUnit`` to the interface.
 
-    def __init__(self, connection: ModbusConnection, unit_id: int = 1) -> None:
+    Can be constructed either from a ``ModbusConnection`` plus a ``unit_id``
+    (the unit is then fetched lazily via ``connection.for_unit``) or directly
+    from a ``ModbusUnit`` handed back by HA's ``async_get_unit``.
+    """
+
+    def __init__(
+        self,
+        connection: ModbusConnection | None = None,
+        unit_id: int = 1,
+        unit: Any | None = None,
+    ) -> None:
         self._connection = connection
         self._unit_id = unit_id
-        self._unit: Any = None
+        self._unit = unit
 
     @property
     def connected(self) -> bool:
         """Check if the underlying connection is connected."""
-        return bool(self._connection.connected)
+        if self._unit is not None:
+            return bool(getattr(self._unit, "connected", False))
+        if self._connection is not None:
+            return bool(self._connection.connected)
+        return False
 
     async def connect(self) -> None:
-        """Connect to the Modbus server."""
-        await self._connection.connect()
+        """Connect to the Modbus server.
+
+        A unit handed back by ``async_get_unit`` is lazy and managed by HA, so
+        there is nothing to connect; only an owned ``connection`` connects.
+        """
+        if self._connection is not None:
+            await self._connection.connect()
 
     async def disconnect(self) -> None:
         """Disconnect from the Modbus server."""
-        await self._connection.disconnect()
+        if self._unit is not None:
+            disconnect = getattr(self._unit, "disconnect", None)
+            if disconnect is not None:
+                await disconnect()
+            return
+        if self._connection is not None:
+            await self._connection.disconnect()
 
     async def read_input_registers(self, address: int, count: int) -> Any:
         """Read input registers at 1-based address."""
@@ -119,8 +144,8 @@ class ModbusConnectionClient(ModbusClientInterface):
             self._raise_translated(err, read=False, address=address)
 
     async def _get_unit(self) -> Any:
-        """Return the lazily-cached unit for this connection and unit id."""
-        if self._unit is None:
+        """Return the unit, fetching it lazily if built from a connection."""
+        if self._unit is None and self._connection is not None:
             self._unit = self._connection.for_unit(self._unit_id)
         return self._unit
 

@@ -172,7 +172,7 @@ verification (tests + `ruff`) before moving on.
       `ModbusTransportSession` with optional connection-identity fields so
       existing `ModbusDataManager(host, port, demo_mode)` call sites and tests
       keep working. Verify: full suite green, `ruff` clean.
-- [ ] **3.2 — Add an HA-backed unit provider** (parallel path, not yet active):
+- [x] **3.2 — Add an HA-backed unit provider** (parallel path, not yet active):
       a function in `connection_manager` that calls `async_get_unit` (from
       `homeassistant.components.modbus`) and wraps the returned unit in a
       `ModbusConnectionClient`. Covered by a focused test mocking HA's

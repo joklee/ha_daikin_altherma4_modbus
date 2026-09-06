@@ -1,13 +1,51 @@
 """Modbus client connection management for Daikin Altherma integration."""
 
 import logging
+from typing import Any
 
 from ..core.exceptions import ModbusConnectionException, ModbusTimeoutException
 from .client_interface import ModbusClientInterface
 from .mock_client import MockModbusTcpClient
 from .modbus_client import RealModbusTcpClient
+from .modbus_connection_client import ModbusConnectionClient
+
+try:
+    from homeassistant.components.modbus import async_get_unit
+    from modbus_connection import ModbusTcpParams
+except ImportError:  # pragma: no cover - HA component not available in tests
+    async_get_unit = None  # type: ignore[assignment]
+    ModbusTcpParams = None  # type: ignore[assignment]
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_get_ha_unit(
+    hass: Any,
+    entry: Any,
+    host: str,
+    port: int,
+    unit_id: int,
+) -> ModbusClientInterface:
+    """Return a facade over the unit HA's ``modbus`` component hands out.
+
+    Calls ``async_get_unit(hass, entry, ModbusTcpParams(host, port), unit_id)``
+    (no I/O — the first read opens the shared connection) and wraps the
+    returned ``ModbusUnit`` in a :class:`ModbusConnectionClient`.
+
+    Raises ``HomeAssistantError`` if the device is already in use under
+    different link settings.
+    """
+    if async_get_unit is None or ModbusTcpParams is None:
+        raise ModbusConnectionException(
+            f"HA modbus component not available for {host}:{port}"
+        )
+    unit = async_get_unit(
+        hass,
+        entry,
+        ModbusTcpParams(host=host, port=port),
+        unit_id,
+    )
+    return ModbusConnectionClient(unit=unit)
 
 
 async def connect_modbus_client(
