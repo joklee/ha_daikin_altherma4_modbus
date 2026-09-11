@@ -41,7 +41,9 @@ def _load_integration_module(monkeypatch):
     const_name = f"{package_name}.const"
     coordinator_manager_name = f"{package_name}.integration.coordinator_manager"
     modbus_client_name = f"{package_name}.modbus.modbus_client"
+    connection_manager_name = f"{package_name}.modbus.connection_manager"
     config_entry_utils_name = f"{package_name}.integration.config_entry_utils"
+    config_flow_name = f"{package_name}.integration.config_flow"
     repair_name = f"{package_name}.integration.repair"
     runtime_data_name = f"{package_name}.runtime_data"
     services_name = f"{package_name}.integration.services"
@@ -52,7 +54,9 @@ def _load_integration_module(monkeypatch):
         const_name,
         coordinator_manager_name,
         modbus_client_name,
+        connection_manager_name,
         config_entry_utils_name,
+        config_flow_name,
         repair_name,
         runtime_data_name,
         services_name,
@@ -70,7 +74,7 @@ def _load_integration_module(monkeypatch):
     const_module.CONF_SLOW_SCAN_INTERVAL = "slow_scan_interval"
     const_module.CONF_ELECTRIC_POWER_SENSOR = "electric_power_sensor"
     const_module.CONF_DEMO_MODE = "demo_mode"
-    sys.modules[const_name] = const_module
+    monkeypatch.setitem(sys.modules, const_name, const_module)
 
     # Mock config_entry_utils module
     config_entry_utils_module = types.ModuleType(config_entry_utils_name)
@@ -104,20 +108,17 @@ def _load_integration_module(monkeypatch):
     config_entry_utils_module.get_demo_mode = lambda entry: entry.options.get(
         "demo_mode", False
     )
-    sys.modules[config_entry_utils_name] = config_entry_utils_module
+    monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
 
     # Mock modbus_client module
     modbus_client_module = types.ModuleType(modbus_client_name)
 
     class MockModbusTcpClient:
-        def __init__(self, host, port=502):
+        def __init__(self, host, port=502, timeout=10):
             self.host = host
             self.port = port
+            self.timeout = timeout
             self.connected = False
-
-        @classmethod
-        async def create(cls, host, port=502, timeout=10):
-            return cls(host, port)
 
         async def connect(self):
             self.connected = True
@@ -144,13 +145,39 @@ def _load_integration_module(monkeypatch):
         async def write_single_coil(self, address, value):
             return None
 
-        @classmethod
-        async def async_close_cached_client(cls, host, port):
-            pass
-
     modbus_client_module.MockModbusTcpClient = MockModbusTcpClient
     modbus_client_module.RealModbusTcpClient = MockModbusTcpClient
-    sys.modules[modbus_client_name] = modbus_client_module
+    monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
+
+    # Mock connection_manager module
+    connection_manager_name = f"{package_name}.modbus.connection_manager"
+    connection_manager_module = types.ModuleType(connection_manager_name)
+
+    async def mock_async_test_connection_with_temporary_unit(hass, host, port, unit_id):
+        """Mock connection test that always succeeds."""
+        return True, None
+
+    async def mock_async_get_ha_unit(hass, entry, host, port, unit_id):
+        """Mock HA unit getter that returns a mock client."""
+        return MockModbusTcpClient(host, port)
+
+    async def mock_connect_modbus_client(
+        client, host, port, connection_type="connection"
+    ):
+        """Mock connect helper."""
+        client.connected = True
+
+    async def mock_ensure_modbus_connection(client, host, port, demo_mode=False):
+        """Mock ensure helper returning the existing client."""
+        return client
+
+    connection_manager_module.async_test_connection_with_temporary_unit = (
+        mock_async_test_connection_with_temporary_unit
+    )
+    connection_manager_module.async_get_ha_unit = mock_async_get_ha_unit
+    connection_manager_module.connect_modbus_client = mock_connect_modbus_client
+    connection_manager_module.ensure_modbus_connection = mock_ensure_modbus_connection
+    monkeypatch.setitem(sys.modules, connection_manager_name, connection_manager_module)
 
     # Mock coordinator_manager module
     coordinator_manager_module = types.ModuleType(coordinator_manager_name)
@@ -181,7 +208,9 @@ def _load_integration_module(monkeypatch):
 
     coordinator_manager_module.CoordinatorManager = MockCoordinatorManager
     coordinator_manager_module.UnifiedCoordinator = MockUnifiedCoordinator
-    sys.modules[coordinator_manager_name] = coordinator_manager_module
+    monkeypatch.setitem(
+        sys.modules, coordinator_manager_name, coordinator_manager_module
+    )
 
     # Mock repair module
     repair_module = types.ModuleType(repair_name)
@@ -190,7 +219,7 @@ def _load_integration_module(monkeypatch):
     repair_module.async_delete_connection_issue = lambda hass, entry: None
     repair_module.async_create_abnormality_issue = MagicMock()
     repair_module.async_delete_abnormality_issue = lambda hass, entry: None
-    sys.modules[repair_name] = repair_module
+    monkeypatch.setitem(sys.modules, repair_name, repair_module)
 
     # Mock runtime_data module
     runtime_data_module = types.ModuleType(runtime_data_name)
@@ -203,12 +232,12 @@ def _load_integration_module(monkeypatch):
             self.manager = manager
 
     runtime_data_module.RuntimeData = MockRuntimeData
-    sys.modules[runtime_data_name] = runtime_data_module
+    monkeypatch.setitem(sys.modules, runtime_data_name, runtime_data_module)
 
     # Mock services module
     services_module = types.ModuleType(services_name)
     services_module.register_services = lambda hass: None
-    sys.modules[services_name] = services_module
+    monkeypatch.setitem(sys.modules, services_name, services_module)
 
     return importlib.import_module(module_name)
 
@@ -242,28 +271,20 @@ async def test_async_setup_entry_connection_failure(monkeypatch):
     """Test async_setup_entry with connection failure."""
     integration_module = _load_integration_module(monkeypatch)
 
-    # Replace the RealModbusTcpClient referenced by async_setup_entry with a
-    # client whose connect() never succeeds, so the connection test during
-    # setup raises ConfigEntryNotReady.
-    class FailingModbusClient:
-        def __init__(self, host, port=502):
-            self.host = host
-            self.port = port
-            self.connected = False
+    # Setup probes the endpoint via async_test_connection_with_temporary_unit;
+    # make that probe fail so setup raises ConfigEntryNotReady.
+    connection_manager_name = (
+        "custom_components.ha_daikin_altherma4_modbus.modbus.connection_manager"
+    )
 
-        @classmethod
-        async def create(cls, host, port=502, timeout=10):
-            return cls(host, port)
+    async def failing_probe(hass, host, port, unit_id):
+        return False, "cannot_connect"
 
-        async def connect(self):
-            self.connected = False
-            return False
-
-        @classmethod
-        async def async_close_cached_client(cls, host, port):
-            pass
-
-    monkeypatch.setattr(integration_module, "RealModbusTcpClient", FailingModbusClient)
+    monkeypatch.setattr(
+        sys.modules[connection_manager_name],
+        "async_test_connection_with_temporary_unit",
+        failing_probe,
+    )
 
     hass = types.SimpleNamespace()
     hass.config_entries = types.SimpleNamespace()

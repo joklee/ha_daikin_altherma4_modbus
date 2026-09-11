@@ -325,6 +325,9 @@ def _load_config_flow_module(monkeypatch):
         mock_abort_if_unique_id_configured
     )
 
+    # The connection probe now needs hass; stub it per test via monkeypatch so
+    # the real module attribute is restored afterwards (these model tests stay
+    # focused on data/options separation, not I/O).
     return config_flow_module
 
 
@@ -465,12 +468,17 @@ def _load_integration_module(monkeypatch):
         def connected(self):
             return self._connected
 
-        @classmethod
-        async def async_close_cached_client(cls, host, port):
-            pass
-
     modbus_client_module.RealModbusTcpClient = FakeRealModbusTcpClient
     monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
+
+    # Setup probes the endpoint via HA's temporary unit; stub the
+    # connection_manager module so setup reaches the coordinator logic.
+    connection_manager_name = f"{package_name}.modbus.connection_manager"
+    connection_manager_module = types.ModuleType(connection_manager_name)
+    connection_manager_module.async_test_connection_with_temporary_unit = AsyncMock(
+        return_value=(True, None)
+    )
+    monkeypatch.setitem(sys.modules, connection_manager_name, connection_manager_module)
 
     # Mock integration.config_entry_utils, repair and services so the real
     # subpackage __init__.py files are not executed
@@ -745,6 +753,10 @@ async def test_config_flow_user_step_handles_empty_electric_power_sensor(monkeyp
     """Test that config flow handles empty electric power sensor."""
     config_flow = _load_config_flow_module(monkeypatch)
     flow = config_flow.ConfigFlow()
+    flow.hass = SimpleNamespace()
+    monkeypatch.setattr(
+        config_flow, "_test_connection", AsyncMock(return_value=(True, None))
+    )
 
     result = await flow.async_step_user(
         {
@@ -783,6 +795,10 @@ async def test_config_flow_user_step_uses_default_values(monkeypatch):
     """Test that config flow uses default values when not provided."""
     config_flow = _load_config_flow_module(monkeypatch)
     flow = config_flow.ConfigFlow()
+    flow.hass = SimpleNamespace()
+    monkeypatch.setattr(
+        config_flow, "_test_connection", AsyncMock(return_value=(True, None))
+    )
 
     result = await flow.async_step_user(
         {

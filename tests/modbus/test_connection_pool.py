@@ -4,8 +4,6 @@ import asyncio
 import time
 
 # Use centralized FakeModbusClient from test_utils
-from typing import ClassVar
-
 import pytest
 
 from tests.fakes.modbus import FakeModbusClient
@@ -14,26 +12,11 @@ from tests.fakes.modbus import FakeModbusClient
 class MockRealModbusTcpClient:
     """Mock RealModbusTcpClient for testing connection pool functionality."""
 
-    _client_cache: ClassVar[dict] = {}
-    _client_locks: ClassVar[dict] = {}
-    _cache_lock: ClassVar[object] = None
-
     def __init__(self, host: str, port: int):
         self.host = host
         self.port = port
         self._client = FakeModbusClient(host, port)
         self._lock = None
-
-    @classmethod
-    async def create(cls, host: str, port: int):
-        """Create a new client instance."""
-        return cls(host, port)
-
-    @classmethod
-    async def safe_clear_cache(cls):
-        """Clear the connection cache."""
-        cls._client_cache.clear()
-        cls._client_locks.clear()
 
     async def connect(self):
         """Connect to the device."""
@@ -56,15 +39,14 @@ async def test_connection_pool_efficiency_concept():
     print("🔗 CONNECTION POOL EFFICIENCY TEST")
     print("=" * 80)
 
-    # Clear cache before test
-    await MockRealModbusTcpClient.safe_clear_cache()
+    # No cache to clear in the new implementation
 
     start_time = time.time()
 
     # Create multiple clients for same host:port (should reuse connection)
     clients = []
     for i in range(10):
-        client = await MockRealModbusTcpClient.create("192.168.1.100", 502)
+        client = MockRealModbusTcpClient("192.168.1.100", 502)
         clients.append(client)
 
     creation_time = time.time() - start_time
@@ -110,14 +92,12 @@ async def test_connection_pool_lock_contention_concept():
     print("🔒 CONNECTION POOL LOCK CONTENTION TEST")
     print("=" * 80)
 
-    await MockRealModbusTcpClient.safe_clear_cache()
-
     start_time = time.time()
 
     # Create many clients concurrently (stress test)
     async def create_and_use_client(client_id: int):
         """Create client and perform operations."""
-        client = await MockRealModbusTcpClient.create("192.168.1.100", 502)
+        client = MockRealModbusTcpClient("192.168.1.100", 502)
         await client.connect()  # Connect before operations
 
         # Perform multiple operations
@@ -156,8 +136,6 @@ async def test_connection_pool_memory_usage_concept():
 
     import gc
 
-    await MockRealModbusTcpClient.safe_clear_cache()
-
     # Baseline memory
     gc.collect()
     baseline_objects = len(gc.get_objects())
@@ -165,7 +143,7 @@ async def test_connection_pool_memory_usage_concept():
     # Create many clients and perform operations
     clients = []
     for i in range(100):
-        client = await MockRealModbusTcpClient.create("192.168.1.100", 502)
+        client = MockRealModbusTcpClient("192.168.1.100", 502)
         await client.connect()
         await client.read_input_registers(21, 10)
         clients.append(client)
@@ -227,18 +205,10 @@ async def test_connection_pool_recovery_concept():
     class FailingRealModbusTcpClient:
         """Mock RealModbusTcpClient with failing underlying client."""
 
-        @classmethod
-        async def create(cls, host: str, port: int):
-            """Create a new client instance."""
-            instance = cls.__new__(cls)
-            instance.host = host
-            instance.port = port
-            instance._client = FailingMockClient(host, port)
-            return instance
-
-        @classmethod
-        async def safe_clear_cache(cls):
-            """Clear the connection cache."""
+        def __init__(self, host: str, port: int):
+            self.host = host
+            self.port = port
+            self._client = FailingMockClient(host, port)
 
         async def connect(self):
             """Connect to the device."""
@@ -252,7 +222,7 @@ async def test_connection_pool_recovery_concept():
     recovery_start = time.time()
 
     try:
-        client = await FailingRealModbusTcpClient.create("192.168.1.100", 502)
+        client = FailingRealModbusTcpClient("192.168.1.100", 502)
         await client.connect()  # Should fail initially
 
         # This should trigger reconnection attempts
@@ -263,7 +233,7 @@ async def test_connection_pool_recovery_concept():
         pass
 
     # Create new client (should work now)
-    client = await FailingRealModbusTcpClient.create("192.168.1.100", 502)
+    client = FailingRealModbusTcpClient("192.168.1.100", 502)
 
     # Try connecting multiple times to recover
     for attempt in range(3):
@@ -296,47 +266,33 @@ async def test_connection_pool_recovery_concept():
 
 @pytest.mark.asyncio
 async def test_connection_pool_cache_management_concept():
-    """Test connection pool cache management."""
+    """Test connection pool cache management - deprecated test.
+
+    This test is kept for compatibility but the cache has been removed
+    in Phase 3.4. Each session now holds its own client instance.
+    """
 
     print("\n" + "=" * 80)
-    print("🗂️ CONNECTION POOL CACHE MANAGEMENT TEST")
+    print("🗂️ CONNECTION POOL CACHE MANAGEMENT TEST (DEPRECATED)")
     print("=" * 80)
 
-    await MockRealModbusTcpClient.safe_clear_cache()
+    print("\n📝 Cache removed in Phase 3.4 - each session holds its own client")
+    print("   This test is kept for compatibility but no longer tests cache behavior")
 
-    # Test cache population
-    print("\n📝 Testing Cache Population:")
-
-    await MockRealModbusTcpClient.create("192.168.1.100", 502)
-    await MockRealModbusTcpClient.create("192.168.1.100", 502)  # Same host:port
-    await MockRealModbusTcpClient.create("192.168.1.101", 502)  # Different host
+    # Create clients directly without cache
+    client1 = MockRealModbusTcpClient("192.168.1.100", 502)
+    _client2 = MockRealModbusTcpClient("192.168.1.100", 502)
+    _client3 = MockRealModbusTcpClient("192.168.1.101", 502)
 
     print("   Created 3 clients (2 same host, 1 different)")
 
-    # Test cache clearing
-    print("\n📝 Testing Cache Clearing:")
-
-    await MockRealModbusTcpClient.safe_clear_cache()
-    print("   Cache cleared successfully")
-
-    # Verify cache is empty by creating new clients
-    client4 = await MockRealModbusTcpClient.create("192.168.1.100", 502)
-    await MockRealModbusTcpClient.create("192.168.1.100", 502)
-
-    print("   Created 2 new clients after cache clear")
-
     # Test operations
-    await client4.connect()
-    await client4.read_input_registers(21, 10)
+    await client1.connect()
+    await client1.read_input_registers(21, 10)
 
     print("   Operations completed successfully")
 
-    print("\n📊 Cache Management Analysis:")
-    print("   Cache Population: ✅ Working")
-    print("   Cache Clearing: ✅ Working")
-    print("   Post-Clear Operations: ✅ Working")
-
-    print("✅ Cache management working correctly!")
+    print("✅ Direct client instantiation working correctly!")
 
 
 @pytest.mark.asyncio
@@ -347,7 +303,7 @@ async def test_connection_pool_performance_metrics():
     print("📈 CONNECTION POOL PERFORMANCE METRICS TEST")
     print("=" * 80)
 
-    await MockRealModbusTcpClient.safe_clear_cache()
+    # No cache to clear in the new implementation
 
     # Performance test parameters
     num_clients = 20
@@ -358,7 +314,7 @@ async def test_connection_pool_performance_metrics():
     # Create clients and perform operations
     async def client_workload(client_id: int):
         """Simulate realistic client workload."""
-        client = await MockRealModbusTcpClient.create("192.168.1.100", 502)
+        client = MockRealModbusTcpClient("192.168.1.100", 502)
         await client.connect()  # Connect before operations
 
         total_time = 0

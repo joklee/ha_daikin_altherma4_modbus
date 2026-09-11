@@ -65,7 +65,10 @@ class ConnectionLostFixFlow(config_entries.ConfigFlow):
                 )
 
             # Test connection
-            connection_ok, error_key = await _test_connection(host, port)
+            unit_id = entry_data_value(entry, CONF_UNIT_ID, DEFAULT_UNIT_ID)
+            connection_ok, error_key = await _test_connection(
+                self.hass, host, port, unit_id
+            )
             if not connection_ok:
                 return self.async_show_form(
                     step_id="fix_connection",

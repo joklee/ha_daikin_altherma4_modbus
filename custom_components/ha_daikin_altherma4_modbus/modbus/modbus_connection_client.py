@@ -86,11 +86,15 @@ class ModbusConnectionClient(ModbusClientInterface):
             await self._connection.connect()
 
     async def disconnect(self) -> None:
-        """Disconnect from the Modbus server."""
+        """Disconnect from the Modbus server.
+
+        A unit handed back by ``async_get_unit`` is owned and shared by HA's
+        ``modbus`` component: dropping its link is a lifecycle decision of
+        that component, so a facade wrapping a bare unit is a no-op here.
+        Only an owned ``connection`` (built directly in tests/standalone)
+        disconnects.
+        """
         if self._unit is not None:
-            disconnect = getattr(self._unit, "disconnect", None)
-            if disconnect is not None:
-                await disconnect()
             return
         if self._connection is not None:
             await self._connection.disconnect()

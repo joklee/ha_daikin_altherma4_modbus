@@ -10,7 +10,7 @@ import pytest
 import custom_components.ha_daikin_altherma4_modbus.core.const as real_const
 
 
-def _load_integration_module(monkeypatch, close_cached_client_mock: AsyncMock):
+def _load_integration_module(monkeypatch):
     """Load integration __init__ with lightweight dependency stubs."""
     # Set up homeassistant mocks first
     homeassistant = types.ModuleType("homeassistant")
@@ -69,7 +69,7 @@ def _load_integration_module(monkeypatch, close_cached_client_mock: AsyncMock):
     modbus_client_module = types.ModuleType(modbus_client_name)
 
     class FakeRealModbusTcpClient:
-        async_close_cached_client = close_cached_client_mock
+        pass
 
     modbus_client_module.RealModbusTcpClient = FakeRealModbusTcpClient
     monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
@@ -79,8 +79,7 @@ def _load_integration_module(monkeypatch, close_cached_client_mock: AsyncMock):
 
 @pytest.mark.asyncio
 async def test_unload_keeps_shared_endpoint_client(monkeypatch):
-    close_cached_client_mock = AsyncMock()
-    integration = _load_integration_module(monkeypatch, close_cached_client_mock)
+    integration = _load_integration_module(monkeypatch)
 
     domain = "ha_daikin_altherma4_modbus"
     shared_host = "192.168.1.10"
@@ -139,15 +138,13 @@ async def test_unload_keeps_shared_endpoint_client(monkeypatch):
     assert unload_ok is True
     unified_coordinator_1.async_shutdown.assert_awaited_once()
     manager_1.async_shutdown.assert_awaited_once_with(disconnect_clients=False)
-    close_cached_client_mock.assert_not_awaited()
     assert "entry_1" not in hass.data[domain]
     assert "entry_2" in hass.data[domain]
 
 
 @pytest.mark.asyncio
 async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
-    close_cached_client_mock = AsyncMock()
-    integration = _load_integration_module(monkeypatch, close_cached_client_mock)
+    integration = _load_integration_module(monkeypatch)
 
     domain = "ha_daikin_altherma4_modbus"
     host = "192.168.1.20"
@@ -185,5 +182,4 @@ async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
     assert unload_ok is True
     unified_coordinator.async_shutdown.assert_awaited_once()
     manager.async_shutdown.assert_awaited_once_with(disconnect_clients=True)
-    close_cached_client_mock.assert_awaited_once_with(host, port)
     assert domain not in hass.data

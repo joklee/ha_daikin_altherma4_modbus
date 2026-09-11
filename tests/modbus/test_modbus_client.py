@@ -241,21 +241,21 @@ def test_one_based_modbus_response_no_bits(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_real_modbus_tcp_client_create(monkeypatch, mock_async_client):
-    """Test RealModbusTcpClient.create factory method."""
+    """Test RealModbusTcpClient direct instantiation."""
     modbus_client = _load_modbus_client_module(monkeypatch)
 
     # Patch AsyncModbusTcpClient to return our mock
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
+        client = modbus_client.RealModbusTcpClient(
             "192.168.1.100", port=502, timeout=10
         )
 
         assert client.host == "192.168.1.100"
         assert client.port == 502
         assert client.timeout == 10
-        assert client._client is not None
+        assert client._client is None  # Not initialized yet
 
 
 @pytest.mark.asyncio
@@ -268,9 +268,8 @@ async def test_real_modbus_tcp_client_connected_property(
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
+        await client._ensure_initialized()
 
         assert client.connected is True
 
@@ -289,9 +288,7 @@ async def test_real_modbus_tcp_client_connect(monkeypatch, mock_async_client):
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
         await client.connect()
 
@@ -311,9 +308,7 @@ async def test_real_modbus_tcp_client_connect_already_connected(
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
         client._reconnect_needed = False
 
         await client.connect()
@@ -332,9 +327,7 @@ async def test_real_modbus_tcp_client_disconnect(monkeypatch, mock_async_client)
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
         await client.disconnect()
 
@@ -358,9 +351,7 @@ async def test_real_modbus_tcp_client_read_input_registers(
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
         response = await client.read_input_registers(10, count=2)
 
@@ -384,9 +375,7 @@ async def test_real_modbus_tcp_client_read_input_registers_error(
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
         # ModbusDeviceException is raised but then caught by generic Exception handler
         # and wrapped in ModbusReadException
@@ -409,9 +398,7 @@ async def test_real_modbus_tcp_client_read_holding_registers(
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
         response = await client.read_holding_registers(20, count=2)
 
@@ -434,9 +421,7 @@ async def test_real_modbus_tcp_client_read_discrete_inputs(
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
         response = await client.read_discrete_inputs(5, count=2)
 
@@ -457,9 +442,7 @@ async def test_real_modbus_tcp_client_read_coils(monkeypatch, mock_async_client)
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
         response = await client.read_coils(1, count=3)
 
@@ -481,9 +464,7 @@ async def test_real_modbus_tcp_client_write_holding_register(
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
         result = await client.write_holding_register(10, value=100)
 
@@ -506,9 +487,7 @@ async def test_real_modbus_tcp_client_write_coil_register(
     with patch.object(
         modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
     ):
-        client = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
+        client = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
         result = await client.write_coil_register(5, value=True)
 
@@ -518,105 +497,26 @@ async def test_real_modbus_tcp_client_write_coil_register(
 
 
 @pytest.mark.asyncio
-async def test_real_modbus_tcp_client_clear_cache(monkeypatch, mock_async_client):
-    """Test RealModbusTcpClient.clear_cache method."""
+async def test_real_modbus_tcp_client_create_uses_own_instance(monkeypatch):
+    """Each instantiation builds its own client instance (no connection cache)."""
     modbus_client = _load_modbus_client_module(monkeypatch)
 
-    with patch.object(
-        modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
-    ):
-        _ = await modbus_client.RealModbusTcpClient.create("192.168.1.100", port=502)
+    # Each AsyncModbusTcpClient(...) call must return a fresh instance so that
+    # we can prove instantiation no longer shares a cached underlying client.
+    def _new_client(*args, **kwargs):
+        return Mock()
 
-        # Clear cache
-        modbus_client.RealModbusTcpClient.clear_cache()
+    with patch.object(modbus_client, "AsyncModbusTcpClient", side_effect=_new_client):
+        client1 = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
+        client2 = modbus_client.RealModbusTcpClient("192.168.1.100", port=502)
 
-        assert len(modbus_client._client_cache) == 0
-        assert len(modbus_client._client_locks) == 0
+        # Initialize both clients to trigger AsyncModbusTcpClient creation
+        await client1._ensure_initialized()
+        await client2._ensure_initialized()
 
-
-@pytest.mark.asyncio
-async def test_real_modbus_tcp_client_safe_clear_cache(monkeypatch, mock_async_client):
-    """Test RealModbusTcpClient.safe_clear_cache method."""
-    modbus_client = _load_modbus_client_module(monkeypatch)
-
-    with patch.object(
-        modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
-    ):
-        _ = await modbus_client.RealModbusTcpClient.create("192.168.1.100", port=502)
-
-        # Safe clear cache
-        await modbus_client.RealModbusTcpClient.safe_clear_cache()
-
-        assert len(modbus_client._client_cache) == 0
-        assert len(modbus_client._client_locks) == 0
-
-
-@pytest.mark.asyncio
-async def test_real_modbus_tcp_client_async_close_cached_client(
-    monkeypatch, mock_async_client
-):
-    """Test RealModbusTcpClient.async_close_cached_client method."""
-    modbus_client = _load_modbus_client_module(monkeypatch)
-
-    mock_async_client.connected = True
-
-    with patch.object(
-        modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
-    ):
-        _ = await modbus_client.RealModbusTcpClient.create("192.168.1.100", port=502)
-
-        # Close specific cached client
-        await modbus_client.RealModbusTcpClient.async_close_cached_client(
-            "192.168.1.100", port=502
-        )
-
-        mock_async_client.close.assert_called_once()
-        assert "192.168.1.100:502" not in modbus_client._client_cache
-
-
-@pytest.mark.asyncio
-async def test_real_modbus_tcp_client_async_close_cached_client_not_connected(
-    monkeypatch, mock_async_client
-):
-    """Test async_close_cached_client when client not connected."""
-    modbus_client = _load_modbus_client_module(monkeypatch)
-
-    mock_async_client.connected = False
-
-    with patch.object(
-        modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
-    ):
-        _ = await modbus_client.RealModbusTcpClient.create("192.168.1.100", port=502)
-
-        # Close should not raise error even if not connected
-        await modbus_client.RealModbusTcpClient.async_close_cached_client(
-            "192.168.1.100", port=502
-        )
-
-        mock_async_client.close.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_real_modbus_tcp_client_client_caching(monkeypatch, mock_async_client):
-    """Test that RealModbusTcpClient reuses cached clients."""
-    modbus_client = _load_modbus_client_module(monkeypatch)
-
-    with patch.object(
-        modbus_client, "AsyncModbusTcpClient", return_value=mock_async_client
-    ):
-        # Create first client
-        client1 = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
-
-        # Create second client with same host:port
-        client2 = await modbus_client.RealModbusTcpClient.create(
-            "192.168.1.100", port=502
-        )
-
-        # Should reuse the same underlying client
-        assert client1._client is client2._client
-        assert client1._lock is client2._lock
+        # No sharing: each instance owns its own underlying client and lock.
+        assert client1._client is not client2._client
+        assert client1._lock is not client2._lock
 
 
 def test_is_modbus_error_with_isError(monkeypatch):

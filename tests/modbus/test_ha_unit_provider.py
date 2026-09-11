@@ -54,6 +54,7 @@ async def test_async_get_ha_unit_calls_async_get_unit_with_expected_args(
 
     monkeypatch.setattr(connection_manager, "async_get_unit", fake_get_unit)
     monkeypatch.setattr(connection_manager, "ModbusTcpParams", FakeTcpParams)
+    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", True)
 
     hass = object()
     entry = object()
@@ -83,6 +84,7 @@ async def test_async_get_ha_unit_wraps_unit_and_translates_address(
 
     monkeypatch.setattr(connection_manager, "async_get_unit", fake_get_unit)
     monkeypatch.setattr(connection_manager, "ModbusTcpParams", FakeTcpParams)
+    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", True)
 
     connection.for_unit(UNIT_ID).input[20] = 2500  # Daikin register 21 -> raw 20
 
@@ -90,6 +92,41 @@ async def test_async_get_ha_unit_wraps_unit_and_translates_address(
 
     # Daikin 1-based address 21 is read at raw 0-based address 20.
     assert await client.read_input_registers(21, 1) == [2500]
+
+
+async def test_async_get_ha_unit_raises_when_provider_missing(
+    monkeypatch,
+) -> None:
+    """Without HA 2026.9 helpers the provider raises a clear connection error."""
+    from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
+        ModbusConnectionException,
+    )
+
+    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", False)
+
+    try:
+        await async_get_ha_unit(object(), object(), HOST, PORT, UNIT_ID)
+    except ModbusConnectionException:
+        return
+    raise AssertionError("expected ModbusConnectionException")
+
+
+async def test_async_test_connection_probe_fails_when_provider_missing(
+    monkeypatch,
+) -> None:
+    """The temporary-unit probe reports failure when the provider is absent."""
+    from custom_components.ha_daikin_altherma4_modbus.modbus.connection_manager import (
+        async_test_connection_with_temporary_unit,
+    )
+
+    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", False)
+
+    ok, error = await async_test_connection_with_temporary_unit(
+        object(), HOST, PORT, UNIT_ID
+    )
+
+    assert ok is False
+    assert error == "cannot_connect"
 
 
 async def test_modbus_connection_client_constructed_from_unit_directly() -> None:

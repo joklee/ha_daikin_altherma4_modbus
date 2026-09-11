@@ -100,10 +100,17 @@ async def test_config_flow_invalid_host(hass, enable_custom_integrations):
 @pytest.mark.asyncio
 async def test_config_flow_connection_error(hass, enable_custom_integrations):
     """Test config flow with connection error - connection test fails."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=False)),
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "connect",
+            new=mock.AsyncMock(),
+        ),
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(False, "cannot_connect"),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -130,8 +137,8 @@ async def test_config_flow_connection_success_demo_mode(
     # Even when the Modbus connection would fail, demo mode should bypass the
     # connection test entirely.
     with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
+        config_flow_module,
+        "_test_connection",
         new=mock.AsyncMock(side_effect=ConnectionError("device not reachable")),
     ):
         result = await hass.config_entries.flow.async_init(
@@ -268,10 +275,17 @@ async def test_config_flow_empty_electric_power_sensor(
     hass, enable_custom_integrations
 ):
     """Test config flow excludes empty electric_power_sensor from options."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "connect",
+            new=mock.AsyncMock(),
+        ),
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -473,10 +487,17 @@ async def test_options_flow_empty_electric_power_sensor(
 @pytest.mark.asyncio
 async def test_config_flow_ipv6_host(hass, enable_custom_integrations):
     """Test config flow with IPv6 address."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "connect",
+            new=mock.AsyncMock(),
+        ),
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -497,10 +518,17 @@ async def test_config_flow_ipv6_host(hass, enable_custom_integrations):
 @pytest.mark.asyncio
 async def test_config_flow_valid_hostname(hass, enable_custom_integrations):
     """Test config flow with valid hostname."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "connect",
+            new=mock.AsyncMock(),
+        ),
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -638,10 +666,17 @@ async def test_config_flow_connection_read_register_exception(
         async def read_input_registers(self, address: int, count: int):
             raise ConnectionError("Read failed but connection is valid")
 
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClientReadError(connected=True)),
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "connect",
+            new=mock.AsyncMock(),
+        ),
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -664,11 +699,11 @@ async def test_config_flow_connection_read_register_exception(
 async def test_config_flow_connection_client_create_exception(
     hass, enable_custom_integrations
 ):
-    """Test config flow when RealModbusTcpClient.create raises exception."""
+    """Test config flow when RealModbusTcpClient.__init__ raises exception."""
     with mock.patch.object(
         RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(side_effect=ConnectionError("Failed to create client")),
+        "__init__",
+        side_effect=ConnectionError("Failed to create client"),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -691,10 +726,17 @@ async def test_config_flow_connection_client_create_exception(
 @pytest.mark.asyncio
 async def test_config_flow_single_label_hostname(hass, enable_custom_integrations):
     """Test config flow with single label hostname."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "connect",
+            new=mock.AsyncMock(),
+        ),
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -715,10 +757,17 @@ async def test_config_flow_single_label_hostname(hass, enable_custom_integration
 @pytest.mark.asyncio
 async def test_config_flow_hostname_with_only_numbers(hass, enable_custom_integrations):
     """Test config flow with hostname containing only numbers."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "connect",
+            new=mock.AsyncMock(),
+        ),
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -944,9 +993,9 @@ async def test_config_flow_reauth_connection_success(hass, enable_custom_integra
 
     with (
         mock.patch.object(
-            RealModbusTcpClient,
-            "create",
-            new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
         ),
         mock.patch.object(
             hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
@@ -1063,10 +1112,17 @@ async def test_config_flow_reauth_connection_error(hass, enable_custom_integrati
     )
     entry.add_to_hass(hass)
 
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=False)),
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "connect",
+            new=mock.AsyncMock(),
+        ),
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(False, "cannot_connect"),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -1227,9 +1283,9 @@ async def test_config_flow_reconfigure_connection_success_not_demo(
 
     with (
         mock.patch.object(
-            RealModbusTcpClient,
-            "create",
-            new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
         ),
         mock.patch.object(
             hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
@@ -1398,10 +1454,17 @@ async def test_config_flow_reconfigure_connection_error(
     )
     entry.add_to_hass(hass)
 
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=False)),
+    with (
+        mock.patch.object(
+            RealModbusTcpClient,
+            "connect",
+            new=mock.AsyncMock(),
+        ),
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(False, "cannot_connect"),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,

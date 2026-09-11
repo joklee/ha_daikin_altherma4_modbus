@@ -3,6 +3,7 @@
 from .client_interface import ModbusClientInterface
 from .connection_manager import (
     async_get_ha_unit,
+    async_test_connection_with_temporary_unit,
     connect_modbus_client,
     ensure_modbus_connection,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "ModbusTransportSession",
     "RealModbusTcpClient",
     "async_get_ha_unit",
+    "async_test_connection_with_temporary_unit",
     "connect_modbus_client",
     "ensure_modbus_connection",
 ]

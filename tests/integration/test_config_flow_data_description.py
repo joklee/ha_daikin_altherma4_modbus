@@ -193,9 +193,10 @@ def _load_config_flow_module(monkeypatch):
         spec = importlib.util.spec_from_file_location("config_flow", tmp_file_path)
         config_flow_module = importlib.util.module_from_spec(spec)
 
-        # Install it in sys.modules before loading
+        # Install it in sys.modules before loading (monkeypatch-restored so the
+        # real module is back in place for subsequent tests)
         module_name = f"{package_name}.integration.config_flow"
-        sys.modules[module_name] = config_flow_module
+        monkeypatch.setitem(sys.modules, module_name, config_flow_module)
 
         # Load the module
         spec.loader.exec_module(config_flow_module)

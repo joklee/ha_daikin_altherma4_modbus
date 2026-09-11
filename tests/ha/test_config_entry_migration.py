@@ -18,8 +18,8 @@ from custom_components.ha_daikin_altherma4_modbus.core.const import (
     DEFAULT_UNIT_ID,
     DOMAIN,
 )
-from custom_components.ha_daikin_altherma4_modbus.modbus.modbus_client import (
-    RealModbusTcpClient,
+from custom_components.ha_daikin_altherma4_modbus.integration import (
+    config_flow as config_flow_module,
 )
 
 HOST = "192.0.2.60"
@@ -41,9 +41,9 @@ async def test_version_1_entry_is_migrated_to_version_2_with_default_unit_id(
     entry.add_to_hass(hass)
 
     with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        side_effect=Exception("Connection refused"),
+        config_flow_module,
+        "_test_connection",
+        new=mock.AsyncMock(return_value=(False, "cannot_connect")),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -73,9 +73,9 @@ async def test_version_2_entry_passes_migration_unchanged(
     entry.add_to_hass(hass)
 
     with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        side_effect=Exception("Connection refused"),
+        config_flow_module,
+        "_test_connection",
+        new=mock.AsyncMock(return_value=(False, "cannot_connect")),
     ):
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()

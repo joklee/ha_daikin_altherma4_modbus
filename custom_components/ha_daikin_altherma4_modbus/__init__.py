@@ -18,7 +18,6 @@ from .integration.repair import (
 )
 from .integration.runtime_data import RuntimeData
 from .integration.services import register_services
-from .modbus.modbus_client import RealModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,24 +64,28 @@ async def async_setup_entry(hass, entry):
     # Test connection before setting up (unless in demo mode)
     if not demo_mode:
         _LOGGER.debug(f"Testing connection during setup to {host}:{port}")
+        unit_id = entry_data_value(entry, CONF_UNIT_ID, DEFAULT_UNIT_ID)
         try:
-            client = await RealModbusTcpClient.create(host, port, timeout=10)
-            await client.connect()
-            if not client.connected:
+            # Local import: same helper the config/repair flows use, so the
+            # real-HA tests can stub one seam (config_flow._test_connection).
+            from .integration.config_flow import _test_connection
+
+            connection_ok, _error_key = await _test_connection(
+                hass, host, port, unit_id
+            )
+            if not connection_ok:
                 _LOGGER.error(f"Cannot connect to {host}:{port} during setup")
-                await RealModbusTcpClient.async_close_cached_client(host, port)
                 async_create_connection_issue(
                     hass, entry, f"Cannot connect to {host}:{port}"
                 )
                 raise ConfigEntryNotReady(f"Cannot connect to {host}:{port}")
-            # Disconnect after test - coordinators will create their own connections
-            await client.disconnect()
             _LOGGER.debug(f"Connection test successful during setup to {host}:{port}")
+        except ConfigEntryNotReady:
+            raise
         except Exception as err:
             _LOGGER.error(
                 f"Connection test failed during setup to {host}:{port}: {err}"
             )
-            await RealModbusTcpClient.async_close_cached_client(host, port)
             async_create_connection_issue(
                 hass, entry, f"Connection failed to {host}:{port}"
             )
@@ -171,9 +174,6 @@ async def async_setup_entry(hass, entry):
                 "Failed shutting down manager after setup failure: %s", shutdown_err
             )
 
-        if not shared_endpoint_in_use:
-            await RealModbusTcpClient.async_close_cached_client(host, port)
-
         if not domain_data and DOMAIN in hass.data:
             hass.data.pop(DOMAIN, None)
 
@@ -221,14 +221,6 @@ async def async_unload_entry(hass, entry):
         except Exception as shutdown_err:
             _LOGGER.debug(
                 "Failed shutting down manager during unload: %s", shutdown_err
-            )
-
-    if not shared_endpoint_in_use:
-        try:
-            await RealModbusTcpClient.async_close_cached_client(host, port)
-        except Exception as shutdown_err:
-            _LOGGER.debug(
-                "Failed closing cached client during unload: %s", shutdown_err
             )
 
     # Clean up hass.data

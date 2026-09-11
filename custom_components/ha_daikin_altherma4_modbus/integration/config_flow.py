@@ -30,8 +30,19 @@ DEFAULT_PORT = 502
 HOSTNAME_PATTERN = re.compile(r"^[A-Za-z0-9-]{1,63}$")
 
 
-async def _test_connection(host: str, port: int) -> tuple[bool, str | None]:
+async def _test_connection(
+    hass, host: str, port: int, unit_id: int = DEFAULT_UNIT_ID
+) -> tuple[bool, str | None]:
     """Test Modbus connection to the device.
+
+    Uses HA's async_get_temporary_unit to test the connection without
+    a config entry.
+
+    Args:
+        hass: Home Assistant instance
+        host: Modbus server host
+        port: Modbus server port
+        unit_id: Modbus unit id (1-247)
 
     Returns:
         Tuple of (success, error_message)
@@ -40,32 +51,13 @@ async def _test_connection(host: str, port: int) -> tuple[bool, str | None]:
     """
     try:
         # Import here to avoid issues during testing without dependencies
-        from ..modbus.modbus_client import RealModbusTcpClient
+        from ..modbus.connection_manager import (
+            async_test_connection_with_temporary_unit,
+        )
 
-        _LOGGER.debug(f"Testing connection to {host}:{port}")
-        client = await RealModbusTcpClient.create(host, port, timeout=10)
-
-        # Try to connect
-        await client.connect()
-
-        if not client.connected:
-            return False, "cannot_connect"
-
-        # Try to read a basic register to verify device is responsive
-        # Using input register 1 which should exist on most Modbus devices
-        try:
-            await client.read_input_registers(1, 1)
-        except Exception as err:
-            _LOGGER.debug(f"Connection test read failed: {err}")
-            # Even if read fails, connection might be valid
-            # Just verify we can connect
-
-        # Disconnect after test
-        await client.disconnect()
-
-        _LOGGER.debug(f"Connection test successful to {host}:{port}")
-        return True, None
-
+        return await async_test_connection_with_temporary_unit(
+            hass, host, port, unit_id
+        )
     except Exception as err:
         _LOGGER.debug(f"Connection test failed to {host}:{port}: {err}")
         return False, "cannot_connect"
@@ -225,7 +217,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Test connection to device (unless in demo mode)
             demo_mode = user_input.get("demo_mode", False)
             if not demo_mode:
-                connection_ok, error_key = await _test_connection(host, port)
+                connection_ok, error_key = await _test_connection(
+                    self.hass, host, port, unit_id
+                )
                 if not connection_ok:
                     errors = {CONF_HOST: error_key}
                     return self.async_show_form(
@@ -306,7 +300,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Test connection (unless in demo mode)
             if not demo_mode:
-                connection_ok, error_key = await _test_connection(host, port)
+                connection_ok, error_key = await _test_connection(
+                    self.hass, host, port, unit_id
+                )
                 if not connection_ok:
                     return self.async_show_form(
                         step_id="reauth",
@@ -389,7 +385,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Test connection (unless in demo mode)
             demo_mode = user_input.get("demo_mode", False)
             if not demo_mode:
-                connection_ok, error_key = await _test_connection(host, port)
+                connection_ok, error_key = await _test_connection(
+                    self.hass, host, port, unit_id
+                )
                 if not connection_ok:
                     return self.async_show_form(
                         step_id="reconfigure",

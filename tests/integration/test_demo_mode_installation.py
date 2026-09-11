@@ -157,7 +157,6 @@ def _load_integration_module(monkeypatch):
         def connected(self):
             return self._connected
 
-    FakeRealModbusTcpClient.async_close_cached_client = AsyncMock()
     modbus_client_module.RealModbusTcpClient = FakeRealModbusTcpClient
     monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
 
@@ -344,7 +343,7 @@ async def test_demo_mode_skips_connection_test(monkeypatch):
     assert result is True
 
     # In demo mode, connection test should be skipped
-    # The RealModbusTcpClient.create should NOT be called during setup
+    # The RealModbusTcpClient should NOT be instantiated during setup
     assert len(connection_attempts) == 0
 
     # Trigger teardown

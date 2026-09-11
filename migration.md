@@ -98,13 +98,13 @@ Executable documentation in `tests/modbus/test_modbus_connection_compat.py`
 
 ### Phase 2 — Facade & dependency
 
-- [ ] Add `modbus-connection[pymodbus]` to `manifest.json` requirements
+- [x] Add `modbus-connection[pymodbus]` to `manifest.json` requirements
       (alongside `pymodbus` until Phase 5)
-- [ ] Implement a `ModbusUnit` facade behind the existing
+- [x] Implement a `ModbusUnit` facade behind the existing
       `modbus/client_interface.py`: adapter translates 1-based Daikin
       addresses to 0-based raw addresses and maps `ModbusError` hierarchy to
       the integration's exception types
-- [ ] Unit tests for the facade: address translation, error mapping, special
+- [x] Unit tests for the facade: address translation, error mapping, special
       value passthrough, write function-code mapping
 
 ### Phase 3 — Connection lifecycle on the shared unit
@@ -123,7 +123,7 @@ Actual signature (from the `2026.9.0` source, `connection.py`):
 def async_get_unit(
     hass: HomeAssistant,
     entry: ConfigEntry,
-    params: ModbusParams,   # ModbusTcpParams | ModbusUdpParams | ModbusTlsParams | ModbusSerialParams
+    params: ModbusParams,  # ModbusTcpParams | ModbusUdpParams | ModbusTlsParams | ModbusSerialParams
     unit_id: int,
 ) -> ModbusUnit: ...
 ```
@@ -184,12 +184,12 @@ verification (tests + `ruff`) before moving on.
       must not recreate a shared connection — `async_get_unit` returns the same
       shared unit. Verify: existing session/repository/data-manager tests plus
       a new sharing test.
-- [ ] **3.4 — Remove the own connection cache from `RealModbusTcpClient`:**
+- [x] **3.4 — Remove the own connection cache from `RealModbusTcpClient`:**
       drop `_client_cache`, `_client_locks`, `_cache_lock`, `clear_cache`,
       `safe_clear_cache`, `async_close_cached_client`, and the `create`
       factory; the client holds one instance per session. Update the
       `__init__.py` call sites that used them.
-- [ ] **3.5 — Rework setup / unload / config-flow logic:** in `__init__.py`,
+- [x] **3.5 — Rework setup / unload / config-flow logic:** in `__init__.py`,
       replace the `create`+`connect` probe and `async_close_cached_client`
       with `async_get_temporary_unit` + a first read (or lazy `async_get_unit`),
       keep `ConfigEntryNotReady` only for structural/setup failures (no
@@ -197,6 +197,25 @@ verification (tests + `ruff`) before moving on.
       `config_flow._test_connection` to the new path. Verify: integration
       tests (`test_integration_lifecycle`, `test_demo_mode_installation`,
       `test_unload_shared_endpoint`).
+
+      Implementation notes:
+      - `connection_manager.async_test_connection_with_temporary_unit(hass,
+        host, port, unit_id)` probes via `async_get_temporary_unit` +
+        `read_input_registers(1, 1)`; always returns a
+        `(ok, "cannot_connect")` tuple (never raises through).
+      - `config_flow._test_connection(hass, host, port, unit_id)` and the
+        repair flow now pass the configured `unit_id`; setup (`__init__.py`)
+        reuses the same `_test_connection` seam so one probe serves flows,
+        setup, and the real-HA tests.
+      - Unload/setup-failure no longer closes any cached client — the HA
+        component owns the shared connection lifecycle;
+        `ModbusConnectionClient.disconnect()` is a no-op for HA-owned units.
+      - Guarded import: HA 2026.8 (current dev env) has neither
+        `async_get_unit` nor `async_get_temporary_unit`; the provider flag
+        `_HAS_SHARED_UNIT_PROVIDER` degrades gracefully — the probe reports
+        `cannot_connect` and the HA-backed unit path raises a clear
+        `ModbusConnectionException` until the HA 2026.9 runtime is used
+        (Docker E2E / production).
 - [ ] **3.6 — Cleanup & dependency check:** verify whether `manifest.json`
       still needs `modbus-connection` directly once HA's `modbus` component is
       the provider; check remaining direct `pymodbus` usage; consolidate
@@ -233,6 +252,11 @@ verification (tests + `ruff`) before moving on.
 
 - `modbus-connection` is young; its API may still shift. Keep the facade thin
   so library changes stay localized.
+- **HA version gate:** the shared-unit helpers (`async_get_unit`,
+  `async_get_temporary_unit`) only exist from HA 2026.9. On HA 2026.8 the
+  probe reports `cannot_connect` and the HA-backed data path raises
+  `ModbusConnectionException`; real-device operation requires the HA 2026.9
+  runtime (Phase 6 Docker E2E validates this against HA stable).
 - pymodbus remains the transport backend (via the extra), so wire behavior
   should be identical — but addressing and exception semantics are exactly
   what the Phase 0 spikes pin down.
