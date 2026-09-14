@@ -260,12 +260,57 @@ verification (tests + `ruff`) before moving on.
 
 ### Phase 4 — Data manager, read & write paths
 
-- [ ] Port `core/data_manager.py` read batching to unit reads (flat lists,
+- [x] Port `core/data_manager.py` read batching to unit reads (flat lists,
       no `is_error()` handling)
-- [ ] Translate pymodbus-style error handling to the `ModbusError` hierarchy
+- [x] Translate pymodbus-style error handling to the `ModbusError` hierarchy
       at exactly one boundary
-- [ ] Writes: keep raw-value assertions (address + raw value + function code)
-- [ ] Coordinator regression: normal/slow/unified behavior unchanged
+- [x] Writes: keep raw-value assertions (address + raw value + function code)
+- [x] Coordinator regression: normal/slow/unified behavior unchanged
+
+      Implementation notes:
+      - `core/mapping_transform.py`: `process_register_block` accepts flat
+        `list` unit reads (index `address - offset`) alongside legacy
+        `.registers` responses; `process_bit_sensors` accepts flat
+        `list[bool]` (index `address - 1`, reads start at 1) alongside
+        legacy `.bits`. Flat lists never carry an error state.
+      - `modbus/register_repository.py`: new `_is_error_result` helper —
+        flat lists/`None` are always success, legacy response objects keep
+        the `isError()` classification until the Phase 5 cutover.
+        `ModbusInvalidAddressException` (from `IllegalDataAddressError`) is
+        now a first-class case: input reads degrade to `[]`,
+        discrete/coils to `None`, holding falls back to chunked blocks —
+        all without spending a reconnect retry. Transient failures still
+        retry once. `_READ_EXCEPTIONS`/`_WRITE_EXCEPTIONS` include the new
+        type; the `exception_code=` string parsing stays legacy-only.
+      - Writes: `None` unit returns (`write_register`/`write_coil` contract)
+        are normalized to `True` so the callers' `is not None` success
+        checks work on both paths; address + raw value are passed through
+        unchanged (FC06/FC05 asserted in the facade tests).
+      - `modbus/modbus_connection_client.py`: single translation boundary
+        hardened — `_MODBUS_ERROR_TYPES` tuple keeps the `except` clause
+        valid when `modbus-connection` is not installed.
+      - `integration/coordinator.py`: `_COORDINATOR_IO_EXCEPTIONS` includes
+        `ModbusInvalidAddressException`, so an unsupported range becomes
+        `UpdateFailed` (repair issue) instead of an unhandled crash.
+      - `modbus/transport_session.py`: `is_modbus_error` returns `False`
+        for flat lists/`None` explicitly (legacy helper kept to Phase 5).
+      - New tests `tests/modbus/test_register_repository_flat_lists.py`
+        (11 tests: flat batch reads, mapping on flat lists, invalid-address
+        degradation without retry, transient retry, `None`-write success,
+        invalid-address write propagation).
+
+      Verification results:
+      - `pytest`: **504 passed, 1 deselected** (Docker E2E opt-in) —
+        includes the 11 new Phase-4 tests plus all pre-existing
+        repository-batching/write, facade (address + raw value + FC),
+        mapping, and coordinator suites unchanged and green.
+      - End-to-end probe against `MockModbusConnection`: input batch
+        (21, 67) + holding batch (1, 80) + discrete (1, 26) + coils (1, 3)
+        through repository + mapping yield 84 mapped keys; writes land at
+        raw 8 / raw 0 with FC `0x06`/`0x05`; special value `32767` passes
+        through; `IllegalDataAddressError` surfaces as
+        `ModbusInvalidAddressException` and degrades to `[]`.
+      - `ruff check .` / `ruff format --check .`: clean.
 
 ### Phase 5 — Cutover & cleanup
 

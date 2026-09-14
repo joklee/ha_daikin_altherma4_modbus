@@ -48,6 +48,14 @@ except ImportError:  # pragma: no cover - modbus-connection not installed
 
 _LOGGER = logging.getLogger(__name__)
 
+# Single translation boundary (Phase 4): every ``ModbusError`` from the unit
+# is mapped onto the integration hierarchy in ``_raise_translated``. Empty
+# when ``modbus-connection`` is not installed so the ``except`` clause stays
+# valid (it then never matches).
+_MODBUS_ERROR_TYPES: tuple[type, ...] = (
+    (ModbusError,) if isinstance(ModbusError, type) else ()
+)
+
 
 class ModbusConnectionClient(ModbusClientInterface):
     """Adapt a shared ``ModbusConnection`` / ``ModbusUnit`` to the interface.
@@ -104,7 +112,7 @@ class ModbusConnectionClient(ModbusClientInterface):
         unit = await self._get_unit()
         try:
             return await unit.read_input_registers(address - 1, count)
-        except ModbusError as err:
+        except _MODBUS_ERROR_TYPES as err:
             self._raise_translated(err, read=True, address=address)
 
     async def read_holding_registers(self, address: int, count: int) -> Any:
@@ -112,7 +120,7 @@ class ModbusConnectionClient(ModbusClientInterface):
         unit = await self._get_unit()
         try:
             return await unit.read_holding_registers(address - 1, count)
-        except ModbusError as err:
+        except _MODBUS_ERROR_TYPES as err:
             self._raise_translated(err, read=True, address=address)
 
     async def read_discrete_inputs(self, address: int, count: int) -> Any:
@@ -120,7 +128,7 @@ class ModbusConnectionClient(ModbusClientInterface):
         unit = await self._get_unit()
         try:
             return await unit.read_discrete_inputs(address - 1, count)
-        except ModbusError as err:
+        except _MODBUS_ERROR_TYPES as err:
             self._raise_translated(err, read=True, address=address)
 
     async def read_coils(self, address: int, count: int) -> Any:
@@ -128,7 +136,7 @@ class ModbusConnectionClient(ModbusClientInterface):
         unit = await self._get_unit()
         try:
             return await unit.read_coils(address - 1, count)
-        except ModbusError as err:
+        except _MODBUS_ERROR_TYPES as err:
             self._raise_translated(err, read=True, address=address)
 
     async def write_holding_register(self, address: int, value: int) -> Any:
@@ -136,7 +144,7 @@ class ModbusConnectionClient(ModbusClientInterface):
         unit = await self._get_unit()
         try:
             return await unit.write_register(address - 1, value)
-        except ModbusError as err:
+        except _MODBUS_ERROR_TYPES as err:
             self._raise_translated(err, read=False, address=address)
 
     async def write_coil_register(self, address: int, value: bool) -> Any:
@@ -144,7 +152,7 @@ class ModbusConnectionClient(ModbusClientInterface):
         unit = await self._get_unit()
         try:
             return await unit.write_coil(address - 1, value)
-        except ModbusError as err:
+        except _MODBUS_ERROR_TYPES as err:
             self._raise_translated(err, read=False, address=address)
 
     async def _get_unit(self) -> Any:

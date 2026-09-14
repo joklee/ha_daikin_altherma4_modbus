@@ -28,6 +28,30 @@ class ModbusMappingTransform:
         self.last_triggered: LastTriggeredData = {}
 
     @staticmethod
+    def _extract_register_raw(register_data, address: int, offset: int) -> int:
+        """Return the raw value for a 1-based address.
+
+        Supports both the legacy response objects (``.registers`` 1-based
+        array, from ``RealModbusTcpClient``/``MockModbusTcpClient``) and the
+        flat ``list`` unit reads (0-based block starting at ``offset``, from
+        ``ModbusConnectionClient``). Flat lists never carry an error state —
+        failures raise instead.
+        """
+        if isinstance(register_data, (list, tuple)):
+            index = address - offset
+            try:
+                return register_data[index]
+            except IndexError as err:
+                _LOGGER.error(
+                    "IndexError accessing flat register %s: %s, array_len=%s",
+                    address,
+                    err,
+                    len(register_data),
+                )
+                raise
+        return register_data.registers[address]
+
+    @staticmethod
     def process_register_block(
         register_data,
         register_list: list[RegisterDefinition],
@@ -45,14 +69,17 @@ class ModbusMappingTransform:
             register_name = item.register_name
             if min_address <= address <= max_address:
                 try:
-                    raw_value = register_data.registers[address]
-                except IndexError as err:
-                    _LOGGER.error(
-                        "IndexError accessing register %s: %s, array_len=%s",
-                        address,
-                        err,
-                        len(register_data.registers),
+                    raw_value = ModbusMappingTransform._extract_register_raw(
+                        register_data, address, offset
                     )
+                except IndexError as err:
+                    if not isinstance(register_data, (list, tuple)):
+                        _LOGGER.error(
+                            "IndexError accessing register %s: %s, array_len=%s",
+                            address,
+                            err,
+                            len(register_data.registers),
+                        )
                     raise
 
                 data[register_name] = ProcessedRegisterItem(
@@ -222,12 +249,40 @@ class ModbusMappingTransform:
     def process_bit_sensors(
         self, result, sensor_list: list[RegisterDefinition], sensor_type: str
     ) -> StateData:
-        """Process bit-based sensors from Modbus bit response."""
+        """Process bit-based sensors from Modbus bit response.
+
+        Accepts legacy response objects (``.bits`` 1-based array) and flat
+        ``list[bool]`` unit reads. Flat bit reads always start at address 1
+        (repository reads ``(1, 26)`` / ``(1, 3)``), so index ``address - 1``
+        applies; failures raise instead of returning error responses.
+        """
         data: StateData = {}
+        is_flat = isinstance(result, (list, tuple))
         for item in sensor_list:
             address = item.address
             input_type = item.input_type or sensor_type
             register_name = item.register_name
+
+            if is_flat:
+                index = address - 1
+                if 0 <= index < len(result):
+                    raw_value = 1 if result[index] else 0
+                    data[register_name] = update_value_if_changed(
+                        register_name,
+                        raw_value,
+                        self.previous_data,
+                        f"{sensor_type.title()} {address}",
+                        input_type=input_type,
+                        address=address,
+                    )
+                else:
+                    _LOGGER.warning(
+                        "%s %s nicht im gelesenen Bereich (%s Bits)",
+                        sensor_type.title(),
+                        address,
+                        len(result),
+                    )
+                continue
 
             if address < len(result.bits):
                 raw_value = 1 if result.bits[address] else 0

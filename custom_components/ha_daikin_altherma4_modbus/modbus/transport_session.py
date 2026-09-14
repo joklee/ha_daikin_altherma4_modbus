@@ -37,7 +37,16 @@ class ModbusTransportSession:
 
     @staticmethod
     def is_modbus_error(response) -> object | bool:
-        """Check if a Modbus response indicates an error."""
+        """Check if a Modbus response indicates an error.
+
+        Legacy path only (``RealModbusTcpClient``/mocks with ``isError()`` /
+        ``is_error()``). Flat ``list`` unit reads from
+        ``ModbusConnectionClient`` never carry an error state — failures
+        raise at the facade boundary — and are always classified as success.
+        Kept until the Phase 5 cutover removes the legacy client.
+        """
+        if response is None or isinstance(response, (list, tuple)):
+            return False
         if hasattr(response, "isError") and callable(response.isError):
             return response.isError()
         if hasattr(response, "is_error") and callable(response.is_error):

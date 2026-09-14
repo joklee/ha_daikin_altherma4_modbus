@@ -10,6 +10,7 @@ from ..core.const import MAX_MODBUS_ADDRESS, MIN_MODBUS_ADDRESS
 from ..core.exceptions import (
     ModbusConnectionException,
     ModbusDeviceException,
+    ModbusInvalidAddressException,
     ModbusReadException,
     ModbusTimeoutException,
     ModbusWriteException,
@@ -52,6 +53,7 @@ _READ_EXCEPTIONS = (
     ModbusTimeoutException,
     ModbusDeviceException,
     ModbusConnectionException,
+    ModbusInvalidAddressException,
     asyncio.TimeoutError,
     OSError,
     ConnectionError,
@@ -61,10 +63,31 @@ _WRITE_EXCEPTIONS = (
     ModbusTimeoutException,
     ModbusDeviceException,
     ModbusConnectionException,
+    ModbusInvalidAddressException,
     asyncio.TimeoutError,
     OSError,
     ConnectionError,
 )
+
+
+def _is_error_result(session: ModbusTransportSession, result: Any) -> bool:
+    """Classify a read/write result as a device error.
+
+    Flat ``list``/``tuple`` unit reads (``ModbusConnectionClient``) never
+    carry an error state — failures raise at the facade boundary instead.
+    Legacy response objects (``RealModbusTcpClient``/mocks with
+    ``isError()``/``is_error()``) keep the old classification until the
+    Phase 5 cutover removes that path.
+    """
+    if result is None or isinstance(result, (list, tuple)):
+        return False
+    is_modbus_error = getattr(session, "is_modbus_error", None)
+    if callable(is_modbus_error):
+        try:
+            return bool(is_modbus_error(result))
+        except Exception:  # pragma: no cover - defensive
+            return False
+    return bool(ModbusTransportSession.is_modbus_error(result))
 
 
 class ModbusRegisterRepository:
@@ -106,6 +129,8 @@ class ModbusRegisterRepository:
         # 🚀 OPTIMIZED: Single batch read for all input registers (21-87)
         # Before: 2 separate reads (21-53, 54-87)
         # After: 1 single read (21-87) = 50% faster!
+        # Unit reads return flat lists and raise on failure; legacy clients
+        # return response objects classified via _is_error_result.
         try:
             block_start = time.time()
             result = await client.read_input_registers(
@@ -116,13 +141,17 @@ class ModbusRegisterRepository:
                 time.time() - block_start,
             )
 
-            if not self._session.is_modbus_error(result):
+            if not _is_error_result(self._session, result):
                 blocks.append((result, 21, 87, 21))
                 _LOGGER.debug(
                     "✅ Batch optimization successful: 67 registers in 1 read"
                 )
             else:
                 _LOGGER.error("Optimized Input Register Block read failed")
+        except ModbusInvalidAddressException as err:
+            _LOGGER.warning(
+                "Optimized Input Register Block not supported by device: %s", err
+            )
         except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read optimized Input Register Block: %s", err)
 
@@ -142,10 +171,16 @@ class ModbusRegisterRepository:
                 "Discrete Inputs (30 bits) read in %.3fs", time.time() - read_start
             )
 
-            if not self._session.is_modbus_error(result):
+            if not _is_error_result(self._session, result):
                 return result
 
             self._log_unsupported_register_type(result, "discrete inputs")
+            return None
+        except ModbusInvalidAddressException as err:
+            _LOGGER.warning(
+                "Device does not support discrete inputs (illegal data address): %s",
+                err,
+            )
             return None
         except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read Discrete Inputs: %s", err)
@@ -163,10 +198,15 @@ class ModbusRegisterRepository:
             result = await client.read_coils(1, 3)
             _LOGGER.debug("Coils (20 bits) read in %.3fs", time.time() - read_start)
 
-            if not self._session.is_modbus_error(result):
+            if not _is_error_result(self._session, result):
                 return result
 
             self._log_unsupported_register_type(result, "coils")
+            return None
+        except ModbusInvalidAddressException as err:
+            _LOGGER.warning(
+                "Device does not support coils (illegal data address): %s", err
+            )
             return None
         except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read Coils: %s", err)
@@ -191,7 +231,7 @@ class ModbusRegisterRepository:
                 time.time() - block_start,
             )
 
-            if not self._session.is_modbus_error(result):
+            if not _is_error_result(self._session, result):
                 data_blocks.append((result, 1, 80, 1))
                 _LOGGER.debug(
                     "✅ Batch optimization successful: 80 registers in 1 read"
@@ -202,6 +242,13 @@ class ModbusRegisterRepository:
                 )
                 # Fallback: Try individual blocks if full range fails
                 await self._fallback_holding_blocks(data_blocks)
+        except ModbusInvalidAddressException as err:
+            _LOGGER.warning(
+                "Device does not support full holding register range (1-80): %s",
+                err,
+            )
+            # Fallback: Try individual blocks on illegal address
+            await self._fallback_holding_blocks(data_blocks)
         except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read optimized Holding Register Block: %s", err)
             # Fallback: Try individual blocks on error
@@ -264,7 +311,7 @@ class ModbusRegisterRepository:
 
         try:
             result = await client.write_holding_register(address, value)
-            if self._session.is_modbus_error(result):
+            if _is_error_result(self._session, result):
                 error_msg = f"Failed to write register {register_name} (address {address}) with value {value}: {result}"
                 _LOGGER.error(error_msg)
                 raise ModbusDeviceException(error_msg)
@@ -275,7 +322,10 @@ class ModbusRegisterRepository:
                 address,
                 value,
             )
-            return result
+            # Facade unit writes return None on success (no response object);
+            # normalize to True so callers' `is not None` success checks keep
+            # working on both the legacy and the unit path.
+            return result if result is not None else True
         except _WRITE_EXCEPTIONS:
             # Re-raise our custom exceptions without wrapping
             raise
@@ -313,7 +363,7 @@ class ModbusRegisterRepository:
 
         try:
             result = await client.write_coil_register(address, value)
-            if self._session.is_modbus_error(result):
+            if _is_error_result(self._session, result):
                 error_msg = f"Failed to write coil {register_name} (address {address}) with value {value}: {result}"
                 _LOGGER.error(error_msg)
                 raise ModbusDeviceException(error_msg)
@@ -324,7 +374,7 @@ class ModbusRegisterRepository:
                 address,
                 value,
             )
-            return result
+            return result if result is not None else True
         except _WRITE_EXCEPTIONS:
             # Re-raise our custom exceptions without wrapping
             raise
@@ -344,13 +394,18 @@ class ModbusRegisterRepository:
                 return None
 
             result = await client.read_discrete_inputs(1, 26)
-            if not self._session.is_modbus_error(result):
+            if not _is_error_result(self._session, result):
                 _LOGGER.info("Successfully retried discrete inputs after reconnection")
                 return result
 
             _LOGGER.warning(
                 "Discrete inputs retry also failed - device may not support this register type: %s",
                 result,
+            )
+            return None
+        except ModbusInvalidAddressException as retry_err:
+            _LOGGER.warning(
+                "Discrete inputs retry refused (illegal data address): %s", retry_err
             )
             return None
         except _READ_EXCEPTIONS as retry_err:
@@ -366,7 +421,7 @@ class ModbusRegisterRepository:
                 return None
 
             result = await client.read_coils(1, 3)
-            if not self._session.is_modbus_error(result):
+            if not _is_error_result(self._session, result):
                 _LOGGER.info("Successfully retried coils after reconnection")
                 return result
 
@@ -374,6 +429,9 @@ class ModbusRegisterRepository:
                 "Coils retry also failed - device may not support this register type: %s",
                 result,
             )
+            return None
+        except ModbusInvalidAddressException as retry_err:
+            _LOGGER.warning("Coils retry refused (illegal data address): %s", retry_err)
             return None
         except _READ_EXCEPTIONS as retry_err:
             _LOGGER.warning("Retry attempt for coils failed: %s", retry_err)
@@ -404,7 +462,7 @@ class ModbusRegisterRepository:
                 time.time() - block_start,
             )
 
-            if not self._session.is_modbus_error(result):
+            if not _is_error_result(self._session, result):
                 return result
 
             if is_optional:
@@ -421,6 +479,15 @@ class ModbusRegisterRepository:
                 )
             else:
                 _LOGGER.error("Holding Register %s read failed: %s", block_name, result)
+            return None
+        except ModbusInvalidAddressException as err:
+            _LOGGER.warning(
+                "Device does not support holding register %s (addresses %s-%s): %s",
+                block_name,
+                min_address,
+                max_address,
+                err,
+            )
             return None
         except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read Holding Register %s: %s", block_name, err)
@@ -457,7 +524,7 @@ class ModbusRegisterRepository:
                 return None
 
             retry_result = await client.read_holding_registers(start_address, count)
-            if not self._session.is_modbus_error(retry_result):
+            if not _is_error_result(self._session, retry_result):
                 _LOGGER.info(
                     "Successfully retried holding register %s after reconnection",
                     block_name,
@@ -477,6 +544,13 @@ class ModbusRegisterRepository:
                     retry_result,
                 )
             return None
+        except ModbusInvalidAddressException as retry_err:
+            _LOGGER.warning(
+                "Holding Register %s retry refused (illegal data address): %s",
+                block_name,
+                retry_err,
+            )
+            return None
         except _READ_EXCEPTIONS as retry_err:
             _LOGGER.warning(
                 "Retry attempt for Holding Register %s failed: %s",
@@ -487,7 +561,14 @@ class ModbusRegisterRepository:
 
     @staticmethod
     def _log_unsupported_register_type(result: Any, register_type: str) -> None:
-        """Log device support diagnostics for register types."""
+        """Log device support diagnostics for legacy register types.
+
+        Legacy path only: pymodbus-style error responses carry
+        ``exception_code`` details. Unit reads raise
+        ``ModbusInvalidAddressException`` instead (handled at the call sites),
+        so this helper stays for the ``RealModbusTcpClient``/mock path until
+        the Phase 5 cutover.
+        """
         error_msg = str(result)
         if "exception_code=2" in error_msg:
             _LOGGER.warning(

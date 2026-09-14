@@ -10,6 +10,7 @@ from ..core.data_manager import ModbusDataManager
 from ..core.exceptions import (
     ModbusConnectionException,
     ModbusDeviceException,
+    ModbusInvalidAddressException,
     ModbusReadException,
     ModbusTimeoutException,
 )
@@ -22,6 +23,7 @@ _COORDINATOR_IO_EXCEPTIONS = (
     ModbusTimeoutException,
     ModbusDeviceException,
     ModbusConnectionException,
+    ModbusInvalidAddressException,
     asyncio.TimeoutError,
     OSError,
     ConnectionError,
