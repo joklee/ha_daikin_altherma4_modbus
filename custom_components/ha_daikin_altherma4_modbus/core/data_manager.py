@@ -315,6 +315,12 @@ class ModbusDataManager:
             )
             raise
 
+    async def read_raw_snapshot(
+        self,
+    ) -> tuple[dict[str, dict[int, int | bool]], dict[str, str]]:
+        """Read all four spaces raw (snapshot for the diagnostics download)."""
+        return await self._repository.read_raw_snapshot()
+
     def _update_last_triggered(self, data: StateData):
         """Update last-triggered calculated sensors."""
         self._mapping.update_last_triggered(data)

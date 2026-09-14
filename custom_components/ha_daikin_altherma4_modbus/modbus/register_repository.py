@@ -69,6 +69,42 @@ _WRITE_EXCEPTIONS = (
     ConnectionError,
 )
 
+# Optimized batch layout shared by the polling path and raw snapshots.
+_INPUT_BATCH = (21, 67)
+_HOLDING_BATCH = (1, 80)
+_HOLDING_FALLBACK_BLOCKS = ((1, 25), (26, 25), (51, 30))
+_DISCRETE_BATCH = (1, 26)
+_COILS_BATCH = (1, 3)
+
+
+def _raw_registers(result: Any, raw_start: int) -> dict[int, int]:
+    """Normalize a register read to a raw 0-based address map.
+
+    Flat unit lists start at the requested (1-based) address, so
+    ``raw_start`` is that address minus one. Legacy 1-based response arrays
+    carry the absolute address as their index, i.e. raw address ``index - 1``.
+    """
+    if isinstance(result, (list, tuple)):
+        return {raw_start + index: int(value) for index, value in enumerate(result)}
+    registers = getattr(result, "registers", None) or []
+    return {
+        index - 1: int(value)
+        for index, value in enumerate(registers)
+        if index - 1 >= raw_start
+    }
+
+
+def _raw_bits(result: Any, raw_start: int) -> dict[int, bool]:
+    """Normalize a bit read to a raw 0-based address map (see above)."""
+    if isinstance(result, (list, tuple)):
+        return {raw_start + index: bool(value) for index, value in enumerate(result)}
+    bits = getattr(result, "bits", None) or []
+    return {
+        index - 1: bool(value)
+        for index, value in enumerate(bits)
+        if index - 1 >= raw_start
+    }
+
 
 def _is_error_result(session: ModbusTransportSession, result: Any) -> bool:
     """Classify a read/write result as a device error.
@@ -130,10 +166,12 @@ class ModbusRegisterRepository:
         # After: 1 single read (21-87) = 50% faster!
         # Unit reads return flat lists and raise on failure; legacy clients
         # return response objects classified via _is_error_result.
+        start_address, count = _INPUT_BATCH
+        min_address, max_address, offset = 21, 87, 21
         try:
             block_start = time.time()
             result = await client.read_input_registers(
-                21, 67
+                start_address, count
             )  # 67 Register in einem Aufruf!
             _LOGGER.debug(
                 "Optimized Input Register Block (21-87) read in %.3fs",
@@ -141,7 +179,7 @@ class ModbusRegisterRepository:
             )
 
             if not _is_error_result(self._session, result):
-                blocks.append((result, 21, 87, 21))
+                blocks.append((result, min_address, max_address, offset))
                 _LOGGER.debug(
                     "✅ Batch optimization successful: 67 registers in 1 read"
                 )
@@ -165,7 +203,8 @@ class ModbusRegisterRepository:
 
         try:
             read_start = time.time()
-            result = await client.read_discrete_inputs(1, 26)
+            start_address, count = _DISCRETE_BATCH
+            result = await client.read_discrete_inputs(start_address, count)
             _LOGGER.debug(
                 "Discrete Inputs (30 bits) read in %.3fs", time.time() - read_start
             )
@@ -194,7 +233,8 @@ class ModbusRegisterRepository:
 
         try:
             read_start = time.time()
-            result = await client.read_coils(1, 3)
+            start_address, count = _COILS_BATCH
+            result = await client.read_coils(start_address, count)
             _LOGGER.debug("Coils (20 bits) read in %.3fs", time.time() - read_start)
 
             if not _is_error_result(self._session, result):
@@ -222,8 +262,9 @@ class ModbusRegisterRepository:
 
         try:
             block_start = time.time()
+            start_address, count = _HOLDING_BATCH
             result = await client.read_holding_registers(
-                1, 80
+                start_address, count
             )  # 80 Register in einem Aufruf!
             _LOGGER.debug(
                 "Optimized Holding Register Block (1-80) read in %.3fs",
@@ -260,9 +301,19 @@ class ModbusRegisterRepository:
     ) -> None:
         """Fallback to individual blocks if optimized batch fails."""
         blocks = [
-            (1, 25, 1, 25, 1, "Block 1", False),
-            (26, 25, 26, 50, 26, "Block 2", False),
-            (51, 30, 51, 80, 51, "Block 3", True),
+            # (start, count, min, max, offset, name, optional); the last
+            # block covers model-dependent registers and may legitimately
+            # be absent.
+            (
+                start,
+                count,
+                start,
+                start + count - 1,
+                start,
+                f"Block {index}",
+                index == len(_HOLDING_FALLBACK_BLOCKS) - 1,
+            )
+            for index, (start, count) in enumerate(_HOLDING_FALLBACK_BLOCKS, start=1)
         ]
 
         _LOGGER.debug("Using fallback individual block reading")
@@ -272,6 +323,70 @@ class ModbusRegisterRepository:
             )
             if result is not None:
                 data_blocks.append((result, min_addr, max_addr, offset))
+
+    async def read_raw_snapshot(
+        self,
+    ) -> tuple[dict[str, dict[int, int | bool]], dict[str, str]]:
+        """Read all four spaces raw, keyed by 0-based unit address.
+
+        Fresh reads in the spirit of the guide's ``async_read_raw``: raw
+        undecoded values for the diagnostics download, directly
+        ``load_raw``-compatible (Daikin address = raw address + 1).
+        Failures are collected per space instead of raising, so one dead
+        space never hides the others (UpdateReport-style failed map);
+        partial holding data still merges with its error noted.
+        """
+        snapshot: dict[str, dict[int, int | bool]] = {
+            "holding": {},
+            "input": {},
+            "coil": {},
+            "discrete": {},
+        }
+        failed: dict[str, str] = {}
+        client = self._session.client
+        if client is None:
+            return snapshot, {space: "no Modbus client available" for space in snapshot}
+
+        def _record(space: str, err: Exception) -> None:
+            failed.setdefault(space, f"{type(err).__name__}: {err}")
+
+        start_address, count = _INPUT_BATCH
+        try:
+            result = await client.read_input_registers(start_address, count)
+            snapshot["input"] = _raw_registers(result, start_address - 1)
+        except Exception as err:
+            _record("input", err)
+
+        start_address, count = _HOLDING_BATCH
+        try:
+            result = await client.read_holding_registers(start_address, count)
+            snapshot["holding"] = _raw_registers(result, start_address - 1)
+        except Exception as err:
+            _record("holding", err)
+            for chunk_start, chunk_count in _HOLDING_FALLBACK_BLOCKS:
+                try:
+                    chunk = await client.read_holding_registers(
+                        chunk_start, chunk_count
+                    )
+                    snapshot["holding"].update(_raw_registers(chunk, chunk_start - 1))
+                except Exception as chunk_err:
+                    _record("holding", chunk_err)
+
+        start_address, count = _DISCRETE_BATCH
+        try:
+            result = await client.read_discrete_inputs(start_address, count)
+            snapshot["discrete"] = _raw_bits(result, start_address - 1)
+        except Exception as err:
+            _record("discrete", err)
+
+        start_address, count = _COILS_BATCH
+        try:
+            result = await client.read_coils(start_address, count)
+            snapshot["coil"] = _raw_bits(result, start_address - 1)
+        except Exception as err:
+            _record("coil", err)
+
+        return snapshot, failed
 
     async def write_holding_register(self, register_name: str, value: int) -> Any:
         """Write a holding register by register name."""
@@ -392,7 +507,8 @@ class ModbusRegisterRepository:
             if client is None:
                 return None
 
-            result = await client.read_discrete_inputs(1, 26)
+            start_address, count = _DISCRETE_BATCH
+            result = await client.read_discrete_inputs(start_address, count)
             if not _is_error_result(self._session, result):
                 _LOGGER.info("Successfully retried discrete inputs after reconnection")
                 return result
@@ -419,7 +535,8 @@ class ModbusRegisterRepository:
             if client is None:
                 return None
 
-            result = await client.read_coils(1, 3)
+            start_address, count = _COILS_BATCH
+            result = await client.read_coils(start_address, count)
             if not _is_error_result(self._session, result):
                 _LOGGER.info("Successfully retried coils after reconnection")
                 return result
