@@ -314,12 +314,61 @@ verification (tests + `ruff`) before moving on.
 
 ### Phase 5 — Cutover & cleanup
 
-- [ ] Switch the client default to the facade; remove the legacy
+- [x] Switch the client default to the facade; remove the legacy
       `pymodbus`-direct client path (no feature toggle, per decision)
-- [ ] Drop the direct `pymodbus` requirement from `manifest.json` if nothing
+- [x] Drop the direct `pymodbus` requirement from `manifest.json` if nothing
       else needs it
-- [ ] Promote `tests/modbus/test_modbus_connection_compat.py` from
+- [x] Promote `tests/modbus/test_modbus_connection_compat.py` from
       `importorskip` to a regular suite test
+
+      Implementation notes:
+      - Deleted: `modbus/modbus_client.py` (`RealModbusTcpClient` +
+        `OneBasedModbusResponse`, the only direct `pymodbus` consumer),
+        `modbus/protocol.py` (dead duplicate, stale `..const` import, never
+        imported), `tests/modbus/test_modbus_client.py`,
+        `tests/modbus/test_ensure_modbus_connection.py` (pinned the removed
+        `ensure_modbus_connection` contract).
+      - `modbus/connection_manager.py`: `connect_modbus_client` and
+        `ensure_modbus_connection` removed; only the HA-backed shared unit
+        (`async_get_ha_unit`), the temporary-unit probe, and the facade
+        remain. `modbus/__init__.py` exports updated accordingly.
+      - `modbus/transport_session.py`: single default path — HA-backed unit
+        when `hass`/`entry` are set (lazy, no I/O), demo mock otherwise.
+        Real mode without `hass`/`entry` raises `ModbusConnectionException`
+        with a clear message instead of opening an own connection;
+        `_ha_backed` now excludes demo mode explicitly. `is_modbus_error`
+        stays as demo/test-fake compat (the demo mock still returns
+        response objects).
+      - `requirements-dev.txt`: `pymodbus>=3.8` replaced with
+        `modbus-connection[pymodbus]>=4.10` (mirrors `manifest.json`);
+        nothing imports `pymodbus` directly anymore (runtime arrives via
+        the extra, which requires `pymodbus[serial]>=3.11`).
+      - `manifest.json`: no change needed — the redundant standalone
+        `pymodbus` pin was already dropped in 3.6; requirements stay
+        `["modbus-connection[pymodbus]>=4.10"]`.
+      - Compat test: `pytest.importorskip("modbus_connection")` removed
+        (hard dependency in manifest + dev requirements); docstring updated
+        from "Phase-0 spike" to permanent regression test.
+      - Test updates: `test_transport_session_ha.py` rewritten — demo path
+        asserts the real `MockModbusTcpClient` (no `ensure_modbus_connection`
+        fake anymore), plus new `test_demo_reconnect_returns_fresh_mock`
+        and `test_real_mode_without_hass_entry_raises`; stale
+        `RealModbusTcpClient` comment in `mock_client.py` and
+        `test_connection_recovery.py` fixed. The `sys.modules`-stub tests
+        (`test_config_model`, `test_demo_mode_installation`,
+        `test_unload_shared_endpoint`, `test_integration_lifecycle`) keep
+        passing — their fake `modbus_client` modules shadow imports and
+        never touch the deleted files.
+
+      Verification results:
+      - `pytest`: **478 passed, 1 deselected** (Docker E2E opt-in; 479
+        collected — delta to Phase 4 is exactly the deleted legacy suites
+        minus the new session tests, nothing silently skipped).
+      - `rg` over `custom_components/`: no `RealModbusTcpClient`,
+        `ensure_modbus_connection`, `connect_modbus_client`,
+        `OneBasedModbusResponse`, or `pymodbus` import remains (only the
+        intentional historical mentions in `connection_manager` docstring).
+      - `ruff check .` / `ruff format --check .`: clean.
 
 ### Phase 6 — Hardening & documentation
 

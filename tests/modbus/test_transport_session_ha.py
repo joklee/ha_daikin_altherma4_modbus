@@ -1,8 +1,10 @@
-"""Tests for the Phase 3.3 transport-session switch to the HA-backed path.
+"""Tests for the transport session on the HA-backed default path.
 
 ``ModbusTransportSession`` obtains its client via the HA-backed provider when
-``hass``/``entry`` are set (lazy, no I/O) and keeps the legacy real/mock path
-otherwise. On the HA path ``reconnect_with_new_client`` must not recreate the
+``hass``/``entry`` are set (lazy, no I/O), connects the demo mock in demo
+mode, and raises ``ModbusConnectionException`` for real mode without
+``hass``/``entry`` (no ``pymodbus``-direct fallback since the Phase 5
+cutover). On the HA path ``reconnect_with_new_client`` must not recreate the
 shared connection — it returns the same shared unit.
 
 Skipped when ``modbus-connection`` is not installed.
@@ -14,10 +16,15 @@ pytest.importorskip("modbus_connection")
 
 from modbus_connection.mock import MockModbusConnection
 
+from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
+    ModbusConnectionException,
+)
 from custom_components.ha_daikin_altherma4_modbus.modbus import transport_session
 from custom_components.ha_daikin_altherma4_modbus.modbus.connection_manager import (
     async_get_ha_unit,
-    ensure_modbus_connection,
+)
+from custom_components.ha_daikin_altherma4_modbus.modbus.mock_client import (
+    MockModbusTcpClient,
 )
 from custom_components.ha_daikin_altherma4_modbus.modbus.modbus_connection_client import (
     ModbusConnectionClient,
@@ -81,8 +88,8 @@ async def test_reconnect_with_new_client_keeps_shared_unit(monkeypatch) -> None:
     assert calls["count"] == 2  # refreshed handle, same shared unit
 
 
-async def test_demo_mode_falls_back_to_legacy_path(monkeypatch) -> None:
-    """Demo mode keeps the mock path even when hass/entry are present."""
+async def test_demo_mode_connects_mock_without_ha_provider(monkeypatch) -> None:
+    """Demo mode connects the mock even when hass/entry are present."""
     ha_called = {"value": False}
 
     async def fake_get_ha_unit(hass, entry, host, port, unit_id):
@@ -91,17 +98,6 @@ async def test_demo_mode_falls_back_to_legacy_path(monkeypatch) -> None:
 
     monkeypatch.setattr(transport_session, "async_get_ha_unit", fake_get_ha_unit)
 
-    legacy_calls = {"value": False}
-    client_sentinel = object()
-
-    async def fake_ensure_modbus_connection(client, host, port, demo_mode):
-        legacy_calls["value"] = True
-        return client_sentinel
-
-    monkeypatch.setattr(
-        transport_session, "ensure_modbus_connection", fake_ensure_modbus_connection
-    )
-
     session = ModbusTransportSession(
         HOST, PORT, demo_mode=True, hass=object(), entry=object(), unit_id=UNIT_ID
     )
@@ -109,17 +105,31 @@ async def test_demo_mode_falls_back_to_legacy_path(monkeypatch) -> None:
     client = await session.ensure_connection()
 
     assert ha_called["value"] is False
-    assert legacy_calls["value"] is True
-    assert client is client_sentinel
+    assert isinstance(client, MockModbusTcpClient)
+    assert client.connected is True
 
 
-async def test_legacy_path_used_without_hass_entry() -> None:
-    """Without hass/entry the session reports not HA-backed."""
+async def test_demo_reconnect_returns_fresh_mock() -> None:
+    """Demo reconnect yields a connected mock client."""
+    session = ModbusTransportSession(HOST, PORT, demo_mode=True)
+
+    client = await session.reconnect_with_new_client()
+
+    assert isinstance(client, MockModbusTcpClient)
+    assert client.connected is True
+
+
+async def test_real_mode_without_hass_entry_raises() -> None:
+    """Real mode without hass/entry has no fallback since the cutover."""
     session = ModbusTransportSession(HOST, PORT)
+
     assert session._ha_backed is False
+    with pytest.raises(ModbusConnectionException):
+        await session.ensure_connection()
+    with pytest.raises(ModbusConnectionException):
+        await session.reconnect_with_new_client()
 
 
 async def test_ha_path_uses_actual_async_get_ha_unit(monkeypatch) -> None:
     """Sanity: the real async_get_ha_unit is importable and callable shape."""
     assert callable(async_get_ha_unit)
-    assert callable(ensure_modbus_connection)

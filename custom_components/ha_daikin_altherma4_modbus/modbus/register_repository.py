@@ -75,9 +75,8 @@ def _is_error_result(session: ModbusTransportSession, result: Any) -> bool:
 
     Flat ``list``/``tuple`` unit reads (``ModbusConnectionClient``) never
     carry an error state — failures raise at the facade boundary instead.
-    Legacy response objects (``RealModbusTcpClient``/mocks with
-    ``isError()``/``is_error()``) keep the old classification until the
-    Phase 5 cutover removes that path.
+    Response objects (demo ``MockModbusTcpClient``, test fakes) with
+    ``isError()``/``is_error()`` keep the legacy classification.
     """
     if result is None or isinstance(result, (list, tuple)):
         return False
@@ -561,13 +560,11 @@ class ModbusRegisterRepository:
 
     @staticmethod
     def _log_unsupported_register_type(result: Any, register_type: str) -> None:
-        """Log device support diagnostics for legacy register types.
+        """Log device support diagnostics for response-object clients.
 
-        Legacy path only: pymodbus-style error responses carry
-        ``exception_code`` details. Unit reads raise
-        ``ModbusInvalidAddressException`` instead (handled at the call sites),
-        so this helper stays for the ``RealModbusTcpClient``/mock path until
-        the Phase 5 cutover.
+        Response-object path only (demo mock, test fakes): pymodbus-style
+        error responses carry ``exception_code`` details. Unit reads raise
+        ``ModbusInvalidAddressException`` instead (handled at the call sites).
         """
         error_msg = str(result)
         if "exception_code=2" in error_msg:

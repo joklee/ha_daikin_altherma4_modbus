@@ -6,8 +6,10 @@
 # version as its own dependency; let pip resolve the consistent set.
 pytest-homeassistant-custom-component
 
-# Integration dependencies
-pymodbus>=3.8
+# Integration dependencies (mirrors manifest.json requirements).
+# pymodbus itself arrives at runtime via the [pymodbus] extra; nothing
+# imports it directly since the Phase 5 cutover removed the legacy client.
+modbus-connection[pymodbus]>=4.10
 
 # Test requirements (from requirements-test.txt)
 pytest>=7.0.0

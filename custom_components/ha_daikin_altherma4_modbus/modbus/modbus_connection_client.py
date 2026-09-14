@@ -1,8 +1,8 @@
 """Thin facade over ``modbus_connection.ModbusUnit``.
 
-Phase 2 of the ``modbus-connection`` migration. This facade adapts the
-``modbus_connection`` transport to the integration's
-:class:`ModbusClientInterface` contract:
+This facade adapts the ``modbus_connection`` transport to the integration's
+:class:`ModbusClientInterface` contract and is the production default
+(obtained via ``async_get_ha_unit`` / the temporary-unit probe):
 
 - Daikin registers are 1-based (21-87, 1-80, ...); the raw unit API is
   0-based, so every call translates ``address - 1`` (hard contract from the
@@ -12,9 +12,6 @@ Phase 2 of the ``modbus-connection`` migration. This facade adapts the
 - Failures raise the ``ModbusError`` hierarchy; this facade maps them onto
   the integration's own exception types at this single boundary.
 - Writes delegate to ``write_register`` / ``write_coil`` (FC06/FC05).
-
-The production path still uses the legacy ``RealModbusTcpClient`` until the
-Phase 5 cutover; this facade is the tested migration target.
 """
 
 from __future__ import annotations

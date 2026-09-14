@@ -1,8 +1,8 @@
-"""Phase-0 compatibility spikes for a future ``modbus-connection`` migration.
+"""Compatibility tests for the ``modbus-connection`` transport.
 
 These tests document the *behavior of the migration target* (the
-``modbus-connection`` library / ``ModbusUnit`` protocol) that the future
-integration-facing facade must preserve. They deliberately make no change
+``modbus-connection`` library / ``ModbusUnit`` protocol) that the
+integration-facing facade preserves. They deliberately make no change
 to production code — they are executable knowledge for the migration plan:
 
 - **Addressing:** the ``ModbusUnit`` raw API is 0-based (matching pymodbus),
@@ -15,15 +15,12 @@ to production code — they are executable knowledge for the migration plan:
 - **Writes:** ``write_register``/``write_coil`` map to FC06/FC05 (or FC16/FC15
   for multi-value variants).
 
-The module is skipped when ``modbus-connection`` is not installed so the
-normal suite stays green without the migration dependency. It becomes a
-permanent regression test once the dependency ships with the integration.
+``modbus-connection`` ships as a hard integration dependency
+(``manifest.json``) and dev dependency (``requirements-dev.txt``), so this
+module runs as a regular suite test since the Phase 5 cutover.
 """
 
 import pytest
-
-pytest.importorskip("modbus_connection")
-
 from modbus_connection.exceptions import IllegalDataAddressError, ModbusError
 from modbus_connection.mock import MockModbusConnection
 

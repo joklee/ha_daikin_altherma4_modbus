@@ -78,7 +78,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         self, address: int, value: int
     ) -> "MockModbusResponse":
         """Mock write holding register."""
-        # Address is already 0-based (modbus_client.py converts it)
+        # Demo store is indexed by the 1-based Daikin address directly.
         # Update the mock data
         if 0 <= address < len(self._demo_data["holding_registers"]):
             self._demo_data["holding_registers"][address] = value
@@ -89,7 +89,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         self, address: int, value: bool
     ) -> "MockModbusResponse":
         """Mock write coil."""
-        # Address is already 0-based (modbus_client.py converts it)
+        # Demo store is indexed by the 1-based Daikin address directly.
         # Update the mock data
         if 0 <= address < len(self._demo_data["coils"]):
             self._demo_data["coils"][address] = value

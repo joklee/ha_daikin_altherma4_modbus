@@ -1,14 +1,20 @@
-"""Transport/session layer for Modbus connectivity."""
+"""Transport/session layer for Modbus connectivity.
+
+Phase 5 of the ``modbus-connection`` migration: the session owns exactly one
+client handle per endpoint, obtained from either the HA-backed shared unit
+(``async_get_ha_unit`` — the production default, lazy, no I/O) or the demo
+mock. There is no ``pymodbus``-direct fallback; real mode without
+``hass``/``entry`` raises ``ModbusConnectionException`` instead of opening
+an own connection.
+"""
 
 import logging
 from typing import Any
 
-from ..core.exceptions import DaikinModbusException
+from ..core.exceptions import DaikinModbusException, ModbusConnectionException
 from .client_interface import ModbusClientInterface
-from .connection_manager import (
-    async_get_ha_unit,
-    ensure_modbus_connection,
-)
+from .connection_manager import async_get_ha_unit
+from .mock_client import MockModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,8 +34,8 @@ class ModbusTransportSession:
         self.host = host
         self.port = port
         self.demo_mode = demo_mode
-        # Connection identity handed down for the HA-backed provider
-        # (used in Phase 3; optional so existing call sites keep working).
+        # Connection identity for the HA-backed provider (the default path;
+        # optional so demo/test call sites keep working).
         self.hass = hass
         self.entry = entry
         self.unit_id = unit_id
@@ -39,11 +45,11 @@ class ModbusTransportSession:
     def is_modbus_error(response) -> object | bool:
         """Check if a Modbus response indicates an error.
 
-        Legacy path only (``RealModbusTcpClient``/mocks with ``isError()`` /
-        ``is_error()``). Flat ``list`` unit reads from
-        ``ModbusConnectionClient`` never carry an error state — failures
-        raise at the facade boundary — and are always classified as success.
-        Kept until the Phase 5 cutover removes the legacy client.
+        Demo/test-fake compat: the demo ``MockModbusTcpClient`` (and test
+        fakes) return response objects with ``isError()`` / ``is_error()``.
+        Flat ``list`` unit reads from ``ModbusConnectionClient`` never carry
+        an error state — failures raise at the facade boundary — and are
+        always classified as success.
         """
         if response is None or isinstance(response, (list, tuple)):
             return False
@@ -58,8 +64,7 @@ class ModbusTransportSession:
 
         On the HA-backed path the unit is lazy (no I/O): the first read opens
         the shared connection and a dropped link reopens on the next request,
-        so we never force a connect here. On the legacy path we fall through to
-        the existing real/mock connection handling.
+        so we never force a connect here. Demo mode connects the mock.
         """
         if self.client is not None:
             return self.client
@@ -82,61 +87,44 @@ class ModbusTransportSession:
                 raise
             return self.client
 
-        if self.client is None:
-            _LOGGER.debug("Creating Modbus client for %s:%s", self.host, self.port)
-
-        try:
-            self.client = await ensure_modbus_connection(
-                self.client, self.host, self.port, self.demo_mode
-            )
-            return self.client
-        except (DaikinModbusException, OSError, TimeoutError) as err:
-            _LOGGER.error(
-                "Failed to establish Modbus connection to %s:%s: %s",
-                self.host,
-                self.port,
-                err,
-            )
-
-            if self.demo_mode:
-                _LOGGER.info("In demo mode, creating mock client as fallback")
-                from .mock_client import MockModbusTcpClient
-
-                self.client = MockModbusTcpClient(self.host, self.port)
-                try:
-                    await self.client.connect()
-                    _LOGGER.info(
-                        "Successfully created fallback mock client in demo mode"
-                    )
-                    return self.client
-                except (DaikinModbusException, OSError, TimeoutError) as mock_err:
-                    _LOGGER.error("Even mock client creation failed: %s", mock_err)
-                    self.client = None
-                    return None
-
-            _LOGGER.error("Real mode connection failed to %s:%s", self.host, self.port)
-            _LOGGER.info("Possible solutions:")
-            _LOGGER.info("1. Check if the Daikin device is powered on")
-            _LOGGER.info("2. Verify the IP address and port (default: 502)")
-            _LOGGER.info("3. Check network connectivity to the device")
-            _LOGGER.info("4. Ensure Modbus TCP is enabled on the device")
-            _LOGGER.info("5. Try enabling demo mode for testing")
-            self.client = None
-            return None
-        except Exception:
-            _LOGGER.exception(
-                "Unexpected error while establishing Modbus connection to %s:%s",
+        if self.demo_mode:
+            _LOGGER.debug(
+                "Creating mock Modbus client for demo mode at %s:%s",
                 self.host,
                 self.port,
             )
-            raise
+            try:
+                self.client = await self._new_client()
+                return self.client
+            except (DaikinModbusException, OSError, TimeoutError) as err:
+                _LOGGER.error(
+                    "Failed to create mock Modbus client for %s:%s: %s",
+                    self.host,
+                    self.port,
+                    err,
+                )
+                self.client = None
+                return None
+            except Exception:
+                _LOGGER.exception(
+                    "Unexpected error while creating mock Modbus client for %s:%s",
+                    self.host,
+                    self.port,
+                )
+                raise
+
+        raise ModbusConnectionException(
+            f"No HA-backed Modbus unit available for {self.host}:{self.port} "
+            "(real mode requires hass/entry via the HA 2026.9 modbus component; "
+            "use demo mode for testing without a device)"
+        )
 
     async def reconnect_with_new_client(self) -> ModbusClientInterface | None:
         """(Re)obtain the client, forcing a fresh handle.
 
         On the HA-backed path this does not recreate the shared connection —
         ``async_get_unit`` returns the same shared unit — but it refreshes the
-        facade handle. On the legacy path a new client is created.
+        facade handle. Demo mode reconnects a fresh mock.
         """
         self.client = await self._new_client()
         return self.client
@@ -144,15 +132,27 @@ class ModbusTransportSession:
     @property
     def _ha_backed(self) -> bool:
         """Whether this session should use the HA-backed provider."""
-        return bool(self.hass is not None and self.entry is not None)
+        return bool(
+            self.hass is not None and self.entry is not None and not self.demo_mode
+        )
 
     async def _new_client(self) -> ModbusClientInterface:
-        """Return a new client via the HA provider or the legacy path."""
-        if self._ha_backed and not self.demo_mode:
+        """Return a new client via the HA provider or the demo mock."""
+        if self._ha_backed:
             unit_id = self.unit_id if self.unit_id is not None else 1
             return await async_get_ha_unit(
                 self.hass, self.entry, self.host, self.port, unit_id
             )
-        return await ensure_modbus_connection(
-            None, self.host, self.port, self.demo_mode
+        if self.demo_mode:
+            client: ModbusClientInterface = MockModbusTcpClient(self.host, self.port)
+            await client.connect()
+            if not client.connected:
+                raise ModbusConnectionException(
+                    f"Mock Modbus client failed to connect to {self.host}:{self.port}"
+                )
+            return client
+        raise ModbusConnectionException(
+            f"No HA-backed Modbus unit available for {self.host}:{self.port} "
+            "(real mode requires hass/entry via the HA 2026.9 modbus component; "
+            "use demo mode for testing without a device)"
         )

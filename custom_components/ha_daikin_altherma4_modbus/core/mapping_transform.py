@@ -31,9 +31,9 @@ class ModbusMappingTransform:
     def _extract_register_raw(register_data, address: int, offset: int) -> int:
         """Return the raw value for a 1-based address.
 
-        Supports both the legacy response objects (``.registers`` 1-based
-        array, from ``RealModbusTcpClient``/``MockModbusTcpClient``) and the
-        flat ``list`` unit reads (0-based block starting at ``offset``, from
+        Supports both response objects (``.registers`` 1-based array, from
+        the demo ``MockModbusTcpClient``/test fakes) and the flat ``list``
+        unit reads (0-based block starting at ``offset``, from
         ``ModbusConnectionClient``). Flat lists never carry an error state —
         failures raise instead.
         """
