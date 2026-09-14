@@ -6,7 +6,8 @@ client to Home Assistant's `modbus-connection` library
 
 - Development branch: `feat/modbus-connection-migration`
 - Reference library: `modbus-connection` 4.10.0 (`modbus-connection[pymodbus]`)
-- Introduced in: config entry `VERSION 2` (unit_id), manifest `0.7.0-dev`
+- Introduced in: config entry `VERSION 2` (unit_id), manifest `0.7.0`
+  (migration complete; all phases checked off)
 
 ---
 
@@ -70,7 +71,7 @@ Executable documentation in `tests/modbus/test_modbus_connection_compat.py`
       - `integration/repair_flow.py`: preserves `unit_id`
       - `translations/en.json` + `de.json`: field descriptions (all three
         flows) and `invalid_unit_id` error message
-      - `manifest.json`: version → `0.7.0-dev`
+      - `manifest.json`: version → `0.7.0` (bumped from `0.7.0-dev` in Phase 6)
 - [x] **Regression test** `tests/ha/test_config_entry_migration.py`
       (v1 entry → migrated with default, reload-stable, idempotent)
 - [x] **Test adjustments:** data assertions now expect `unit_id`
@@ -87,8 +88,7 @@ Executable documentation in `tests/modbus/test_modbus_connection_compat.py`
 
 ### Known gaps / notes
 
-- `translations/nl.json` does not contain the new `unit_id` strings; HA falls
-  back to English (optional follow-up).
+- `translations/nl.json` now contains the `unit_id` strings (added in Phase 6).
 - `manifest.json` still requires `pymodbus>=3.8` — intentional; the backend
   swap happens in Phase 2/3.
 - The Docker E2E test still writes version-1 entry data on purpose: it
@@ -372,12 +372,36 @@ verification (tests + `ruff`) before moving on.
 
 ### Phase 6 — Hardening & documentation
 
-- [ ] Docker E2E (`HA_DOCKER_DEMO_TESTS=1`) against HA stable, including the
+- [x] Docker E2E (`HA_DOCKER_DEMO_TESTS=1`) against HA stable, including the
       v1→v2 migration of its fixture entry
-- [ ] Update `README.md`, `SCRIPTS.md`, and the Cline rules (`20-modbus`) for
+- [x] Update `README.md`, `SCRIPTS.md`, and the Cline rules (`20-modbus`) for
       the new backend
-- [ ] Optional: add `unit_id` strings to `translations/nl.json`
-- [ ] Final version bump `0.7.0-dev` → `0.7.0` on release
+- [x] Optional: add `unit_id` strings to `translations/nl.json`
+- [x] Final version bump `0.7.0-dev` → `0.7.0` on release
+
+      Verification results:
+      - Docker E2E `test_ha_docker_demo_mode` (`-m slow`, opt-in):
+        **1 passed** against `ghcr.io/home-assistant/home-assistant:stable`
+        (resolved to **HA 2026.9.2** — the first stable with the shared
+        `modbus` component). The v1 fixture entry (no `unit_id`) was
+        migrated live to **version 2 with `unit_id: 1`** (verified in the
+        container's `core.config_entries`); normal + slow coordinators set
+        up in demo mode with 9 integration log lines and **no ERROR/CRITICAL**
+        lines.
+      - Docs: `README.md` (HA 2026.9+ prerequisite, `Unit ID` config row,
+        shared-connection note under Connection Limits, reconfigure + credits
+        wording), `SCRIPTS.md` (E2E scope: demo coordinators, v1→v2
+        migration, `:stable` image, opt-in flag), `.clinerules/20-modbus.md`
+        (backend chain, `modbus-connection[pymodbus]>=4.10` requirement,
+        facade responsibility, `ModbusError` boundary §39, HA-independent
+        facade §40, unit-level test mocking §41, new §72 Shared Modbus
+        Backend rules).
+      - `translations/nl.json`: `unit_id` label + description in all three
+        config steps plus the `invalid_unit_id` error string; `test_translations`
+        (15 tests) green.
+      - `manifest.json`: version `0.7.0-dev` → `0.7.0`.
+      - `pytest`: full suite re-run below; `ruff check .` /
+        `ruff format --check .`: clean.
 
 ## 6. Risks / watch items
 
@@ -387,7 +411,8 @@ verification (tests + `ruff`) before moving on.
   `async_get_temporary_unit`) only exist from HA 2026.9. On HA 2026.8 the
   probe reports `cannot_connect` and the HA-backed data path raises
   `ModbusConnectionException`; real-device operation requires the HA 2026.9
-  runtime (Phase 6 Docker E2E validates this against HA stable).
+  runtime (validated by the Phase 6 Docker E2E against HA stable 2026.9.2;
+  `README.md` prerequisites require HA 2026.9+).
 - pymodbus remains the transport backend (via the extra), so wire behavior
   should be identical — but addressing and exception semantics are exactly
   what the Phase 0 spikes pin down.
