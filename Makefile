@@ -112,15 +112,6 @@ format-check:
 	@echo "🔍 Checking code formatting..."
 	ruff format --check .
 
-security:
-	@echo "🔒 Running security checks..."
-	pip-audit -r requirements-dev.txt --progress-spinner off \
-	  --ignore-vuln PYSEC-2026-3552 \
-	  --ignore-vuln PYSEC-2026-3553 \
-	  --ignore-vuln PYSEC-2026-3554
-	@echo "   Note: PYSEC-2026-3552/3553/3554 (cryptography<50) are accepted"
-	@echo "   until Home Assistant lifts its exact pin 'cryptography==48.0.1'."
-
 safety:
 	@echo "⚠️  Checking dependency vulnerabilities..."
 	safety check --json

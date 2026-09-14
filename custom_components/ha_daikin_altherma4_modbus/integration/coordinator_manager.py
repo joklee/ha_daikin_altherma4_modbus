@@ -24,19 +24,23 @@ class CoordinatorManager:
         normal_interval: int = 10,
         slow_interval: int = 600,
         demo_mode: bool = False,
+        entry=None,
+        unit_id: int | None = None,
     ):
         """Initialize the coordinator manager."""
         self.hass = hass
         self.host = host
         self.port = port
         self.demo_mode = demo_mode
+        self.entry = entry
+        self.unit_id = unit_id
 
         # Create coordinators
         self.normal_coordinator = DaikinAlthermaNormalCoordinator(
-            hass, host, port, normal_interval, demo_mode
+            hass, host, port, normal_interval, demo_mode, entry, unit_id
         )
         self.slow_coordinator = DaikinAlthermaSlowCoordinator(
-            hass, host, port, slow_interval, demo_mode
+            hass, host, port, slow_interval, demo_mode, entry, unit_id
         )
 
         self.coordinators = {
@@ -76,6 +80,101 @@ class CoordinatorManager:
     def get_coordinator(self, coordinator_type: str):
         """Get a specific coordinator by type."""
         return self.coordinators.get(coordinator_type)
+
+    @staticmethod
+    def _client_of(coordinator) -> Any | None:
+        """Return the transport client of a coordinator, if any."""
+        data_manager = getattr(coordinator, "data_manager", None)
+        return getattr(data_manager, "client", None)
+
+    @staticmethod
+    def _latest(*values: float | None) -> float | None:
+        """Return the newest timestamp, ignoring unset ones."""
+        valid = [value for value in values if value is not None]
+        return max(valid) if valid else None
+
+    @property
+    def connection_active(self) -> bool:
+        """Whether any coordinator currently holds a connected client."""
+        for coordinator in self.coordinators.values():
+            client = self._client_of(coordinator)
+            if client is not None and bool(getattr(client, "connected", False)):
+                return True
+        return False
+
+    @property
+    def last_read_at(self) -> float | None:
+        """Epoch of the newest successful read across coordinators."""
+        return self._latest(
+            *(
+                getattr(self._client_of(coordinator), "last_read_at", None)
+                for coordinator in self.coordinators.values()
+            )
+        )
+
+    @property
+    def last_write_at(self) -> float | None:
+        """Epoch of the newest successful write across coordinators."""
+        return self._latest(
+            *(
+                getattr(self._client_of(coordinator), "last_write_at", None)
+                for coordinator in self.coordinators.values()
+            )
+        )
+
+    @staticmethod
+    def _error_counts(coordinator, direction: str) -> dict[str, int]:
+        """Return a client's error counters for one direction, if any."""
+        client = CoordinatorManager._client_of(coordinator)
+        counts = getattr(client, "error_counts", None)
+        if not isinstance(counts, dict):
+            return {}
+        return {
+            key: int(counts.get(f"{direction}_{key}", 0) or 0)
+            for key in ("timeout", "connection", "invalid_address", "other")
+        }
+
+    def error_breakdown(self, direction: str) -> dict[str, int]:
+        """Summed error counters for reads or writes across coordinators."""
+        total = {"timeout": 0, "connection": 0, "invalid_address": 0, "other": 0}
+        for coordinator in self.coordinators.values():
+            for key, value in self._error_counts(coordinator, direction).items():
+                total[key] += value
+        return total
+
+    @property
+    def read_errors(self) -> int:
+        """Total failed reads across coordinators."""
+        return sum(self.error_breakdown("read").values())
+
+    @property
+    def write_errors(self) -> int:
+        """Total failed writes across coordinators."""
+        return sum(self.error_breakdown("write").values())
+
+    @property
+    def last_error_at(self) -> float | None:
+        """Epoch of the newest failure across coordinators."""
+        return self._latest(
+            *(
+                getattr(self._client_of(coordinator), "last_error_at", None)
+                for coordinator in self.coordinators.values()
+            )
+        )
+
+    @property
+    def last_error(self) -> str | None:
+        """Description of the newest failure across coordinators."""
+        newest: float | None = None
+        message: str | None = None
+        for coordinator in self.coordinators.values():
+            client = self._client_of(coordinator)
+            stamp = getattr(client, "last_error_at", None)
+            if stamp is not None and (newest is None or stamp > newest):
+                newest = stamp
+                text = getattr(client, "last_error", None)
+                message = str(text) if text is not None else None
+        return message
 
     def get_all_data(self):
         """Get combined data from all coordinators."""

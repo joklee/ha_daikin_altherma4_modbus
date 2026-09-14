@@ -150,10 +150,9 @@ async def test_connection_recovery_cycle(fail_cls, hass):
 
     Only the input-register read is failed on purpose. Failing the
     discrete-input read instead would trigger ``_retry_read_discrete_inputs``,
-    which in real mode calls ``reconnect_with_new_client()`` and creates a
-    real ``RealModbusTcpClient`` (a real network attempt). Keeping discrete
-    reads healthy keeps this test deterministic and offline while still
-    exercising the genuine input-register failure path.
+    which calls ``reconnect_with_new_client()``. Keeping discrete reads
+    healthy keeps this test deterministic and offline while still exercising
+    the genuine input-register failure path.
     """
     # Phase 1 - connected
     coordinator, client = _make_coordinator(hass, fail_cls)

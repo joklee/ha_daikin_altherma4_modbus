@@ -23,6 +23,8 @@ CONF_SCAN_INTERVAL = "scan_interval"
 CONF_SLOW = "slow"
 CONF_SLOW_SCAN_INTERVAL = "slow_scan_interval"
 CONF_UNIT = "unit"
+CONF_UNIT_ID = "unit_id"
+DEFAULT_UNIT_ID = 1  # Daikin Altherma 4 over a direct TCP link is unit 1
 
 SLOW_SCAN_INTERVAL = 30
 NORMAL_SCAN_INTERVAL = 5

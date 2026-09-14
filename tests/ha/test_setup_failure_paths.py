@@ -8,8 +8,8 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.ha_daikin_altherma4_modbus.core.const import DOMAIN
-from custom_components.ha_daikin_altherma4_modbus.modbus.modbus_client import (
-    RealModbusTcpClient,
+from custom_components.ha_daikin_altherma4_modbus.integration import (
+    config_flow as config_flow_module,
 )
 
 HOST = "192.0.2.50"
@@ -30,9 +30,9 @@ async def test_setup_entry_connection_failure_raises_config_entry_not_ready(
     entry.add_to_hass(hass)
 
     with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        side_effect=Exception("Connection refused"),
+        config_flow_module,
+        "_test_connection",
+        new=mock.AsyncMock(return_value=(False, "cannot_connect")),
     ):
         assert await hass.config_entries.async_setup(entry.entry_id) is False
         await hass.async_block_till_done()

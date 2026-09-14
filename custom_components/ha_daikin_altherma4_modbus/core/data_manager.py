@@ -26,6 +26,9 @@ class ModbusDataManager:
     host: str
     port: int
     demo_mode: bool = False
+    hass: Any | None = None
+    entry: Any | None = None
+    unit_id: int | None = None
 
     _session: ModbusTransportSession = field(init=False)
     _repository: ModbusRegisterRepository = field(init=False)
@@ -35,7 +38,9 @@ class ModbusDataManager:
 
     def __post_init__(self):
         """Initialize internal components after dataclass creation."""
-        self._session = ModbusTransportSession(self.host, self.port, self.demo_mode)
+        self._session = ModbusTransportSession(
+            self.host, self.port, self.demo_mode, self.hass, self.entry, self.unit_id
+        )
         self._repository = ModbusRegisterRepository(self._session)
         self._mapping = ModbusMappingTransform()
 
@@ -309,6 +314,12 @@ class ModbusDataManager:
                 "Failed to refresh Modbus connection in data manager: %s", err
             )
             raise
+
+    async def read_raw_snapshot(
+        self,
+    ) -> tuple[dict[str, dict[int, int | bool]], dict[str, str]]:
+        """Read all four spaces raw (snapshot for the diagnostics download)."""
+        return await self._repository.read_raw_snapshot()
 
     def _update_last_triggered(self, data: StateData):
         """Update last-triggered calculated sensors."""

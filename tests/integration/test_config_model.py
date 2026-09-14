@@ -107,7 +107,12 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
     sensor_component_module.SensorEntity = type("FakeSensorEntity", (), {})
     # Add SensorStateClass for long-term statistics support
     sensor_component_module.SensorStateClass = type(
-        "SensorStateClass", (), {"MEASUREMENT": "measurement"}
+        "SensorStateClass",
+        (),
+        {
+            "MEASUREMENT": "measurement",
+            "TOTAL_INCREASING": "total_increasing",
+        },
     )
     # Add SensorDeviceClass for device class enums
     sensor_component_module.SensorDeviceClass = type(
@@ -121,11 +126,19 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
             "TIMESTAMP": "timestamp",
             "SPEED": "speed",
             "PRESSURE": "pressure",
+            "VOLUME_FLOW_RATE": "volume_flow_rate",
         },
     )
     monkeypatch.setitem(
         sys.modules, "homeassistant.components.sensor", sensor_component_module
     )
+    select_component_module = types.ModuleType("homeassistant.components.select")
+    select_component_module.SelectEntity = type("FakeSelectEntity", (), {})
+    monkeypatch.setitem(
+        sys.modules, "homeassistant.components.select", select_component_module
+    )
+
+    util_module = types.ModuleType("homeassistant.util")
 
     util_module = types.ModuleType("homeassistant.util")
     monkeypatch.setitem(sys.modules, "homeassistant.util", util_module)
@@ -154,6 +167,37 @@ def _load_config_flow_module(monkeypatch):
     voluptuous_module.Required = _identity
     voluptuous_module.Optional = _identity
     voluptuous_module.Schema = FakeSchema
+
+    def _coerce(target_type):
+        def _convert(value):
+            return target_type(value)
+
+        return _convert
+
+    class FakeRange:
+        def __init__(self, min=None, max=None):
+            self.min = min
+            self.max = max
+
+        def __call__(self, value):
+            if self.min is not None and value < self.min:
+                raise ValueError(f"value must be at least {self.min}")
+            if self.max is not None and value > self.max:
+                raise ValueError(f"value must be at most {self.max}")
+            return value
+
+    def _all(*validators):
+        def _apply(value):
+            result = value
+            for validator in validators:
+                result = validator(result)
+            return result
+
+        return _apply
+
+    voluptuous_module.All = _all
+    voluptuous_module.Coerce = _coerce
+    voluptuous_module.Range = FakeRange
     monkeypatch.setitem(sys.modules, "voluptuous", voluptuous_module)
 
     config_entries_module = types.ModuleType("homeassistant.config_entries")
@@ -221,6 +265,8 @@ def _load_config_flow_module(monkeypatch):
     const_module.CONF_SLOW = "slow"
     const_module.CONF_SLOW_SCAN_INTERVAL = "slow_scan_interval"
     const_module.CONF_UNIT = "unit"
+    const_module.CONF_UNIT_ID = "unit_id"
+    const_module.DEFAULT_UNIT_ID = 1
     const_module.SLOW_SCAN_INTERVAL = 600
     const_module.NORMAL_SCAN_INTERVAL = 10
     const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
@@ -279,6 +325,9 @@ def _load_config_flow_module(monkeypatch):
         mock_abort_if_unique_id_configured
     )
 
+    # The connection probe now needs hass; stub it per test via monkeypatch so
+    # the real module attribute is restored afterwards (these model tests stay
+    # focused on data/options separation, not I/O).
     return config_flow_module
 
 
@@ -329,6 +378,8 @@ def _load_integration_module(monkeypatch):
     const_module.CONF_SLOW = "slow"
     const_module.CONF_SLOW_SCAN_INTERVAL = "slow_scan_interval"
     const_module.CONF_UNIT = "unit"
+    const_module.CONF_UNIT_ID = "unit_id"
+    const_module.DEFAULT_UNIT_ID = 1
     const_module.SLOW_SCAN_INTERVAL = 600
     const_module.NORMAL_SCAN_INTERVAL = 10
     const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
@@ -351,7 +402,17 @@ def _load_integration_module(monkeypatch):
     class FakeCoordinatorManager:
         last_instance = None
 
-        def __init__(self, hass, host, port, normal_interval, slow_interval, demo_mode):
+        def __init__(
+            self,
+            hass,
+            host,
+            port,
+            normal_interval,
+            slow_interval,
+            demo_mode,
+            entry=None,
+            unit_id=None,
+        ):
             self.normal = FakeCoordinator()
             self.slow = FakeCoordinator()
             self.host = host
@@ -407,12 +468,17 @@ def _load_integration_module(monkeypatch):
         def connected(self):
             return self._connected
 
-        @classmethod
-        async def async_close_cached_client(cls, host, port):
-            pass
-
     modbus_client_module.RealModbusTcpClient = FakeRealModbusTcpClient
     monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
+
+    # Setup probes the endpoint via HA's temporary unit; stub the
+    # connection_manager module so setup reaches the coordinator logic.
+    connection_manager_name = f"{package_name}.modbus.connection_manager"
+    connection_manager_module = types.ModuleType(connection_manager_name)
+    connection_manager_module.async_test_connection_with_temporary_unit = AsyncMock(
+        return_value=(True, None)
+    )
+    monkeypatch.setitem(sys.modules, connection_manager_name, connection_manager_module)
 
     # Mock integration.config_entry_utils, repair and services so the real
     # subpackage __init__.py files are not executed
@@ -524,7 +590,11 @@ async def test_config_flow_user_step_separates_data_and_options(monkeypatch):
     )
 
     assert result["type"] == "create_entry"
-    assert result["data"] == {"host": "192.168.1.20", "port": 1502}
+    assert result["data"] == {
+        "host": "192.168.1.20",
+        "port": 1502,
+        "unit_id": 1,
+    }
     assert result["title"] == "Daikin Altherma 4 (192.168.1.20)"
     assert result["options"] == {
         "scan_interval": 15,
@@ -674,7 +744,7 @@ async def test_config_flow_user_step_trims_whitespace(monkeypatch):
     )
 
     assert result["type"] == "create_entry"
-    assert result["data"] == {"host": "192.168.1.100", "port": 502}
+    assert result["data"] == {"host": "192.168.1.100", "port": 502, "unit_id": 1}
     assert result["options"]["electric_power_sensor"] == "sensor.power"
 
 
@@ -683,6 +753,10 @@ async def test_config_flow_user_step_handles_empty_electric_power_sensor(monkeyp
     """Test that config flow handles empty electric power sensor."""
     config_flow = _load_config_flow_module(monkeypatch)
     flow = config_flow.ConfigFlow()
+    flow.hass = SimpleNamespace()
+    monkeypatch.setattr(
+        config_flow, "_test_connection", AsyncMock(return_value=(True, None))
+    )
 
     result = await flow.async_step_user(
         {
@@ -721,6 +795,10 @@ async def test_config_flow_user_step_uses_default_values(monkeypatch):
     """Test that config flow uses default values when not provided."""
     config_flow = _load_config_flow_module(monkeypatch)
     flow = config_flow.ConfigFlow()
+    flow.hass = SimpleNamespace()
+    monkeypatch.setattr(
+        config_flow, "_test_connection", AsyncMock(return_value=(True, None))
+    )
 
     result = await flow.async_step_user(
         {
@@ -733,7 +811,7 @@ async def test_config_flow_user_step_uses_default_values(monkeypatch):
     )
 
     assert result["type"] == "create_entry"
-    assert result["data"] == {"host": "192.168.1.100", "port": 502}
+    assert result["data"] == {"host": "192.168.1.100", "port": 502, "unit_id": 1}
     assert result["options"]["scan_interval"] == 10
     assert result["options"]["slow_scan_interval"] == 600
     assert result["options"]["demo_mode"] is False

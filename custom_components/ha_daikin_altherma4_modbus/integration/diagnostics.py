@@ -62,6 +62,36 @@ async def async_get_config_entry_diagnostics(
         "coordinator_data": coordinator_data,
     }
 
+    # Raw register snapshot in the guide's shape: fresh undecoded reads keyed
+    # by raw unit address, per-space failures, and successfully read spaces.
+    # Data managers without a snapshot seam (test stubs) are skipped.
+    registers: dict[str, dict[int, int | bool]] = {
+        "holding": {},
+        "input": {},
+        "coil": {},
+        "discrete": {},
+    }
+    failed: dict[str, str] = {}
+    for coordinator in manager.coordinators.values():
+        data_manager = getattr(coordinator, "data_manager", None)
+        read_raw_snapshot = getattr(data_manager, "read_raw_snapshot", None)
+        if not callable(read_raw_snapshot):
+            continue
+        try:
+            space_map, space_failed = await read_raw_snapshot()
+        except Exception as err:
+            failed.setdefault("snapshot", f"{type(err).__name__}: {err}")
+            continue
+        for space, values in space_map.items():
+            registers.setdefault(space, {}).update(values)
+        for space, error in space_failed.items():
+            failed.setdefault(space, error)
+    diagnostics_data["registers"] = registers
+    diagnostics_data["failed"] = failed
+    diagnostics_data["updated"] = sorted(
+        space for space, values in registers.items() if values
+    )
+
     return {
         "config_entry_data": async_redact_data(
             diagnostics_data["config_entry_data"], TO_REDACT
@@ -70,4 +100,7 @@ async def async_get_config_entry_diagnostics(
         "connection": async_redact_data(diagnostics_data["connection"], TO_REDACT),
         "coordinator_statuses": diagnostics_data["coordinator_statuses"],
         "coordinator_data": diagnostics_data["coordinator_data"],
+        "registers": diagnostics_data["registers"],
+        "failed": diagnostics_data["failed"],
+        "updated": diagnostics_data["updated"],
     }

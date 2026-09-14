@@ -46,7 +46,7 @@
 3. **Ethernet network access** to the heat pump (WiFi is not supported)
 4. **Network cable (RJ45)** connected between your heat pump and network
 5. **Modbus TCP enabled** on your heat pump (see activation instructions below)
-6. **Home Assistant 2024.1 or higher**
+6. **Home Assistant 2026.9 or higher** (uses HA's shared `modbus` component)
 
 ---
 
@@ -69,6 +69,11 @@ The heat pump supports a total of **3 concurrent connections**. Examples:
 - 3× port 502
 - 3× port 802
 - Combination, e.g. 1× port 502 and 2× port 802
+
+The integration does not open its own Modbus connection: it uses Home Assistant's
+shared `modbus` component (`modbus-connection`), so multiple integrations can share
+one physical connection per `host:port`. The configured **Unit ID** selects the
+addressed unit on that shared connection.
 
 ### Step-by-Step Activation
 
@@ -128,6 +133,7 @@ If you want to test the integration without a physical heat pump connected:
 |-----------|-------------|---------|
 | **Host** | IP address of your Daikin heat pump | – |
 | **Port** | Modbus TCP port | `502` |
+| **Unit ID** | Modbus unit address (slave ID) of the heat pump | `1` |
 
 ### Optional Parameters
 
@@ -176,10 +182,10 @@ After installation, you can modify settings via:
 
 ### Changing Connection Details
 
-You can change the host address and port via the reconfigure flow:
+You can change the host address, port, and unit ID via the reconfigure flow:
 1. **Settings** → **Devices & Services** → **Daikin Altherma 4 Modbus**
 2. Click **Configure**
-3. Change host/port – the new connection will be tested before applying
+3. Change host/port/unit ID – the new connection will be tested before applying
 
 ---
 
@@ -762,5 +768,5 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 
 - Based on Daikin Altherma HT Modbus documentation
 - Built with the Home Assistant Custom Integration Framework
-- Uses the pymodbus library for Modbus TCP communication
+- Uses Home Assistant's shared Modbus component (`modbus-connection`) for Modbus TCP communication
 - Multilingual support with comprehensive translations

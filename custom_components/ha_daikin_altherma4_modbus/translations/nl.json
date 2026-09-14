@@ -10,7 +10,8 @@
           "scan_interval": "Scan Interval",
           "slow_scan_interval": "Langzame Scan Interval",
           "electric_power_sensor": "Externe stroomverbruik sensor Entity ID",
-          "demo_mode": "Demo Mode"
+          "demo_mode": "Demo Mode",
+          "unit_id": "Unit-ID"
         },
         "data_description": {
           "host": "IP address of hostname van de Daikin Altherma warmtepomp",
@@ -18,7 +19,8 @@
           "scan_interval": "Scan interval in seconde voor normale data",
           "slow_scan_interval": "Scan interval in seconde voor langzame data",
           "electric_power_sensor": "Optionele Entity ID voor externe stroomverbruik sensor",
-          "demo_mode": "Demo mode inschakelen zonder connectie"
+          "demo_mode": "Demo mode inschakelen zonder connectie",
+          "unit_id": "Modbus-unitadres (slave-ID) van de warmtepomp, meestal 1."
         }
       },
       "reauth": {
@@ -30,7 +32,8 @@
           "scan_interval": "Scan Interval",
           "slow_scan_interval": "Langzame Scan Interval",
           "electric_power_sensor": "Externe stroomverbruik sensor Entity ID",
-          "demo_mode": "Demo Mode"
+          "demo_mode": "Demo Mode",
+          "unit_id": "Unit-ID"
         },
         "data_description": {
           "host": "IP address of hostname van de Daikin Altherma warmtepomp",
@@ -38,7 +41,8 @@
           "scan_interval": "Scan interval in seconde voor normale data",
           "slow_scan_interval": "Scan interval in seconde voor langzame data",
           "electric_power_sensor": "Optionele Entity ID voor externe stroomverbruik sensor",
-          "demo_mode": "Demo mode inschakelen zonder connectie"
+          "demo_mode": "Demo mode inschakelen zonder connectie",
+          "unit_id": "Modbus-unitadres (slave-ID) van de warmtepomp, meestal 1."
         }
       },
       "reconfigure": {
@@ -50,7 +54,8 @@
           "scan_interval": "Scan Interval",
           "slow_scan_interval": "Langzame Scan Interval",
           "electric_power_sensor": "Externe stroomverbruik sensor Entity ID",
-          "demo_mode": "Demo Mode"
+          "demo_mode": "Demo Mode",
+          "unit_id": "Unit-ID"
         },
         "data_description": {
           "host": "IP address of hostname van de Daikin Altherma warmtepomp",
@@ -58,9 +63,13 @@
           "scan_interval": "Scan interval in seconde voor normale data",
           "slow_scan_interval": "Scan interval in seconde voor langzame data",
           "electric_power_sensor": "Optionele Entity ID voor externe stroomverbruik sensor",
-          "demo_mode": "Demo mode inschakelen zonder connectie"
+          "demo_mode": "Demo mode inschakelen zonder connectie",
+          "unit_id": "Modbus-unitadres (slave-ID) van de warmtepomp, meestal 1."
         }
       }
+    },
+    "error": {
+      "invalid_unit_id": "Unit-ID moet tussen 1 en 247 liggen."
     }
   },
   "options": {
@@ -145,6 +154,9 @@
       }
     },
     "binary_sensor": {
+      "connection_active": {
+        "name": "Verbinding actief"
+      },
       "input_30": {
         "name": "Compressor actief"
       },
@@ -246,6 +258,25 @@
       }
     },
     "sensor": {
+      "connection_last_read": {
+        "name": "Laatste leesopdracht"
+      },
+      "connection_last_write": {
+        "name": "Laatste schrijfopdracht"
+      },
+      "connection_read_errors": {
+        "name": "Leesfouten"
+      },
+      "connection_state": {
+        "name": "Verbindingsstatus",
+        "state": {
+          "connected": "Verbonden",
+          "disconnected": "Niet verbonden"
+        }
+      },
+      "connection_write_errors": {
+        "name": "Schrijffouten"
+      },
       "input_21": {
         "name": "Unit abnormality",
         "state": {
