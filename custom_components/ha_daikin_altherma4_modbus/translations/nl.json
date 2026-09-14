@@ -154,6 +154,9 @@
       }
     },
     "binary_sensor": {
+      "connection_active": {
+        "name": "Verbinding actief"
+      },
       "input_30": {
         "name": "Compressor actief"
       },
@@ -255,6 +258,25 @@
       }
     },
     "sensor": {
+      "connection_last_read": {
+        "name": "Laatste leesopdracht"
+      },
+      "connection_last_write": {
+        "name": "Laatste schrijfopdracht"
+      },
+      "connection_read_errors": {
+        "name": "Leesfouten"
+      },
+      "connection_state": {
+        "name": "Verbindingsstatus",
+        "state": {
+          "connected": "Verbonden",
+          "disconnected": "Niet verbonden"
+        }
+      },
+      "connection_write_errors": {
+        "name": "Schrijffouten"
+      },
       "input_21": {
         "name": "Unit abnormality",
         "state": {

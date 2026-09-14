@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from typing import Any
 
 from .client_interface import ModbusClientInterface
@@ -16,6 +17,19 @@ class MockModbusTcpClient(ModbusClientInterface):
         self.host = host
         self.port = port
         self._connected = False
+        # Epoch timestamps of the last successful read/write (mirrors the
+        # facade contract so connection diagnostic sensors work in demo mode).
+        self.last_read_at: float | None = None
+        self.last_write_at: float | None = None
+        # Error-counter shape mirrors the facade; the mock never fails, so
+        # these stay at their zero state.
+        self.error_counts: dict[str, int] = {
+            f"{direction}_{category}": 0
+            for direction in ("read", "write")
+            for category in ("timeout", "connection", "invalid_address", "other")
+        }
+        self.last_error_at: float | None = None
+        self.last_error: str | None = None
         self._data_regenerated = False  # Flag to track data regeneration
         # Force regeneration of demo data to ensure new enum logic is used
         self._demo_data = self.generate_demo_register_data()
@@ -44,6 +58,7 @@ class MockModbusTcpClient(ModbusClientInterface):
     ) -> "MockModbusResponse":
         """Mock read input registers."""
         self._demo_data = self.generate_demo_register_data()
+        self.last_read_at = time.time()
 
         return MockModbusResponse(self._demo_data["input_registers"], address, count)
 
@@ -52,6 +67,7 @@ class MockModbusTcpClient(ModbusClientInterface):
     ) -> "MockModbusResponse":
         """Mock read holding registers."""
         self._demo_data = self.generate_demo_register_data()
+        self.last_read_at = time.time()
 
         return MockModbusResponse(self._demo_data["holding_registers"], address, count)
 
@@ -60,6 +76,7 @@ class MockModbusTcpClient(ModbusClientInterface):
     ) -> "MockModbusResponse":
         """Mock read discrete inputs."""
         self._demo_data = self.generate_demo_register_data()
+        self.last_read_at = time.time()
 
         return MockModbusResponse(
             self._demo_data["discrete_inputs"], address, count, is_bits=True
@@ -68,6 +85,7 @@ class MockModbusTcpClient(ModbusClientInterface):
     async def read_coils(self, address: int, count: int) -> "MockModbusResponse":
         """Mock read coils."""
         self._demo_data = self.generate_demo_register_data()
+        self.last_read_at = time.time()
 
         # Convert 1-based address to 0-based for internal use
         return MockModbusResponse(
@@ -83,6 +101,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         if 0 <= address < len(self._demo_data["holding_registers"]):
             self._demo_data["holding_registers"][address] = value
         _LOGGER.debug(f"Mock write holding register {address} with value {value}")
+        self.last_write_at = time.time()
         return MockModbusResponse([], 0, 0)  # Success response
 
     async def write_coil_register(
@@ -94,6 +113,7 @@ class MockModbusTcpClient(ModbusClientInterface):
         if 0 <= address < len(self._demo_data["coils"]):
             self._demo_data["coils"][address] = value
         _LOGGER.debug(f"Mock write coil {address} with value {value}")
+        self.last_write_at = time.time()
         return MockModbusResponse([], 0, 0)  # Success response
 
     @staticmethod

@@ -142,6 +142,9 @@
       }
     },
     "binary_sensor": {
+      "connection_active": {
+        "name": "Verbindung aktiv"
+      },
       "input_30": {
         "name": "Umwälzpumpe läuft"
       },
@@ -246,6 +249,25 @@
       }
     },
     "sensor": {
+      "connection_last_read": {
+        "name": "Letzte lesende Abfrage"
+      },
+      "connection_last_write": {
+        "name": "Letzte schreibende Abfrage"
+      },
+      "connection_read_errors": {
+        "name": "Lesefehler"
+      },
+      "connection_state": {
+        "name": "Verbindungsstatus",
+        "state": {
+          "connected": "Verbunden",
+          "disconnected": "Nicht verbunden"
+        }
+      },
+      "connection_write_errors": {
+        "name": "Schreibfehler"
+      },
       "input_21": {
         "name": "Unregelmäßigkeit bei der Einheit",
         "state": {

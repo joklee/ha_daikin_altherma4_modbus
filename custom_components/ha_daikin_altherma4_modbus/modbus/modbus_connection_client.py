@@ -17,6 +17,7 @@ This facade adapts the ``modbus_connection`` transport to the integration's
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from ..core.exceptions import (
@@ -71,6 +72,21 @@ class ModbusConnectionClient(ModbusClientInterface):
         self._connection = connection
         self._unit_id = unit_id
         self._unit = unit
+        # Epoch timestamps of the last successful read/write through this
+        # facade. The unit itself holds no state, so consumers (connection
+        # diagnostic sensors) read the history here instead.
+        self.last_read_at: float | None = None
+        self.last_write_at: float | None = None
+        # Error counters by direction and category, plus the newest failure.
+        # Neither the unit nor HA's shared component expose diagnostics, so
+        # the facade (the single translation boundary) counts them itself.
+        self.error_counts: dict[str, int] = {
+            f"{direction}_{category}": 0
+            for direction in ("read", "write")
+            for category in ("timeout", "connection", "invalid_address", "other")
+        }
+        self.last_error_at: float | None = None
+        self.last_error: str | None = None
 
     @property
     def connected(self) -> bool:
@@ -108,55 +124,89 @@ class ModbusConnectionClient(ModbusClientInterface):
         """Read input registers at 1-based address."""
         unit = await self._get_unit()
         try:
-            return await unit.read_input_registers(address - 1, count)
+            result = await unit.read_input_registers(address - 1, count)
+            self.last_read_at = time.time()
+            return result
         except _MODBUS_ERROR_TYPES as err:
-            self._raise_translated(err, read=True, address=address)
+            self._record_error(err, read=True, address=address)
 
     async def read_holding_registers(self, address: int, count: int) -> Any:
         """Read holding registers at 1-based address."""
         unit = await self._get_unit()
         try:
-            return await unit.read_holding_registers(address - 1, count)
+            result = await unit.read_holding_registers(address - 1, count)
+            self.last_read_at = time.time()
+            return result
         except _MODBUS_ERROR_TYPES as err:
-            self._raise_translated(err, read=True, address=address)
+            self._record_error(err, read=True, address=address)
 
     async def read_discrete_inputs(self, address: int, count: int) -> Any:
         """Read discrete inputs at 1-based address."""
         unit = await self._get_unit()
         try:
-            return await unit.read_discrete_inputs(address - 1, count)
+            result = await unit.read_discrete_inputs(address - 1, count)
+            self.last_read_at = time.time()
+            return result
         except _MODBUS_ERROR_TYPES as err:
-            self._raise_translated(err, read=True, address=address)
+            self._record_error(err, read=True, address=address)
 
     async def read_coils(self, address: int, count: int) -> Any:
         """Read coils at 1-based address."""
         unit = await self._get_unit()
         try:
-            return await unit.read_coils(address - 1, count)
+            result = await unit.read_coils(address - 1, count)
+            self.last_read_at = time.time()
+            return result
         except _MODBUS_ERROR_TYPES as err:
-            self._raise_translated(err, read=True, address=address)
+            self._record_error(err, read=True, address=address)
 
     async def write_holding_register(self, address: int, value: int) -> Any:
         """Write a holding register at 1-based address (FC06)."""
         unit = await self._get_unit()
         try:
-            return await unit.write_register(address - 1, value)
+            result = await unit.write_register(address - 1, value)
+            self.last_write_at = time.time()
+            return result
         except _MODBUS_ERROR_TYPES as err:
-            self._raise_translated(err, read=False, address=address)
+            self._record_error(err, read=False, address=address)
 
     async def write_coil_register(self, address: int, value: bool) -> Any:
         """Write a coil at 1-based address (FC05)."""
         unit = await self._get_unit()
         try:
-            return await unit.write_coil(address - 1, value)
+            result = await unit.write_coil(address - 1, value)
+            self.last_write_at = time.time()
+            return result
         except _MODBUS_ERROR_TYPES as err:
-            self._raise_translated(err, read=False, address=address)
+            self._record_error(err, read=False, address=address)
 
     async def _get_unit(self) -> Any:
         """Return the unit, fetching it lazily if built from a connection."""
         if self._unit is None and self._connection is not None:
             self._unit = self._connection.for_unit(self._unit_id)
         return self._unit
+
+    @staticmethod
+    def _classify_error(err: Exception) -> str:
+        """Map a ``ModbusError`` onto a counter category."""
+        if ModbusTimeoutError is not None and isinstance(err, ModbusTimeoutError):
+            return "timeout"
+        if ModbusConnectionError is not None and isinstance(err, ModbusConnectionError):
+            return "connection"
+        if IllegalDataAddressError is not None and isinstance(
+            err, IllegalDataAddressError
+        ):
+            return "invalid_address"
+        return "other"
+
+    def _record_error(self, err: Exception, *, read: bool, address: int) -> None:
+        """Count a failure, remember it, and raise the translated exception."""
+        category = self._classify_error(err)
+        direction = "read" if read else "write"
+        self.error_counts[f"{direction}_{category}"] += 1
+        self.last_error_at = time.time()
+        self.last_error = f"{direction} at {address}: {type(err).__name__}: {err}"
+        self._raise_translated(err, read=read, address=address)
 
     def _raise_translated(self, err: Exception, *, read: bool, address: int) -> None:
         """Raise the integration exception matching a ModbusError.

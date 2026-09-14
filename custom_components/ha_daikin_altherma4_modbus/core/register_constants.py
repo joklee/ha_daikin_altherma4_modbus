@@ -1374,3 +1374,83 @@ CALCULATED_SENSORS = [
         translation_key="delta_t",
     ),
 ]
+
+
+# Connection diagnostic sensors for the "Enhanced" device. Unlike register
+# sensors these expose the state of the shared modbus-connection backend
+# itself (connection status, last read/write); their values are served live
+# from the CoordinatorManager, not from coordinator data.
+CONNECTION_SENSORS = [
+    CalculatedRegister(
+        name="Connection active",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_active",
+        data_type=INT16,
+        calc_type="connection_active",
+        unit="",
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_active",
+    ),
+    CalculatedRegister(
+        name="Last read",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_last_read",
+        data_type=TIMESTAMP16,
+        calc_type="connection_last_read",
+        unit="",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_last_read",
+    ),
+    CalculatedRegister(
+        name="Last write",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_last_write",
+        data_type=TIMESTAMP16,
+        calc_type="connection_last_write",
+        unit="",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_last_write",
+    ),
+    CalculatedRegister(
+        name="Read errors",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_read_errors",
+        data_type=INT16,
+        calc_type="connection_read_errors",
+        unit="",
+        device_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_read_errors",
+    ),
+    CalculatedRegister(
+        name="Write errors",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_write_errors",
+        data_type=INT16,
+        calc_type="connection_write_errors",
+        unit="",
+        device_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_write_errors",
+    ),
+    CalculatedRegister(
+        name="Connection state",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_state",
+        data_type=TEXT16,
+        calc_type="connection_state",
+        unit="",
+        device_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_state",
+    ),
+]

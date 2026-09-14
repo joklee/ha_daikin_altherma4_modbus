@@ -154,6 +154,9 @@
       }
     },
     "binary_sensor": {
+      "connection_active": {
+        "name": "Connection active"
+      },
       "input_30": {
         "name": "Compressor run"
       },
@@ -255,6 +258,25 @@
       }
     },
     "sensor": {
+      "connection_last_read": {
+        "name": "Last read"
+      },
+      "connection_last_write": {
+        "name": "Last write"
+      },
+      "connection_read_errors": {
+        "name": "Read errors"
+      },
+      "connection_state": {
+        "name": "Connection state",
+        "state": {
+          "connected": "Connected",
+          "disconnected": "Disconnected"
+        }
+      },
+      "connection_write_errors": {
+        "name": "Write errors"
+      },
       "input_21": {
         "name": "Unit abnormality",
         "state": {
