@@ -216,10 +216,47 @@ verification (tests + `ruff`) before moving on.
         `cannot_connect` and the HA-backed unit path raises a clear
         `ModbusConnectionException` until the HA 2026.9 runtime is used
         (Docker E2E / production).
-- [ ] **3.6 — Cleanup & dependency check:** verify whether `manifest.json`
+- [x] **3.6 — Cleanup & dependency check:** verify whether `manifest.json`
       still needs `modbus-connection` directly once HA's `modbus` component is
       the provider; check remaining direct `pymodbus` usage; consolidate
       now-redundant tests/code.
+
+      Verification results:
+      - **`manifest.json` requirements:** both libraries remain required for
+        now — `modbus-connection` directly (production imports
+        `ModbusTcpParams` in `connection_manager` and `ModbusConnection` +
+        the exception hierarchy in the facade), and `pymodbus` at runtime via
+        the `[pymodbus]` extra (which requires `pymodbus[serial]>=3.11`,
+        superseding the old separate `pymodbus>=3.8` pin). The redundant
+        standalone `pymodbus>=3.8` entry was dropped; Phase 5 re-evaluates
+        both once the legacy client is removed.
+      - **Direct `pymodbus` usage:** confined to the legacy
+        `modbus/modbus_client.py` (`AsyncModbusTcpClient`, `ModbusError*`),
+        used only by the non-HA-backed fallback path (`ensure_modbus_connection`)
+        and demo mode. Removed at the Phase 5 cutover.
+      - **Test consolidation:**
+        - `tests/modbus/test_connection_pool.py` deleted — it exercised the
+          integration's own connection cache removed in 3.4 by driving a
+          test-local mock with timing/flakiness-prone assertions and contained
+          a `test_connection_pool_cache_management_concept` that literally
+          tested nothing. Replaced by `test_ensure_modbus_connection.py`
+          (client creation real/demo, reuse, lazy reconnect, failure
+          propagation).
+        - `tests/integration/test_config_flow.py`: removed dead
+          `_FakeModbusClient`/`_FakeModbusClientReadError` and leftover
+          `RealModbusTcpClient.connect`/`__init__` patches that no seam
+          reaches; added a probe-exception → `cannot_connect` test through the
+          real `connection_manager` boundary.
+        - Test isolation: `test_unload_shared_endpoint.py` snapshots and
+          restores `sys.modules` for the `homeassistant*`/`custom_components*`
+          namespaces (fixes the poisoning reported in 3.5 — later real-HA
+          setup tests see `ConfigEntryNotReady` instead of a plain
+          `Exception`). A `config_flow`-level quirk remains: HA's flow
+          manager instantiates the handler from a fresh module re-imported
+          after the test-suite re-imports the package under stubs, so
+          module-level patches on the collector's module copy have no effect.
+          That ordering sensitivity is pre-existing (verified identical on
+          the base commit) and out of scope for 3.6.
 
 ### Phase 4 — Data manager, read & write paths
 

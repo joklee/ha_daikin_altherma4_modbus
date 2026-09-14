@@ -10,6 +10,32 @@ import pytest
 import custom_components.ha_daikin_altherma4_modbus.core.const as real_const
 
 
+@pytest.fixture(autouse=True)
+def _restore_module_state():
+    """Snapshot & restore ``sys.modules`` for the namespaces this file touches.
+
+    The tests re-import the integration while stub ``homeassistant`` modules
+    are installed. Without a restore, the re-import caches a poisoned
+    integration module (e.g. ``ConfigEntryNotReady`` bound to a plain
+    ``Exception``) in ``sys.modules``; that breaks later real-HA tests that
+    run in the same process (entry setup ends in ``setup_error`` instead of
+    ``setup_retry``). The fixture restores the modules other test files
+    imported at collection time so the teardown is fully restorable.
+    """
+    prefixes = ("homeassistant", "custom_components")
+
+    def _is_tracked(key: str) -> bool:
+        return key.startswith(prefixes)
+
+    snapshot = {key: module for key, module in sys.modules.items() if _is_tracked(key)}
+
+    yield
+
+    for key in [key for key in list(sys.modules) if _is_tracked(key)]:
+        sys.modules.pop(key, None)
+    sys.modules.update(snapshot)
+
+
 def _load_integration_module(monkeypatch):
     """Load integration __init__ with lightweight dependency stubs."""
     # Set up homeassistant mocks first
