@@ -7,8 +7,8 @@
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/joklee/ha_daikin_altherma4_modbus)
 ![License](https://img.shields.io/github/license/joklee/ha_daikin_altherma4_modbus)
 ![HACS](https://img.shields.io/badge/HACS-Default-orange)
-![Python](https://img.shields.io/badge/python-3.8%2B-blue)
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.1%2B-blue)
+![Python](https://img.shields.io/badge/python-3.13%2B-blue)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.9%2B-blue)
 
 # Daikin Altherma 4 Modbus Integration for Home Assistant
 
@@ -102,7 +102,7 @@ addressed unit on that shared connection.
 6. Restart Home Assistant
 7. Go to **Settings** → **Devices & Services** → **Integrations**
 8. Click **+ Add Integration** and search for "Daikin Altherma 4 Modbus"
-9. Enter your heat pump's IP address and port (default: 502)
+9. Enter your heat pump's IP address, port (default: 502) and unit ID (default: 1)
 10. Complete the configuration with your preferred polling intervals
 
 ### Manual Installation
@@ -112,14 +112,14 @@ addressed unit on that shared connection.
 3. Restart Home Assistant
 4. Go to **Settings** → **Devices & Services** → **Integrations**
 5. Click **+ Add Integration** and search for "Daikin Altherma 4 Modbus"
-6. Enter your heat pump's IP address and port (default: 502)
+6. Enter your heat pump's IP address, port (default: 502) and unit ID (default: 1)
 7. Complete the configuration with your preferred polling intervals
 
 ### Testing Without Hardware
 
 If you want to test the integration without a physical heat pump connected:
-- Set the host address to `localhost`
-- The integration will use realistic mock data
+- Enable the **Demo Mode** option during configuration
+- The integration will use realistic mock data and skip the connection test
 - All 50+ input registers generate realistic values
 - Perfect for development and demonstration
 
@@ -139,10 +139,10 @@ If you want to test the integration without a physical heat pump connected:
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| **Scan Interval (seconds)** | Polling interval for normal registers | `10` |
-| **Slow Scan Interval (seconds)** | Polling interval for slowly changing registers | `600` |
+| **Scan Interval (seconds)** | Polling interval for normal registers | `5` |
+| **Slow Scan Interval (seconds)** | Polling interval for slowly changing registers | `30` |
 | **Electric Power Sensor** | Entity ID of an external power sensor for CoP calculation | – |
-| **Demo Mode** | Skip connection test (for testing without hardware) | `false` |
+| **Demo Mode** | Use simulated mock data and skip the connection test (for testing without hardware) | `false` |
 
 ### External Power Sensor
 
@@ -201,6 +201,7 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 | Number | 20+ | Setpoint settings |
 | Select | 10+ | Operation mode selection |
 | Climate | 2 | Thermostat control |
+| Connection diagnostics (Enhanced device) | 1 binary + 5 sensors | Link status, timestamps, error counters (all diagnostic) |
 
 ### Sensors (Input Registers)
 
@@ -370,6 +371,17 @@ All binary sensors have the **Diagnostic** category.
 | Last Defrost | – | timestamp | – | Timestamp of last defrost cycle |
 | Last Booster Heater | – | timestamp | – | Timestamp of last auxiliary heater activation |
 | Last DHW Running | – | timestamp | – | Timestamp of last DHW heating cycle |
+
+### Connection Diagnostics (Enhanced Device)
+
+These diagnostic entities report the health of the shared Modbus connection:
+
+| Entity | Type | Description |
+|--------|------|-------------|
+| Connection active | Binary sensor (`connectivity`) | Whether any coordinator currently holds a live connection |
+| Connection state | Sensor | `connected` / `disconnected` |
+| Last read / Last write | Sensor (`timestamp`) | Newest successful read/write across coordinators |
+| Read errors / Write errors | Sensor (counter) | Total failures with per-category breakdown attributes (`timeout`, `connection`, `invalid_address`, `other`) plus `last_error` and `last_error_at` |
 
 ### Special Register Values
 
@@ -600,7 +612,7 @@ automation:
 
 3. **Model-dependent:** Not all registers are supported by every heat pump model. Registers returning 32767 during setup are automatically skipped.
 
-4. **No real-time control:** Modbus TCP is polling-based. The minimum polling interval is 10 seconds. This integration is not suitable for immediate reactions.
+4. **No real-time control:** Modbus TCP is polling-based (defaults: 5 s normal, 30 s slow registers). This integration is not suitable for immediate reactions.
 
 5. **Change-based algorithm:** The Modbus algorithm is change-based. The heat pump is only updated if a change is detected. To prevent changes from being lost due to communication outages, it is recommended to periodically refresh state from the client side.
 
@@ -621,7 +633,7 @@ automation:
 | Connection failed | Wrong IP/port | Verify IP address and port |
 | No data | Modbus TCP not enabled | Check Modbus settings on heat pump |
 | Entities unavailable | Register not supported | Check heat pump model compatibility |
-| Update errors | Scan interval too short | Set to at least 10 seconds |
+| Update errors | Scan interval too short | Increase the scan intervals (defaults: 5 s / 30 s) |
 | Performance issues | Polling too frequently | Increase scan intervals |
 
 ### Connection and Network Issues
@@ -654,7 +666,7 @@ The integration uses the Home Assistant Repair system:
 2. **Check network:** Test connectivity with `telnet <ip> 502`
 3. **Register coverage:** Check your device documentation for supported register ranges
 4. **Monitor performance:** Watch Home Assistant logs for connection patterns
-5. **Export data:** Use the diagnostics function (Integration → Download diagnostic data)
+5. **Export data:** Use the diagnostics function (Integration → Download diagnostic data) — the download includes a raw snapshot of all register spaces plus connection diagnostics
 
 ---
 
@@ -715,7 +727,7 @@ Removing this integration does not modify any settings on your Daikin Altherma 4
 
 ### Test Suite
 
-- **298 automated tests** covering core functionality
+- **510+ automated tests** covering core functionality
 - **Mock client** for development without hardware
 - **Coverage reports** for quality assurance
 - **Integration tests** for full workflow validation
@@ -746,11 +758,11 @@ make benchmark
 
 ### Dev Features
 
-- **Demo mode:** Built-in mock client for testing (host: `localhost`)
+- **Demo mode:** Built-in mock client for testing (enable the Demo Mode option)
 - **Debug logging:** Comprehensive logging for troubleshooting
 - **Modular architecture:** Clean separation of concerns
 - **Type hints:** Full type annotation support
-- **Multilingual:** English and German translations
+- **Multilingual:** English, German and Dutch translations
 
 ---
 
