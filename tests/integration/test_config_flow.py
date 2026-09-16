@@ -253,6 +253,12 @@ async def test_config_flow_empty_electric_power_sensor(
             "_test_connection",
             return_value=(True, None),
         ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -460,6 +466,12 @@ async def test_config_flow_ipv6_host(hass, enable_custom_integrations):
             "_test_connection",
             return_value=(True, None),
         ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -485,6 +497,12 @@ async def test_config_flow_valid_hostname(hass, enable_custom_integrations):
             config_flow_module,
             "_test_connection",
             return_value=(True, None),
+        ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
         ),
     ):
         result = await hass.config_entries.flow.async_init(
@@ -623,10 +641,18 @@ async def test_config_flow_probe_read_failure_still_creates_entry(
     temporary unit is what exercises the device, so an exception there must
     not be surfaced to the user.
     """
-    with mock.patch.object(
-        config_flow_module,
-        "_test_connection",
-        return_value=(True, None),
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -687,6 +713,12 @@ async def test_config_flow_single_label_hostname(hass, enable_custom_integration
             "_test_connection",
             return_value=(True, None),
         ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -712,6 +744,12 @@ async def test_config_flow_hostname_with_only_numbers(hass, enable_custom_integr
             config_flow_module,
             "_test_connection",
             return_value=(True, None),
+        ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
         ),
     ):
         result = await hass.config_entries.flow.async_init(
