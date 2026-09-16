@@ -491,7 +491,9 @@ async def test_poll_issues_documented_batches_end_to_end() -> None:
     }
     assert ("input", 20, 67) in issued  # Daikin 21..87 -> raw 20, 67 regs
     assert ("holding", 0, 80) in issued  # Daikin 1..80 -> raw 0, 80 regs
-    assert ("discrete_input", 0, 26) in issued  # Daikin 1..26 -> raw 0
+    # modbus-connection>=4.11 records discrete reads as "discrete"
+    # (older: "discrete_input"); pin the batch address either way.
+    assert ("discrete_input", 0, 26) in issued or ("discrete", 0, 26) in issued
     assert ("coil", 0, 3) in issued  # Daikin 1..3 -> raw 0
 
 
