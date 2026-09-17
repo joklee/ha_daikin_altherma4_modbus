@@ -18,12 +18,15 @@ and asserts the *observable* behaviour of the production code. It does **not**
 mock the coordinator, the data manager or the entity.
 """
 
+import logging
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
 from custom_components.ha_daikin_altherma4_modbus.core.const import DOMAIN
 from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
+    ModbusConnectionException,
     ModbusReadException,
     ModbusTimeoutException,
 )
@@ -185,3 +188,56 @@ async def test_connection_recovery_cycle(fail_cls, hass):
     assert coordinator.data.get("input_40") is not None
     assert sensor.available is True
     assert sensor.native_value == pytest.approx(TEMP16_EXPECTED)
+
+
+async def test_coordinator_logs_outage_once(hass, caplog):
+    """A dead device logs once when going down and once when recovering.
+
+    Silver ``log-when-unavailable``: repeated failed polls must not fill
+    the log. The data manager is stubbed to raise past the repository so
+    the coordinator's own except path is exercised deterministically.
+    """
+    coordinator = DaikinAlthermaNormalCoordinator(
+        hass, "192.0.2.1", 502, scan_interval=10, demo_mode=False
+    )
+    coordinator.data_manager = SimpleNamespace(
+        fetch_input_registers_data=AsyncMock(
+            side_effect=ModbusConnectionException("dead gateway")
+        ),
+        fetch_discrete_inputs_data=AsyncMock(return_value={}),
+    )
+
+    logger_name = "custom_components.ha_daikin_altherma4_modbus.integration.coordinator"
+    with caplog.at_level(logging.DEBUG, logger=logger_name):
+        for _ in range(3):
+            await coordinator.async_refresh()
+
+    errors = [
+        record
+        for record in caplog.records
+        if record.name == logger_name
+        and record.levelno == logging.ERROR
+        and "Error updating normal data" in record.message
+    ]
+    assert len(errors) == 1
+    assert coordinator.last_update_success is False
+
+    # Recovery is logged exactly once at info level.
+    caplog.clear()
+    coordinator.data_manager = SimpleNamespace(
+        fetch_input_registers_data=AsyncMock(return_value={"input_40": 1}),
+        fetch_discrete_inputs_data=AsyncMock(return_value={}),
+    )
+    with caplog.at_level(logging.DEBUG, logger=logger_name):
+        await coordinator.async_refresh()
+        await coordinator.async_refresh()
+
+    recoveries = [
+        record
+        for record in caplog.records
+        if record.name == logger_name
+        and record.levelno == logging.INFO
+        and "connection re-established" in record.message
+    ]
+    assert len(recoveries) == 1
+    assert coordinator.last_update_success is True

@@ -129,6 +129,62 @@ async def test_async_test_connection_probe_fails_when_provider_missing(
     assert error == "cannot_connect"
 
 
+async def test_async_test_connection_probe_succeeds_with_temporary_unit(
+    monkeypatch,
+) -> None:
+    """The probe returns success when the temporary unit answers the read."""
+    from contextlib import asynccontextmanager
+
+    connection = MockModbusConnection()
+    connection.for_unit(UNIT_ID).input[0] = 1234
+
+    @asynccontextmanager
+    async def fake_temporary_unit(hass, params, unit_id):
+        assert params.host == HOST
+        assert params.port == PORT
+        yield connection.for_unit(unit_id)
+
+    monkeypatch.setattr(
+        connection_manager, "async_get_temporary_unit", fake_temporary_unit
+    )
+
+    # Call through the same module object that was patched: other test
+    # modules re-import this module under stubs, so a fresh
+    # function-local import could resolve to a different module instance.
+    ok, error = await connection_manager.async_test_connection_with_temporary_unit(
+        object(), HOST, PORT, UNIT_ID
+    )
+
+    assert ok is True
+    assert error is None
+
+
+async def test_async_test_connection_probe_maps_unit_error_to_cannot_connect(
+    monkeypatch,
+) -> None:
+    """A failing probe read is reported as cannot_connect, never raised."""
+    from contextlib import asynccontextmanager
+
+    from modbus_connection.exceptions import ModbusConnectionError
+
+    @asynccontextmanager
+    async def failing_temporary_unit(hass, params, unit_id):
+        raise ModbusConnectionError("dead gateway")
+        yield None
+
+    monkeypatch.setattr(
+        connection_manager, "async_get_temporary_unit", failing_temporary_unit
+    )
+
+    # Same module handle as the patch (see test above for why).
+    ok, error = await connection_manager.async_test_connection_with_temporary_unit(
+        object(), HOST, PORT, UNIT_ID
+    )
+
+    assert ok is False
+    assert error == "cannot_connect"
+
+
 async def test_modbus_connection_client_constructed_from_unit_directly() -> None:
     """A facade built directly from a unit works without a connection."""
     connection = MockModbusConnection()

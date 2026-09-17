@@ -7,7 +7,7 @@ from homeassistant import config_entries
 
 try:
     from homeassistant.const import CONF_HOST, CONF_PORT
-except ImportError:
+except ImportError:  # pragma: no cover - fallback only without Home Assistant
     # Fallback for testing when homeassistant is not available
     CONF_HOST = "host"
     CONF_PORT = "port"

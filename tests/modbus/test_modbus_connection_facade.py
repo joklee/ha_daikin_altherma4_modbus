@@ -185,3 +185,28 @@ async def test_write_coil_register_maps_to_write_coil() -> None:
     # Daikin 1-based 3 -> raw 2.
     assert unit.coils[2] is True
     assert events[-1].function_code == 0x05
+
+
+async def test_connection_error_coil_write_maps_to_connection_exception() -> None:
+    connection, client = _make_client()
+    connection.for_unit(1).fail_write(
+        2,
+        ModbusConnectionError("link down"),
+        register_type="coil",
+    )
+
+    with pytest.raises(ModbusConnectionException):
+        await client.write_coil_register(3, True)
+
+
+async def test_owned_connection_connect_and_disconnect() -> None:
+    connection, client = _make_client()
+    assert client.connected is False
+
+    await client.connect()
+    assert client.connected is True
+    assert connection.connected is True
+
+    await client.disconnect()
+    assert client.connected is False
+    assert connection.connected is False

@@ -100,3 +100,19 @@ async def test_diagnostics_coordinator_data_serialization():
     data = result["coordinator_data"]["main"]
     assert data["key1"]["nested"] == "value"
     assert data["key2"]["value"] == 42
+
+
+def test_diagnostics_platform_registered_at_domain_root():
+    """Regression: HA loads diagnostics from <domain>.diagnostics.
+
+    The implementation lives in ``integration/diagnostics.py``; without a
+    top-level re-export Home Assistant silently falls back to default
+    diagnostics and the custom payload (raw snapshot, connection status)
+    never reaches the download.
+    """
+    import custom_components.ha_daikin_altherma4_modbus.diagnostics as root_module
+
+    assert (
+        root_module.async_get_config_entry_diagnostics
+        is async_get_config_entry_diagnostics
+    )

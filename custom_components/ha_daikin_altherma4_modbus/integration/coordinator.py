@@ -68,6 +68,10 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
 
         self.data = {}
         self._connection_issue_created = False
+        # Tracks whether the outage was already logged so a dead device
+        # logs once when going down and once when recovering (Silver:
+        # log-when-unavailable) instead of on every poll.
+        self._unavailable_logged = False
 
     def _find_config_entry(self):
         """Find the config entry for this coordinator."""
@@ -91,7 +95,10 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
             # Combine data
             self.data = {**input_data, **discrete_data}
 
-            # Connection recovered - delete repair issue if one was created
+            # Connection recovered - log once and delete repair issue if created
+            if self._unavailable_logged:
+                _LOGGER.info("NormalCoordinator connection re-established")
+                self._unavailable_logged = False
             if self._connection_issue_created:
                 entry = self._find_config_entry()
                 if entry:
@@ -101,7 +108,10 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
             return self.data
 
         except _COORDINATOR_IO_EXCEPTIONS as err:
-            _LOGGER.error(f"Error updating normal data: {err}")
+            # Log only the transition to unavailable, not every failed poll.
+            if not self._unavailable_logged:
+                _LOGGER.error(f"Error updating normal data: {err}")
+                self._unavailable_logged = True
             # Create repair issue on connection failure
             if not self._connection_issue_created:
                 entry = self._find_config_entry()
@@ -151,6 +161,8 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
 
         self.data = {}
         self._connection_issue_created = False
+        # See normal coordinator: log the outage once, not on every poll.
+        self._unavailable_logged = False
 
     def _find_config_entry(self):
         """Find the config entry for this coordinator."""
@@ -175,7 +187,10 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
             # Combine data
             self.data = {**coil_data, **holding_data}
 
-            # Connection recovered - delete repair issue if one was created
+            # Connection recovered - log once and delete repair issue if created
+            if self._unavailable_logged:
+                _LOGGER.info("SlowCoordinator connection re-established")
+                self._unavailable_logged = False
             if self._connection_issue_created:
                 entry = self._find_config_entry()
                 if entry:
@@ -185,7 +200,10 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
             return self.data
 
         except _COORDINATOR_IO_EXCEPTIONS as err:
-            _LOGGER.error(f"Error updating slow data: {err}")
+            # Log only the transition to unavailable, not every failed poll.
+            if not self._unavailable_logged:
+                _LOGGER.error(f"Error updating slow data: {err}")
+                self._unavailable_logged = True
             # Create repair issue on connection failure (only if not already created by normal coordinator)
             if not self._connection_issue_created:
                 entry = self._find_config_entry()

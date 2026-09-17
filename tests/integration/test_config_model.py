@@ -9,6 +9,29 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _restore_module_state():
+    """Snapshot & restore ``sys.modules`` for stubbed namespaces.
+
+    The loaders below re-import integration modules while stub modules are
+    installed; without a restore, the re-import caches poisoned modules in
+    ``sys.modules`` and breaks later real-HA tests in the same process.
+    (Same pattern as tests/modbus/test_unload_shared_endpoint.py.)
+    """
+    prefixes = ("homeassistant", "custom_components")
+
+    def _is_tracked(key: str) -> bool:
+        return key.startswith(prefixes)
+
+    snapshot = {key: module for key, module in sys.modules.items() if _is_tracked(key)}
+
+    yield
+
+    for key in [key for key in list(sys.modules) if _is_tracked(key)]:
+        sys.modules.pop(key, None)
+    sys.modules.update(snapshot)
+
+
 def _reset_modules(*names: str) -> None:
     for name in names:
         sys.modules.pop(name, None)

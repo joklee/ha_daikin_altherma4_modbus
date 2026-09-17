@@ -133,3 +133,66 @@ async def test_real_mode_without_hass_entry_raises() -> None:
 async def test_ha_path_uses_actual_async_get_ha_unit(monkeypatch) -> None:
     """Sanity: the real async_get_ha_unit is importable and callable shape."""
     assert callable(async_get_ha_unit)
+
+
+async def test_ensure_connection_reuses_existing_client() -> None:
+    """A cached client is returned without touching the provider."""
+    session = ModbusTransportSession(HOST, PORT)
+    sentinel = object()
+    session.client = sentinel
+
+    assert await session.ensure_connection() is sentinel
+
+
+async def test_ha_provider_error_propagates(monkeypatch) -> None:
+    """Unexpected provider failures are logged and re-raised."""
+    from modbus_connection.exceptions import ModbusError
+
+    async def failing_get_ha_unit(hass, entry, host, port, unit_id):
+        raise ModbusError("provider exploded")
+
+    monkeypatch.setattr(transport_session, "async_get_ha_unit", failing_get_ha_unit)
+
+    session = ModbusTransportSession(
+        HOST, PORT, hass=object(), entry=object(), unit_id=UNIT_ID
+    )
+    with pytest.raises(ModbusError):
+        await session.ensure_connection()
+
+
+async def test_demo_mode_connection_failure_returns_none(monkeypatch) -> None:
+    """A failing demo mock yields None instead of raising known errors."""
+
+    class FailingMockClient:
+        def __init__(self, host, port):
+            pass
+
+        async def connect(self):
+            raise OSError("cannot connect mock")
+
+    monkeypatch.setattr(transport_session, "MockModbusTcpClient", FailingMockClient)
+
+    session = ModbusTransportSession(HOST, PORT, demo_mode=True)
+    assert await session.ensure_connection() is None
+    assert session.client is None
+
+
+async def test_demo_mode_unexpected_error_propagates(monkeypatch) -> None:
+    """Unexpected demo failures are logged and re-raised."""
+
+    class BrokenMockClient:
+        def __init__(self, host, port):
+            raise RuntimeError("broken factory")
+
+    monkeypatch.setattr(transport_session, "MockModbusTcpClient", BrokenMockClient)
+
+    session = ModbusTransportSession(HOST, PORT, demo_mode=True)
+    with pytest.raises(RuntimeError):
+        await session.ensure_connection()
+
+
+async def test_new_client_without_provider_or_demo_raises() -> None:
+    """_new_client without hass/entry/demo raises directly."""
+    session = ModbusTransportSession(HOST, PORT)
+    with pytest.raises(ModbusConnectionException):
+        await session._new_client()

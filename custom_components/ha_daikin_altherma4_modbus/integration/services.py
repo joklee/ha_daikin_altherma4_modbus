@@ -5,7 +5,7 @@ import logging
 try:
     import voluptuous as vol
     from homeassistant.config_entries import ConfigEntryState
-    from homeassistant.exceptions import ServiceValidationError
+    from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
     from homeassistant.helpers import config_validation as cv
     from homeassistant.helpers.service import async_register_admin_service
 
@@ -240,10 +240,42 @@ def _get_coil_address(register_name: str) -> int:
     for coil in COIL_REGISTERS:
         if coil.register_name == register_name:
             return coil.address
+    if HAS_HA:
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="unsupported_option",
+            translation_placeholders={
+                "option": "coil",
+                "register_name": register_name,
+            },
+        )
     raise ValueError(f"Coil register {register_name} not found")
 
 
 if HAS_HA:
+
+    async def _guarded_write(register_name, write_call):
+        """Execute a Modbus write, surfacing failures as HomeAssistantError.
+
+        Silver ``action-exceptions``: service calls must raise HA exceptions
+        so the frontend shows a translatable error instead of an unexpected
+        traceback from the transport layer.
+        """
+        try:
+            return await write_call()
+        except (HomeAssistantError, ServiceValidationError):
+            raise
+        except Exception as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="write_failed",
+                translation_placeholders={
+                    "operation_name": "write",
+                    "register_type": "register",
+                    "register_name": register_name,
+                    "error": str(err),
+                },
+            ) from err
 
     def _get_entry_and_validate(hass, config_entry_id):
         """Get config entry and validate it's loaded."""
@@ -279,7 +311,10 @@ if HAS_HA:
                 translation_placeholders={"operation_mode": operation_mode},
             )
 
-        await manager.write_holding_register(REGISTER_OPERATION_MODE, mode_value)
+        await _guarded_write(
+            REGISTER_OPERATION_MODE,
+            lambda: manager.write_holding_register(REGISTER_OPERATION_MODE, mode_value),
+        )
         _LOGGER.debug(
             "Set operation mode to %s (value: %s) for entry %s",
             operation_mode,
@@ -297,7 +332,10 @@ if HAS_HA:
         manager = runtime_data.manager
 
         coil_address = _get_coil_address(REGISTER_DHW_HVAC_MODE)
-        await manager.write_coil_register(coil_address, state)
+        await _guarded_write(
+            REGISTER_DHW_HVAC_MODE,
+            lambda: manager.write_coil_register(coil_address, state),
+        )
         _LOGGER.debug(
             "Set DHW state to %s for entry %s",
             state,
@@ -315,7 +353,9 @@ if HAS_HA:
 
         # Main zone is coil_2
         coil_address = _get_coil_address("coil_2")
-        await manager.write_coil_register(coil_address, state)
+        await _guarded_write(
+            "coil_2", lambda: manager.write_coil_register(coil_address, state)
+        )
         _LOGGER.debug(
             "Set main zone state to %s for entry %s",
             state,
@@ -333,7 +373,9 @@ if HAS_HA:
 
         # Additional zone is coil_3
         coil_address = _get_coil_address("coil_3")
-        await manager.write_coil_register(coil_address, state)
+        await _guarded_write(
+            "coil_3", lambda: manager.write_coil_register(coil_address, state)
+        )
         _LOGGER.debug(
             "Set additional zone state to %s for entry %s",
             state,
@@ -365,7 +407,10 @@ if HAS_HA:
                 translation_placeholders={"smart_grid_mode": smart_grid_mode},
             )
 
-        await manager.write_holding_register("holding_56", mode_value)
+        await _guarded_write(
+            "holding_56",
+            lambda: manager.write_holding_register("holding_56", mode_value),
+        )
         _LOGGER.debug(
             "Set Smart Grid mode to %s (value: %s) for entry %s",
             smart_grid_mode,
@@ -391,7 +436,10 @@ if HAS_HA:
                 translation_placeholders={"quiet_mode": quiet_mode},
             )
 
-        await manager.write_holding_register("holding_9", mode_value)
+        await _guarded_write(
+            "holding_9",
+            lambda: manager.write_holding_register("holding_9", mode_value),
+        )
         _LOGGER.debug(
             "Set Quiet mode to %s (value: %s) for entry %s",
             quiet_mode,
@@ -408,7 +456,12 @@ if HAS_HA:
         runtime_data = entry.runtime_data
         manager = runtime_data.manager
 
-        await manager.write_holding_register("holding_13", 1 if booster_mode else 0)
+        await _guarded_write(
+            "holding_13",
+            lambda: manager.write_holding_register(
+                "holding_13", 1 if booster_mode else 0
+            ),
+        )
         _LOGGER.debug(
             "Set DHW booster mode to %s for entry %s",
             booster_mode,
@@ -425,12 +478,20 @@ if HAS_HA:
         runtime_data = entry.runtime_data
         manager = runtime_data.manager
 
-        await manager.write_holding_register("holding_15", 1 if single_heatup else 0)
+        await _guarded_write(
+            "holding_15",
+            lambda: manager.write_holding_register(
+                "holding_15", 1 if single_heatup else 0
+            ),
+        )
 
         if setpoint is not None:
             # Convert setpoint to register value (scale by 0.01)
             register_value = int(setpoint / 0.01)
-            await manager.write_holding_register("holding_16", register_value)
+            await _guarded_write(
+                "holding_16",
+                lambda: manager.write_holding_register("holding_16", register_value),
+            )
             _LOGGER.debug(
                 "Set DHW single heat-up to %s with setpoint %s°C for entry %s",
                 single_heatup,
@@ -455,7 +516,10 @@ if HAS_HA:
 
         # Convert power limit to register value (scale by 0.001)
         register_value = int(power_limit / 0.001)
-        await manager.write_holding_register("holding_58", register_value)
+        await _guarded_write(
+            "holding_58",
+            lambda: manager.write_holding_register("holding_58", register_value),
+        )
         _LOGGER.debug(
             "Set power limit to %s kW (value: %s) for entry %s",
             power_limit,
@@ -474,7 +538,10 @@ if HAS_HA:
 
         # Convert offset to register value (scale by 0.01)
         register_value = int(offset / 0.01)
-        await manager.write_holding_register("holding_54", register_value)
+        await _guarded_write(
+            "holding_54",
+            lambda: manager.write_holding_register("holding_54", register_value),
+        )
         _LOGGER.debug(
             "Set heating offset to %s K (value: %s) for entry %s",
             offset,
@@ -493,7 +560,10 @@ if HAS_HA:
 
         # Convert offset to register value (scale by 0.01)
         register_value = int(offset / 0.01)
-        await manager.write_holding_register("holding_55", register_value)
+        await _guarded_write(
+            "holding_55",
+            lambda: manager.write_holding_register("holding_55", register_value),
+        )
         _LOGGER.debug(
             "Set cooling offset to %s K (value: %s) for entry %s",
             offset,
@@ -512,7 +582,10 @@ if HAS_HA:
 
         # Convert setpoint to register value (scale by 0.01)
         register_value = int(setpoint / 0.01)
-        await manager.write_holding_register("holding_6", register_value)
+        await _guarded_write(
+            "holding_6",
+            lambda: manager.write_holding_register("holding_6", register_value),
+        )
         _LOGGER.debug(
             "Set room heating setpoint to %s°C (value: %s) for entry %s",
             setpoint,
@@ -531,7 +604,10 @@ if HAS_HA:
 
         # Convert setpoint to register value (scale by 0.01)
         register_value = int(setpoint / 0.01)
-        await manager.write_holding_register("holding_7", register_value)
+        await _guarded_write(
+            "holding_7",
+            lambda: manager.write_holding_register("holding_7", register_value),
+        )
         _LOGGER.debug(
             "Set room cooling setpoint to %s°C (value: %s) for entry %s",
             setpoint,
@@ -550,7 +626,10 @@ if HAS_HA:
 
         # Convert setpoint to register value (scale by 0.01)
         register_value = int(setpoint / 0.01)
-        await manager.write_holding_register("holding_63", register_value)
+        await _guarded_write(
+            "holding_63",
+            lambda: manager.write_holding_register("holding_63", register_value),
+        )
         _LOGGER.debug(
             "Set additional zone setpoint to %s°C (value: %s) for entry %s",
             setpoint,
@@ -567,13 +646,13 @@ if HAS_HA:
         manager = runtime_data.manager
 
         # Trigger connection refresh by reconnecting
-        await manager.refresh_connection()
+        await _guarded_write("connection", manager.refresh_connection)
         _LOGGER.debug(
             "Refreshed connection for entry %s",
             config_entry_id,
         )
 
-else:
+else:  # pragma: no cover - dummies only without Home Assistant
     # Dummy functions for testing imports
     async def async_set_operation_mode(hass, call):
         pass

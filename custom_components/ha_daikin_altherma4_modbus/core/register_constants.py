@@ -4,7 +4,7 @@ try:
     from homeassistant.components.binary_sensor import BinarySensorDeviceClass
     from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
     from homeassistant.const import EntityCategory
-except ImportError:
+except ImportError:  # pragma: no cover - fallback only without Home Assistant
     # Fallback for testing when homeassistant is not available
     from enum import StrEnum
 

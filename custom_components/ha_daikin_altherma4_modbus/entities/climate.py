@@ -16,6 +16,7 @@ from ..common import (
     get_coordinator_register_data,
     get_register_scale,
     get_register_value,
+    is_entity_available,
     safe_write_register,
     to_unsigned_16bit,
 )
@@ -75,6 +76,14 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
         self._attr_device_info = CALCULATED_DEVICE_INFO
         self._attr_translation_key = "daikin_thermostat_climate"
+
+    @property
+    def available(self) -> bool:
+        """Return True if the core climate registers report valid values."""
+        data = self.coordinator.data
+        return is_entity_available(
+            data, REGISTER_OPERATION_MODE
+        ) and is_entity_available(data, REGISTER_CURRENT_TEMP)
 
     def _get_register_data(self, register_name):
         """Get register data without DOMAIN prefix."""
@@ -422,6 +431,14 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
         self._attr_target_temperature_step = 1
         self._attr_device_info = CALCULATED_DEVICE_INFO
         self._attr_translation_key = self._translation_key
+
+    @property
+    def available(self) -> bool:
+        """Return True if the hvac mode and temp registers report valid values."""
+        data = self.coordinator.data
+        return is_entity_available(
+            data, self._hvac_mode_register
+        ) and is_entity_available(data, self._temp_register)
 
     def _get_register_data(self, register_name):
         """Get register data without DOMAIN prefix."""
