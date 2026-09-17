@@ -61,6 +61,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 register_name=discrete.register_name,
                 unique_id=discrete.register_name,
                 translation_key=discrete.translation_key,
+                disabled_by_default=discrete.disabled_by_default,
             )
         )
 
@@ -78,6 +79,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
                 device_info=CALCULATED_DEVICE_INFO,
                 translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
             )
         )
 
@@ -141,6 +143,7 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
         entity_category=None,
         unique_id=None,
         translation_key=None,
+        disabled_by_default=False,
     ):
         super().__init__(coordinator)
         self._entry = entry
@@ -151,6 +154,7 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_entity_category = entity_category
         self._attr_device_info = DISCRETE_INPUT_DEVICE_INFO
         self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
 
     @property
     def available(self) -> bool:
@@ -187,6 +191,7 @@ class ConnectionActiveSensor(CoordinatorEntity, BinarySensorEntity):
         entity_category=None,
         device_info=None,
         translation_key=None,
+        disabled_by_default=False,
     ):
         super().__init__(coordinator)
         self._entry = entry
@@ -195,6 +200,7 @@ class ConnectionActiveSensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_entity_category = entity_category
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
 
     def _manager(self):
         """Return the CoordinatorManager behind the unified coordinator."""

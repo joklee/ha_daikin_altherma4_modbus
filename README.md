@@ -622,6 +622,10 @@ automation:
 
 8. **No firmware updates:** The integration cannot provide or manage firmware updates for the heat pump.
 
+9. **No auto-discovery:** The heat pump advertises no discovery protocol, so the integration cannot be discovered automatically — configure it manually with the heat pump's IP address, port and unit ID.
+
+10. **Static device set:** All entities are determined by the fixed register map at setup time. Registers your model does not support (returning 32767) are skipped once during setup; no devices appear or disappear afterwards.
+
 ---
 
 ## Troubleshooting

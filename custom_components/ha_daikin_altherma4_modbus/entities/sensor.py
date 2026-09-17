@@ -180,6 +180,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
                 device_info=CALCULATED_DEVICE_INFO,
                 translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
             )
         )
 
@@ -199,6 +200,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
                 device_info=CALCULATED_DEVICE_INFO,
                 translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
             )
         )
 
@@ -215,6 +217,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
                 device_info=CALCULATED_DEVICE_INFO,
                 translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
             )
         )
 
@@ -741,6 +744,7 @@ class ConnectionTimestampSensor(CoordinatorEntity, SensorEntity):
         entity_category=None,
         device_info=None,
         translation_key=None,
+        disabled_by_default=False,
     ):
         super().__init__(coordinator)
         self._entry = entry
@@ -750,6 +754,7 @@ class ConnectionTimestampSensor(CoordinatorEntity, SensorEntity):
         self._attr_entity_category = entity_category
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
 
     def _manager(self):
         """Return the CoordinatorManager behind the unified coordinator."""
@@ -798,6 +803,7 @@ class ConnectionErrorSensor(CoordinatorEntity, SensorEntity):
         entity_category=None,
         device_info=None,
         translation_key=None,
+        disabled_by_default=False,
     ):
         super().__init__(coordinator)
         self._entry = entry
@@ -807,6 +813,7 @@ class ConnectionErrorSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
         self._attr_state_class = SensorStateClass.TOTAL_INCREASING
+        self._attr_entity_registry_enabled_default = not disabled_by_default
 
     def _manager(self):
         """Return the CoordinatorManager behind the unified coordinator."""
@@ -864,6 +871,7 @@ class ConnectionStateSensor(CoordinatorEntity, SensorEntity):
         entity_category=None,
         device_info=None,
         translation_key=None,
+        disabled_by_default=False,
     ):
         super().__init__(coordinator)
         self._entry = entry
@@ -871,6 +879,7 @@ class ConnectionStateSensor(CoordinatorEntity, SensorEntity):
         self._attr_entity_category = entity_category
         self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
         self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
 
     def _manager(self):
         """Return the CoordinatorManager behind the unified coordinator."""

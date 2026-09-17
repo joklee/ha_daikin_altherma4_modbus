@@ -1023,6 +1023,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_2",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 2",
@@ -1033,6 +1034,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_3",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 3",
@@ -1043,6 +1045,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_4",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 4",
@@ -1053,6 +1056,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_5",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 5",
@@ -1063,6 +1067,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_6",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 6",
@@ -1073,6 +1078,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_7",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Booster heater",
@@ -1122,6 +1128,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_12",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Holiday mode active",
@@ -1131,6 +1138,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_13",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Antifrost status",
@@ -1140,6 +1148,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_14",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Water pipe freeze prevention status",
@@ -1149,6 +1158,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_15",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Disinfection operation",
@@ -1218,6 +1228,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_22",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Manual tank heat up request",
@@ -1227,6 +1238,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_23",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Emergency active",
@@ -1256,6 +1268,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_26",
+        disabled_by_default=True,
     ),
 ]
 
@@ -1404,6 +1417,7 @@ CONNECTION_SENSORS = [
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="connection_last_read",
+        disabled_by_default=True,
     ),
     CalculatedRegister(
         name="Last write",
@@ -1416,6 +1430,7 @@ CONNECTION_SENSORS = [
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="connection_last_write",
+        disabled_by_default=True,
     ),
     CalculatedRegister(
         name="Read errors",
@@ -1428,6 +1443,7 @@ CONNECTION_SENSORS = [
         device_class=None,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="connection_read_errors",
+        disabled_by_default=True,
     ),
     CalculatedRegister(
         name="Write errors",
@@ -1440,7 +1456,11 @@ CONNECTION_SENSORS = [
         device_class=None,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="connection_write_errors",
+        disabled_by_default=True,
     ),
+    # NOTE: connection_active and connection_state stay enabled (headline
+    # connection status); only the deep-dive timestamps/counters above
+    # start disabled.
     CalculatedRegister(
         name="Connection state",
         address=0,

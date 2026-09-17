@@ -610,6 +610,11 @@ async def test_sensor_setup_creates_connection_entities() -> None:
     assert len(stamps) == 2
     assert len(errors) == 2
     assert len(states) == 1
+    # Gold entity-disabled-by-default: deep-dive timestamps/counters start
+    # disabled, the headline state sensor stays enabled.
+    assert all(e.entity_registry_enabled_default is False for e in stamps)
+    assert all(e.entity_registry_enabled_default is False for e in errors)
+    assert all(e.entity_registry_enabled_default is True for e in states)
     assert {e._stamp_kind for e in stamps} == {"read", "write"}
     assert {e._error_kind for e in errors} == {"read", "write"}
     # Values resolve live from the manager through the real setup path.

@@ -81,6 +81,9 @@ class RegisterDefinition:
     entity_category: EntityCategory | None = None
     step: int | float | None = None
     state_class: str | None = None
+    # Gold entity-disabled-by-default: noisy/granular diagnostic registers
+    # start disabled; users can enable them per entity in the UI.
+    disabled_by_default: bool = False
 
 
 @dataclass
