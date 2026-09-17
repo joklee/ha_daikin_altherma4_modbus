@@ -95,12 +95,48 @@ class CoordinatorManager:
 
     @property
     def connection_active(self) -> bool:
-        """Whether any coordinator currently holds a connected client."""
+        """Whether any coordinator currently holds a connected client.
+
+        This is shared-link state, not device health: the link can be up
+        while the device stops answering. Prefer :meth:`device_reachable`
+        as the user-facing health metric.
+        """
         for coordinator in self.coordinators.values():
             client = self._client_of(coordinator)
             if client is not None and bool(getattr(client, "connected", False)):
                 return True
         return False
+
+    @property
+    def device_reachable(self) -> bool:
+        """Whether the device recently answered polls.
+
+        Unlike :meth:`connection_active`, this reflects observed poll
+        outcomes: reachable when at least one coordinator's last update
+        succeeded without pending consecutive failures.
+        """
+        for coordinator in self.coordinators.values():
+            last_ok = getattr(coordinator, "last_update_success", False) is True
+            failures = int(getattr(coordinator, "_consecutive_failures", 0) or 0)
+            if last_ok and failures == 0:
+                return True
+        return False
+
+    @property
+    def max_consecutive_failures(self) -> int:
+        """Highest consecutive-failure count across coordinators.
+
+        Mirrors the transient/persistent classification used for repair
+        issues (see ``REPAIR_ISSUE_CONSECUTIVE_FAILURES``): 0 means
+        healthy, higher values count down to a repair issue.
+        """
+        return max(
+            (
+                int(getattr(coordinator, "_consecutive_failures", 0) or 0)
+                for coordinator in self.coordinators.values()
+            ),
+            default=0,
+        )
 
     @property
     def last_read_at(self) -> float | None:

@@ -157,6 +157,9 @@
       "connection_active": {
         "name": "Verbinding actief"
       },
+      "device_reachable": {
+        "name": "Apparaat bereikbaar"
+      },
       "input_30": {
         "name": "Compressor actief"
       },
@@ -276,6 +279,9 @@
       },
       "connection_write_errors": {
         "name": "Schrijffouten"
+      },
+      "connection_consecutive_failures": {
+        "name": "Opeenvolgende fouten"
       },
       "input_21": {
         "name": "Unit abnormality",

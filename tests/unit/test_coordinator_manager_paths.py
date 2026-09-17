@@ -67,6 +67,38 @@ async def test_shutdown_without_client_and_with_failing_shutdown():
     await manager.async_shutdown(disconnect_clients=True)
 
 
+def test_device_reachable_reflects_poll_outcomes():
+    """Reachable = at least one coordinator succeeded without pending failures."""
+    healthy = SimpleNamespace(last_update_success=True)
+    healthy._consecutive_failures = 0
+    failing = SimpleNamespace(last_update_success=False)
+    failing._consecutive_failures = 3
+    manager = _manager(normal=healthy, slow=failing)
+    # _manager builds SimpleNamespace coordinators; attach flags directly.
+    assert manager.device_reachable is True
+    assert manager.max_consecutive_failures == 3
+
+    healthy.last_update_success = False
+    assert manager.device_reachable is False
+
+    healthy.last_update_success = True
+    healthy._consecutive_failures = 1
+    failing._consecutive_failures = 0
+    failing.last_update_success = True
+    assert manager.device_reachable is True
+    assert manager.max_consecutive_failures == 1
+
+
+def test_device_reachable_false_without_success():
+    """No successful poll yet means unreachable, zero failures."""
+    manager = _manager(
+        normal=SimpleNamespace(last_update_success=None),
+        slow=SimpleNamespace(last_update_success=None),
+    )
+    assert manager.device_reachable is False
+    assert manager.max_consecutive_failures == 0
+
+
 async def test_get_coordinator_and_delegates():
     manager = _manager()
     assert manager.get_coordinator("normal") is manager.normal_coordinator

@@ -145,6 +145,9 @@
       "connection_active": {
         "name": "Verbindung aktiv"
       },
+      "device_reachable": {
+        "name": "Gerät erreichbar"
+      },
       "input_30": {
         "name": "Umwälzpumpe läuft"
       },
@@ -267,6 +270,9 @@
       },
       "connection_write_errors": {
         "name": "Schreibfehler"
+      },
+      "connection_consecutive_failures": {
+        "name": "Aufeinanderfolgende Fehler"
       },
       "input_21": {
         "name": "Unregelmäßigkeit bei der Einheit",

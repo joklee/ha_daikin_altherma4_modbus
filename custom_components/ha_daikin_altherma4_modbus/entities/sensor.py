@@ -221,6 +221,23 @@ async def async_setup_entry(hass, entry, async_add_entities):
             )
         )
 
+    # Consecutive-failure counter on the "Enhanced" device: tracks the
+    # transient/persistent outage classification (repair issue threshold).
+    for conn in CONNECTION_SENSORS:
+        if conn.calc_type != "connection_consecutive_failures":
+            continue
+        entities.append(
+            ConsecutiveFailuresSensor(
+                coordinator=unified_coordinator,
+                entry=entry,
+                unique_id=conn.register_name,
+                entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
+                device_info=CALCULATED_DEVICE_INFO,
+                translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
+            )
+        )
+
     async_add_entities(entities)
 
     # Set up abnormality monitoring callback
@@ -897,3 +914,50 @@ class ConnectionStateSensor(CoordinatorEntity, SensorEntity):
         if manager is None:
             return None
         return "connected" if manager.connection_active else "disconnected"
+
+
+class ConsecutiveFailuresSensor(CoordinatorEntity, SensorEntity):
+    """Diagnostic sensor: highest consecutive-failure count across coordinators.
+
+    Lives on the "Enhanced" device. Counts down to a repair issue: 0 means
+    healthy, higher values track the transient/persistent classification
+    (see ``REPAIR_ISSUE_CONSECUTIVE_FAILURES``).
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+        disabled_by_default=False,
+    ):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = unique_id
+        self._attr_entity_category = entity_category
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
+
+    def _manager(self):
+        """Return the CoordinatorManager behind the unified coordinator."""
+        return getattr(self.coordinator, "manager", None)
+
+    @property
+    def available(self) -> bool:
+        """Available whenever the manager is reachable (zero is valid)."""
+        return self._manager() is not None
+
+    @property
+    def native_value(self):
+        """Return the highest consecutive-failure count."""
+        manager = self._manager()
+        if manager is None:
+            return None
+        return manager.max_consecutive_failures

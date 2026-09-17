@@ -112,6 +112,9 @@
     },
     "connection_active": {
       "icon": "mdi:connection"
+    },
+    "device_reachable": {
+      "icon": "mdi:lan-check"
     }
   },
   "number": {
@@ -312,6 +315,9 @@
     },
     "external_electric_power": {
       "icon": "mdi:flash"
+    },
+    "connection_consecutive_failures": {
+      "icon": "mdi:counter"
     }
   }
 }

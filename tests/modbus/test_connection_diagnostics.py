@@ -38,11 +38,13 @@ from custom_components.ha_daikin_altherma4_modbus.entities import (
 )
 from custom_components.ha_daikin_altherma4_modbus.entities.binary_sensor import (
     ConnectionActiveSensor,
+    DeviceReachableSensor,
 )
 from custom_components.ha_daikin_altherma4_modbus.entities.sensor import (
     ConnectionErrorSensor,
     ConnectionStateSensor,
     ConnectionTimestampSensor,
+    ConsecutiveFailuresSensor,
 )
 from custom_components.ha_daikin_altherma4_modbus.integration.coordinator_manager import (
     CoordinatorManager,
@@ -426,6 +428,75 @@ def test_state_sensor_reports_connected() -> None:
     assert entity.native_value == "connected"
 
 
+def _reachable_manager(normal, slow) -> CoordinatorManager:
+    """Manager shell with coordinator-shaped stubs (poll outcome + counters)."""
+    manager = CoordinatorManager.__new__(CoordinatorManager)
+    manager.normal_coordinator = normal
+    manager.slow_coordinator = slow
+    manager.coordinators = {"normal": normal, "slow": slow}
+    return manager
+
+
+def _polling_coordinator(*, last_update_success, consecutive_failures=0):
+    return SimpleNamespace(
+        data_manager=SimpleNamespace(client=None),
+        last_update_success=last_update_success,
+        _consecutive_failures=consecutive_failures,
+    )
+
+
+def test_reachable_sensor_reports_poll_outcome() -> None:
+    """device_reachable follows poll success, not link state."""
+    entity = DeviceReachableSensor(
+        coordinator=_coordinator(
+            _reachable_manager(
+                _polling_coordinator(last_update_success=True, consecutive_failures=0),
+                _polling_coordinator(last_update_success=False),
+            )
+        ),
+        entry=None,
+        unique_id="device_reachable",
+        translation_key="device_reachable",
+        device_info=None,
+    )
+    assert entity.available is True
+    assert entity.is_on is True
+    assert entity.entity_registry_enabled_default is True
+
+
+def test_reachable_sensor_off_when_all_polls_failing() -> None:
+    """A held link with failing polls reads OFF (the reported gap)."""
+    failing = _polling_coordinator(last_update_success=False, consecutive_failures=2)
+    entity = DeviceReachableSensor(
+        coordinator=_coordinator(_reachable_manager(failing, failing)),
+        entry=None,
+        unique_id="device_reachable",
+        translation_key="device_reachable",
+        device_info=None,
+    )
+    assert entity.available is True
+    assert entity.is_on is False
+
+
+def test_consecutive_failures_sensor_reports_max() -> None:
+    """The failures sensor exposes the highest coordinator counter."""
+    entity = ConsecutiveFailuresSensor(
+        coordinator=_coordinator(
+            _reachable_manager(
+                _polling_coordinator(last_update_success=False, consecutive_failures=1),
+                _polling_coordinator(last_update_success=False, consecutive_failures=2),
+            )
+        ),
+        entry=None,
+        unique_id="connection_consecutive_failures",
+        translation_key="connection_consecutive_failures",
+        disabled_by_default=True,
+    )
+    assert entity.available is True
+    assert entity.native_value == 2
+    assert entity.entity_registry_enabled_default is False
+
+
 def test_state_sensor_reports_disconnected() -> None:
     entity = ConnectionStateSensor(
         coordinator=_coordinator(_manager(None, None)),
@@ -573,6 +644,9 @@ async def test_binary_setup_creates_active_sensor() -> None:
 
     active = [e for e in added if isinstance(e, ConnectionActiveSensor)]
     assert len(active) == 1
+    reachable = [e for e in added if isinstance(e, DeviceReachableSensor)]
+    assert len(reachable) == 1
+    assert reachable[0].entity_registry_enabled_default is True
     entity = active[0]
     assert (
         entity._attr_device_info["translation_key"]
@@ -607,9 +681,12 @@ async def test_sensor_setup_creates_connection_entities() -> None:
     stamps = [e for e in added if isinstance(e, ConnectionTimestampSensor)]
     errors = [e for e in added if isinstance(e, ConnectionErrorSensor)]
     states = [e for e in added if isinstance(e, ConnectionStateSensor)]
+    failures = [e for e in added if isinstance(e, ConsecutiveFailuresSensor)]
     assert len(stamps) == 2
     assert len(errors) == 2
     assert len(states) == 1
+    assert len(failures) == 1
+    assert failures[0].entity_registry_enabled_default is False
     # Gold entity-disabled-by-default: deep-dive timestamps/counters start
     # disabled, the headline state sensor stays enabled.
     assert all(e.entity_registry_enabled_default is False for e in stamps)

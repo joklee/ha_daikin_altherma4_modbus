@@ -201,7 +201,7 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 | Number | 20+ | Setpoint settings |
 | Select | 10+ | Operation mode selection |
 | Climate | 2 | Thermostat control |
-| Connection diagnostics (Enhanced device) | 1 binary + 5 sensors | Link status, timestamps, error counters (all diagnostic) |
+| Connection diagnostics (Enhanced device) | 2 binary + 6 sensors | Reachability, link status, timestamps, error counters (all diagnostic) |
 
 ### Sensors (Input Registers)
 
@@ -374,14 +374,20 @@ All binary sensors have the **Diagnostic** category.
 
 ### Connection Diagnostics (Enhanced Device)
 
-These diagnostic entities report the health of the shared Modbus connection:
+These diagnostic entities report the health of the shared Modbus connection.
+Note the two levels: **link state** (is the shared TCP connection up?) vs.
+**device health** (did the heat pump recently answer polls?):
 
 | Entity | Type | Description |
 |--------|------|-------------|
-| Connection active | Binary sensor (`connectivity`) | Whether any coordinator currently holds a live connection |
-| Connection state | Sensor | `connected` / `disconnected` |
+| Device reachable | Binary sensor (`connectivity`) | **Primary health metric:** whether the heat pump recently answered polls |
+| Connection active | Binary sensor (`connectivity`) | Shared-link state: whether any coordinator holds a live connection (can be on while the device stopped answering) |
+| Connection state | Sensor | `connected` / `disconnected` (link state) |
 | Last read / Last write | Sensor (`timestamp`) | Newest successful read/write across coordinators |
 | Read errors / Write errors | Sensor (counter) | Total failures with per-category breakdown attributes (`timeout`, `connection`, `invalid_address`, `other`) plus `last_error` and `last_error_at` |
+| Consecutive failures | Sensor (counter) | Highest consecutive-failure count across coordinators (0 = healthy; repair issue at 3) |
+
+The deep-dive entities (timestamps, error counters, consecutive failures) and the granular discrete inputs start disabled; enable them per entity if needed for troubleshooting.
 
 ### Special Register Values
 

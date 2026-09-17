@@ -157,6 +157,9 @@
       "connection_active": {
         "name": "Connection active"
       },
+      "device_reachable": {
+        "name": "Device reachable"
+      },
       "input_30": {
         "name": "Compressor run"
       },
@@ -276,6 +279,9 @@
       },
       "connection_write_errors": {
         "name": "Write errors"
+      },
+      "connection_consecutive_failures": {
+        "name": "Consecutive failures"
       },
       "input_21": {
         "name": "Unit abnormality",
