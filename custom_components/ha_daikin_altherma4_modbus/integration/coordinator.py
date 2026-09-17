@@ -29,6 +29,13 @@ _COORDINATOR_IO_EXCEPTIONS = (
     ConnectionError,
 )
 
+# Outage classification: a single failed poll is transient (error counters
+# and one log line, no repair issue). Only this many *consecutive* failures
+# mark the outage as persistent and raise a repair issue. A wrong
+# host/port/unit id fails every poll, so misconfiguration still surfaces
+# quickly without flagging normal TCP blips.
+REPAIR_ISSUE_CONSECUTIVE_FAILURES = 3
+
 
 class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
     """Normal interval coordinator for input and discrete registers."""
@@ -72,6 +79,10 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         # logs once when going down and once when recovering (Silver:
         # log-when-unavailable) instead of on every poll.
         self._unavailable_logged = False
+        # Consecutive failed polls; reset by any successful poll. Only a
+        # persistent outage (see REPAIR_ISSUE_CONSECUTIVE_FAILURES) raises
+        # a repair issue - single TCP blips stay transient.
+        self._consecutive_failures = 0
 
     def _find_config_entry(self):
         """Find the config entry for this coordinator."""
@@ -95,6 +106,9 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
             # Combine data
             self.data = {**input_data, **discrete_data}
 
+            # Success resets the outage classification: a later failure
+            # starts over as transient.
+            self._consecutive_failures = 0
             # Connection recovered - log once and delete repair issue if created
             if self._unavailable_logged:
                 _LOGGER.info("NormalCoordinator connection re-established")
@@ -108,12 +122,17 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
             return self.data
 
         except _COORDINATOR_IO_EXCEPTIONS as err:
+            self._consecutive_failures += 1
             # Log only the transition to unavailable, not every failed poll.
             if not self._unavailable_logged:
                 _LOGGER.error(f"Error updating normal data: {err}")
                 self._unavailable_logged = True
-            # Create repair issue on connection failure
-            if not self._connection_issue_created:
+            # A single failed poll is transient (counters already record it
+            # at the facade). Only a persistent outage raises a repair issue.
+            if (
+                self._consecutive_failures >= REPAIR_ISSUE_CONSECUTIVE_FAILURES
+                and not self._connection_issue_created
+            ):
                 entry = self._find_config_entry()
                 if entry:
                     async_create_connection_issue(
@@ -163,6 +182,7 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         self._connection_issue_created = False
         # See normal coordinator: log the outage once, not on every poll.
         self._unavailable_logged = False
+        self._consecutive_failures = 0
 
     def _find_config_entry(self):
         """Find the config entry for this coordinator."""
@@ -187,6 +207,8 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
             # Combine data
             self.data = {**coil_data, **holding_data}
 
+            # Success resets the outage classification (see normal coordinator).
+            self._consecutive_failures = 0
             # Connection recovered - log once and delete repair issue if created
             if self._unavailable_logged:
                 _LOGGER.info("SlowCoordinator connection re-established")
@@ -200,12 +222,17 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
             return self.data
 
         except _COORDINATOR_IO_EXCEPTIONS as err:
+            self._consecutive_failures += 1
             # Log only the transition to unavailable, not every failed poll.
             if not self._unavailable_logged:
                 _LOGGER.error(f"Error updating slow data: {err}")
                 self._unavailable_logged = True
-            # Create repair issue on connection failure (only if not already created by normal coordinator)
-            if not self._connection_issue_created:
+            # Only a persistent outage raises a repair issue (only if not
+            # already created by normal coordinator)
+            if (
+                self._consecutive_failures >= REPAIR_ISSUE_CONSECUTIVE_FAILURES
+                and not self._connection_issue_created
+            ):
                 entry = self._find_config_entry()
                 if entry:
                     # Only create if no issue exists yet (normal coordinator may have created one)

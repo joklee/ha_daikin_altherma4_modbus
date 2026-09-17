@@ -191,7 +191,11 @@ async def test_unload_swallows_manager_shutdown_error(hass, enable_custom_integr
 async def test_coordinator_failure_creates_repair_issue(
     hass, enable_custom_integrations, caplog
 ):
-    """Coordinator UpdateFailed paths create a repair issue via entry lookup."""
+    """Transient blips stay silent; persistent outages raise a repair issue."""
+    from custom_components.ha_daikin_altherma4_modbus.integration.coordinator import (
+        REPAIR_ISSUE_CONSECUTIVE_FAILURES,
+    )
+
     entry = _demo_entry()
     entry.add_to_hass(hass)
     # A second entry without runtime data exercises the lookup skip branch.
@@ -206,11 +210,19 @@ async def test_coordinator_failure_creates_repair_issue(
         ),
         fetch_discrete_inputs_data=AsyncMock(return_value={}),
     )
-    await coordinator.async_refresh()
-
-    assert coordinator.last_update_success is False
     registry = async_get_issue_registry(hass)
-    assert (DOMAIN, f"connection_lost_{entry.entry_id}") in registry.issues
+    issue_id = (DOMAIN, f"connection_lost_{entry.entry_id}")
+
+    # Transient: isolated failures raise UpdateFailed but no repair issue.
+    for _ in range(REPAIR_ISSUE_CONSECUTIVE_FAILURES - 1):
+        await coordinator.async_refresh()
+        assert coordinator.last_update_success is False
+        assert issue_id not in registry.issues
+
+    # Persistent: reaching the threshold raises the repair issue.
+    await coordinator.async_refresh()
+    assert coordinator.last_update_success is False
+    assert issue_id in registry.issues
 
     # Recovery clears the issue and resets the flags.
     coordinator.data_manager = SimpleNamespace(
@@ -219,7 +231,8 @@ async def test_coordinator_failure_creates_repair_issue(
     )
     await coordinator.async_refresh()
     assert coordinator.last_update_success is True
-    assert (DOMAIN, f"connection_lost_{entry.entry_id}") not in registry.issues
+    assert coordinator._consecutive_failures == 0
+    assert issue_id not in registry.issues
 
 
 async def test_slow_coordinator_failure_paths(hass, enable_custom_integrations):

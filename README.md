@@ -661,7 +661,7 @@ logger:
 ### Repair Issues
 
 The integration uses the Home Assistant Repair system:
-- **Connection lost:** A repair issue is created when the connection is lost. You can fix the connection directly from the HA UI.
+- **Connection lost:** Single failed polls are transient (counted, not reported). Only after 3 consecutive failed polls is a repair issue created; you can fix the connection directly from the HA UI. The issue clears automatically on recovery.
 - **Device abnormality:** When the heat pump reports errors or warnings (register 21), an informational repair issue is created.
 
 ### Advanced Troubleshooting
