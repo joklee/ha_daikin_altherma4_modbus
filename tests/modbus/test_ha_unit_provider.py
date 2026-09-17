@@ -144,6 +144,9 @@ async def test_async_test_connection_probe_succeeds_with_temporary_unit(
         assert params.port == PORT
         yield connection.for_unit(unit_id)
 
+    # Force the provider flag: on HA versions without the shared modbus
+    # helpers the probe short-circuits before reaching the temporary unit.
+    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", True)
     monkeypatch.setattr(
         connection_manager, "async_get_temporary_unit", fake_temporary_unit
     )
@@ -172,6 +175,9 @@ async def test_async_test_connection_probe_maps_unit_error_to_cannot_connect(
         raise ModbusConnectionError("dead gateway")
         yield None
 
+    # Same provider-flag forcing as above: exercise the unit-read path,
+    # not the provider-missing short-circuit.
+    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", True)
     monkeypatch.setattr(
         connection_manager, "async_get_temporary_unit", failing_temporary_unit
     )
