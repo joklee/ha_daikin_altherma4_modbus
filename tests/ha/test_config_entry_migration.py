@@ -55,6 +55,8 @@ async def test_version_1_entry_is_migrated_to_version_2_with_default_unit_id(
     # Existing data must not be touched by the migration.
     assert entry.data[CONF_HOST] == HOST
     assert entry.data[CONF_PORT] == PORT
+    # The old-style unique_id gains the default unit id.
+    assert entry.unique_id == f"{HOST}:{PORT}:{DEFAULT_UNIT_ID}"
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
 
@@ -67,7 +69,7 @@ async def test_version_2_entry_passes_migration_unchanged(
         domain=DOMAIN,
         version=2,
         title=f"Daikin Altherma 4 ({HOST})",
-        unique_id=f"{HOST}:{PORT}",
+        unique_id=f"{HOST}:{PORT}:3",
         data={CONF_HOST: HOST, CONF_PORT: PORT, CONF_UNIT_ID: 3},
     )
     entry.add_to_hass(hass)
@@ -82,4 +84,5 @@ async def test_version_2_entry_passes_migration_unchanged(
 
     assert entry.version == 2
     assert entry.data[CONF_UNIT_ID] == 3
+    assert entry.unique_id == f"{HOST}:{PORT}:3"
     assert entry.state is ConfigEntryState.SETUP_RETRY

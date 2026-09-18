@@ -59,7 +59,7 @@ def _stub_config_flow():
     }
     cf_mod._is_valid_host = lambda host: bool(host)
     cf_mod._test_connection = AsyncMock(return_value=(True, None))
-    cf_mod._connection_unique_id = lambda host, port: f"{host}:{port}"
+    cf_mod._connection_unique_id = lambda host, port, unit_id=1: f"{host}:{port}:{unit_id}"
 
     class _StubConfigFlow:
         def async_abort(self, *, reason):

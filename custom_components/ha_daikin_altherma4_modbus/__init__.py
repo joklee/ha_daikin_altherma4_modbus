@@ -4,6 +4,8 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .config_flow import ConfigFlow as ConfigFlow
 from .core.const import (
+    CONF_HOST,
+    CONF_PORT,
     CONF_UNIT_ID,
     DEFAULT_UNIT_ID,
     DOMAIN,
@@ -26,15 +28,28 @@ async def async_migrate_entry(hass, entry):
     """Migrate a stored config entry to a newer version.
 
     Version 2 introduces the Modbus unit id (``unit_id``) to the entry
-    ``data``.  Old version-1 entries receive the default unit id (1) while
-    every other value is preserved, so no reconfiguration is required.
+    ``data`` and includes it in the ``unique_id`` (``host:port:unit_id``).
+    Old version-1 entries receive the default unit id (1) while every
+    other value is preserved, so no reconfiguration is required.
     The function is idempotent: calling it again on an already-migrated
     entry is a no-op.
     """
     if entry.version < 2:
         data = {**entry.data}
         data.setdefault(CONF_UNIT_ID, DEFAULT_UNIT_ID)
-        hass.config_entries.async_update_entry(entry, data=data, version=2)
+        updates: dict = {"data": data, "version": 2}
+        # Rewrite old-style unique_ids ("host:port") so the same triple
+        # keeps matching after the scheme change. Anything else (already
+        # new-style, None, custom) is left untouched.
+        host = data.get(CONF_HOST)
+        port = data.get(CONF_PORT)
+        if (
+            host is not None
+            and port is not None
+            and entry.unique_id == f"{host}:{port}"
+        ):
+            updates["unique_id"] = f"{host}:{port}:{data[CONF_UNIT_ID]}"
+        hass.config_entries.async_update_entry(entry, **updates)
     return True
 
 

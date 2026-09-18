@@ -1008,22 +1008,22 @@ async def test_config_flow_reauth_connection_success(hass, enable_custom_integra
 
 @pytest.mark.asyncio
 async def test_config_flow_reauth_duplicate_host_port(hass, enable_custom_integrations):
-    """Test reauth aborts when the target host/port already exists.
+    """Test reauth aborts when the target host/port/unit already exists.
 
     Reauth must not be able to give two entries the same identity
-    (host:port) by reauthenticating one entry onto another entry's
-    connection details.
+    (host:port:unit_id) by reauthenticating one entry onto another
+    entry's connection details.
     """
     entry_a = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.100:502",
+        unique_id="192.168.1.100:502:1",
         data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={"scan_interval": 15},
     )
     entry_b = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.200:502",
-        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502},
+        unique_id="192.168.1.200:502:1",
+        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502, CONF_UNIT_ID: 1},
         options={"scan_interval": 15},
     )
     entry_a.add_to_hass(hass)
@@ -1051,7 +1051,11 @@ async def test_config_flow_reauth_duplicate_host_port(hass, enable_custom_integr
     assert result["reason"] == "already_configured"
     # Neither entry may have been modified.
     assert entry_a.data == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
-    assert entry_b.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry_b.data == {
+        CONF_HOST: "192.168.1.200",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     reload_mock.assert_not_called()
 
 
@@ -1194,7 +1198,7 @@ async def test_config_flow_reconfigure_success(hass, enable_custom_integrations)
         "slow_scan_interval": 400,
         "demo_mode": True,
     }
-    assert entry.unique_id == "192.168.1.200:502"
+    assert entry.unique_id == "192.168.1.200:502:1"
     reload_mock.assert_called_once_with(entry.entry_id)
 
 
@@ -1293,7 +1297,7 @@ async def test_config_flow_reconfigure_connection_success_not_demo(
     }
     assert entry.options["scan_interval"] == 20
     assert entry.options["electric_power_sensor"] == "sensor.power"
-    assert entry.unique_id == "192.168.1.200:502"
+    assert entry.unique_id == "192.168.1.200:502:1"
     reload_mock.assert_called_once_with(entry.entry_id)
 
 
@@ -1466,17 +1470,17 @@ async def test_config_flow_reconfigure_connection_error(
 async def test_config_flow_reconfigure_duplicate_host_port(
     hass, enable_custom_integrations
 ):
-    """Test reconfigure aborts when the target host/port already exists."""
+    """Test reconfigure aborts when the target host/port/unit already exists."""
     entry_a = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.100:502",
+        unique_id="192.168.1.100:502:1",
         data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={"scan_interval": 15},
     )
     entry_b = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.200:502",
-        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502},
+        unique_id="192.168.1.200:502:1",
+        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502, CONF_UNIT_ID: 1},
         options={"scan_interval": 15},
     )
     entry_a.add_to_hass(hass)
@@ -1505,7 +1509,11 @@ async def test_config_flow_reconfigure_duplicate_host_port(
     assert result["reason"] == "already_configured"
     # Neither entry may have been modified.
     assert entry_a.data == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
-    assert entry_b.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry_b.data == {
+        CONF_HOST: "192.168.1.200",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     reload_mock.assert_not_called()
 
 
@@ -1516,7 +1524,7 @@ async def test_config_flow_unique_id_prevents_duplicates(
     """Test that unique ID prevents duplicate entries."""
     existing = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.100:502",
+        unique_id="192.168.1.100:502:1",
         data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={"scan_interval": 15, "demo_mode": True},
     )

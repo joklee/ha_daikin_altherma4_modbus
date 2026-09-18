@@ -44,7 +44,7 @@ def _demo_entry(**overrides):
     return MockConfigEntry(
         domain=DOMAIN,
         title="Daikin Altherma 4 (192.0.2.10)",
-        unique_id="192.0.2.10:502",
+        unique_id="192.0.2.10:502:1",
         data=data,
         options=options,
         version=2,
@@ -57,16 +57,64 @@ async def test_migrate_v1_adds_default_unit_id():
     hass = SimpleNamespace(config_entries=SimpleNamespace())
     updated = {}
 
-    def fake_update(entry, *, data, version):
-        updated["data"] = data
-        updated["version"] = version
+    def fake_update(entry, **kwargs):
+        updated.update(kwargs)
 
     hass.config_entries.async_update_entry = fake_update
-    entry = SimpleNamespace(version=1, data={CONF_HOST: "h", CONF_PORT: 502})
+    entry = SimpleNamespace(
+        version=1,
+        unique_id="h:502",
+        data={CONF_HOST: "h", CONF_PORT: 502},
+    )
 
     assert await async_migrate_entry(hass, entry) is True
     assert updated["data"][CONF_UNIT_ID] == 1
     assert updated["data"][CONF_HOST] == "h"
+    assert updated["version"] == 2
+    assert updated["unique_id"] == "h:502:1"
+
+
+async def test_migrate_v1_preserves_unknown_keys():
+    """Migration keeps unknown data keys and respects an existing unit id."""
+    hass = SimpleNamespace(config_entries=SimpleNamespace())
+    updated = {}
+
+    def fake_update(entry, **kwargs):
+        updated.update(kwargs)
+
+    hass.config_entries.async_update_entry = fake_update
+    entry = SimpleNamespace(
+        version=1,
+        unique_id="h:502",
+        data={
+            CONF_HOST: "h",
+            CONF_PORT: 502,
+            CONF_UNIT_ID: 5,
+            "some_future_key": "keep-me",
+        },
+    )
+
+    assert await async_migrate_entry(hass, entry) is True
+    assert updated["data"][CONF_UNIT_ID] == 5
+    assert updated["data"]["some_future_key"] == "keep-me"
+    assert updated["unique_id"] == "h:502:5"
+
+
+async def test_migrate_v1_leaves_nonstandard_unique_id():
+    """A custom unique_id is not rewritten by the migration."""
+    hass = SimpleNamespace(config_entries=SimpleNamespace())
+    updated = {}
+
+    def fake_update(entry, **kwargs):
+        updated.update(kwargs)
+
+    hass.config_entries.async_update_entry = fake_update
+    entry = SimpleNamespace(
+        version=1, unique_id="custom-id", data={CONF_HOST: "h", CONF_PORT: 502}
+    )
+
+    assert await async_migrate_entry(hass, entry) is True
+    assert "unique_id" not in updated
     assert updated["version"] == 2
 
 

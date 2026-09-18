@@ -87,9 +87,14 @@ def _is_valid_host(host: str) -> bool:
     return True
 
 
-def _connection_unique_id(host: str, port: int) -> str:
-    """Build the config entry unique_id from connection details."""
-    return f"{host}:{port}"
+def _connection_unique_id(host: str, port: int, unit_id: int = DEFAULT_UNIT_ID) -> str:
+    """Build the config entry unique_id from connection details.
+
+    The unit id is part of the identity: several units may share one
+    host/port (shared Modbus connection), while the same host/port/unit
+    triple must map to exactly one entry.
+    """
+    return f"{host}:{port}:{unit_id}"
 
 
 def _build_reauth_schema(
@@ -230,7 +235,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
 
             # Set unique ID to prevent duplicate entries for the same device
-            await self.async_set_unique_id(_connection_unique_id(host, port))
+            await self.async_set_unique_id(_connection_unique_id(host, port, unit_id))
             self._abort_if_unique_id_configured()
 
             data = {
@@ -310,9 +315,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         errors={CONF_HOST: error_key},
                     )
 
-            # Abort if another config entry already uses this host/port
-            # (prevents two entries sharing the same unique_id "host:port")
-            self._async_abort_entries_match({CONF_HOST: host, CONF_PORT: port})
+            # Abort if another config entry already uses this host/port/unit
+            # (prevents two entries sharing the same unique_id
+            # "host:port:unit_id")
+            self._async_abort_entries_match(
+                {CONF_HOST: host, CONF_PORT: port, CONF_UNIT_ID: unit_id}
+            )
 
             new_options = {
                 "scan_interval": scan_interval,
@@ -326,7 +334,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # data_updates preserves unknown data keys on the entry
             return self.async_update_reload_and_abort(
                 config_entry,
-                unique_id=_connection_unique_id(host, port),
+                unique_id=_connection_unique_id(host, port, unit_id),
                 data_updates={
                     CONF_HOST: host,
                     CONF_PORT: port,
@@ -395,9 +403,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         errors={CONF_HOST: error_key},
                     )
 
-            # Abort if another config entry already uses this host/port
-            # (prevents two entries sharing the same unique_id "host:port")
-            self._async_abort_entries_match({CONF_HOST: host, CONF_PORT: port})
+            # Abort if another config entry already uses this host/port/unit
+            # (prevents two entries sharing the same unique_id
+            # "host:port:unit_id")
+            self._async_abort_entries_match(
+                {CONF_HOST: host, CONF_PORT: port, CONF_UNIT_ID: unit_id}
+            )
 
             new_options = dict(reconfigure_entry.options)
             new_options["scan_interval"] = scan_interval
@@ -410,7 +421,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # data_updates preserves unknown data keys on the entry
             return self.async_update_reload_and_abort(
                 reconfigure_entry,
-                unique_id=_connection_unique_id(host, port),
+                unique_id=_connection_unique_id(host, port, unit_id),
                 data_updates={
                     CONF_HOST: host,
                     CONF_PORT: port,
