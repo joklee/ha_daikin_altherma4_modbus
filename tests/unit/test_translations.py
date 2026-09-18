@@ -478,8 +478,8 @@ class TestTranslations:
             if reconfigure:
                 extra = set(reconfigure.keys()) - valid_section_keys
                 assert not extra, (
-                    f"{lang}.json: config.reconfigure has extra keys {extra} at top "
-                    f"level. Use config.reconfigure.step.<step_id> structure instead."
+                    f"{lang}.json: config.reconfigure.step.{step_id} has "
+                    f"extra keys: {step_extra}"
                 )
                 for step_id, step_data in reconfigure.get("step", {}).items():
                     if isinstance(step_data, dict):
@@ -488,3 +488,54 @@ class TestTranslations:
                             f"{lang}.json: config.reconfigure.step.{step_id} has "
                             f"extra keys: {step_extra}"
                         )
+
+    def test_icons_cover_entity_translation_keys(self, component_dir):
+        """Every entity translation key needs an icons.json entry (Gold)."""
+        from custom_components.ha_daikin_altherma4_modbus.core.register_constants import (
+            DISCRETE_REGISTERS,
+            HOLDING_REGISTERS,
+            INPUT_REGISTERS,
+        )
+        from custom_components.ha_daikin_altherma4_modbus.core.register_types import (
+            NumberRegister,
+            SelectRegister,
+        )
+
+        with open(component_dir / "translations" / "icons.json", encoding="utf-8") as f:
+            icons = json.load(f)
+
+        def icon_keys(platform):
+            section = icons.get(platform, {})
+            return set(section) if isinstance(section, dict) else set()
+
+        # Only running/problem input registers become binaries; every
+        # discrete register does.
+        expected_binary = (
+            {
+                r.translation_key
+                for r in INPUT_REGISTERS
+                if r.translation_key and str(r.device_class) in ("running", "problem")
+            }
+            | {r.translation_key for r in DISCRETE_REGISTERS if r.translation_key}
+            | {"connection_active"}
+        )
+        expected_number = {
+            r.translation_key
+            for r in HOLDING_REGISTERS
+            if isinstance(r, NumberRegister) and r.translation_key
+        }
+        expected_select = {
+            r.translation_key
+            for r in HOLDING_REGISTERS
+            if isinstance(r, SelectRegister) and r.translation_key
+        }
+
+        for platform, expected in (
+            ("binary_sensor", expected_binary),
+            ("number", expected_number),
+            ("select", expected_select),
+        ):
+            missing = expected - icon_keys(platform)
+            assert not missing, f"icons.json [{platform}] missing: {sorted(missing)}"
+
+        assert "daikin_thermostat_climate" in icon_keys("climate")

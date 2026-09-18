@@ -45,12 +45,23 @@ from custom_components.ha_daikin_altherma4_modbus.integration.services import (
     SERVICE_SET_ROOM_COOLING_SETPOINT_SCHEMA,
     SERVICE_SET_ROOM_HEATING_SETPOINT_SCHEMA,
     SERVICE_SET_SMART_GRID_MODE_SCHEMA,
+    async_refresh_connection,
+    async_set_additional_zone_setpoint,
     async_set_additional_zone_state,
+    async_set_cooling_offset,
+    async_set_dhw_booster_mode,
+    async_set_dhw_single_heatup,
     async_set_dhw_state,
+    async_set_heating_offset,
     async_set_main_zone_state,
     async_set_operation_mode,
+    async_set_power_limit,
+    async_set_quiet_mode,
+    async_set_room_cooling_setpoint,
+    async_set_room_heating_setpoint,
     async_set_smart_grid_mode,
     get_operation_mode_map,
+    get_quiet_mode_map,
     get_smart_grid_mode_map,
 )
 
@@ -704,3 +715,248 @@ class TestSmartGridModeMapping:
         assert smart_grid_mode_map["forced_off"] == 1
         assert smart_grid_mode_map["recommended_on"] == 2
         assert smart_grid_mode_map["forced_on"] == 3
+
+
+class TestRemainingServiceHandlers:
+    """Success paths for the write-heavy service handlers."""
+
+    def _call(self, hass, mock_config_entry, mock_runtime_data, service, data):
+        mock_config_entry.runtime_data = mock_runtime_data
+        hass.config_entries.async_get_entry.return_value = mock_config_entry
+        return ServiceCall(
+            hass=hass,
+            domain=DOMAIN,
+            service=service,
+            data={"config_entry_id": "test_entry_id", **data},
+        )
+
+    async def test_set_quiet_mode_success(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        mode = next(iter(get_quiet_mode_map()))
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_QUIET_MODE,
+            {"quiet_mode": mode},
+        )
+        await async_set_quiet_mode(hass, call)
+        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+            "holding_9", get_quiet_mode_map()[mode]
+        )
+
+    async def test_set_dhw_booster_mode_success(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_DHW_BOOSTER_MODE,
+            {"booster_mode": True},
+        )
+        await async_set_dhw_booster_mode(hass, call)
+        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+            "holding_13", 1
+        )
+
+    async def test_set_dhw_single_heatup_without_setpoint(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_DHW_SINGLE_HEATUP,
+            {"single_heatup": True},
+        )
+        await async_set_dhw_single_heatup(hass, call)
+        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+            "holding_15", 1
+        )
+
+    async def test_set_dhw_single_heatup_with_setpoint(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_DHW_SINGLE_HEATUP,
+            {"single_heatup": True, "setpoint": 45.0},
+        )
+        await async_set_dhw_single_heatup(hass, call)
+        assert mock_runtime_data.manager.write_holding_register.call_count == 2
+        mock_runtime_data.manager.write_holding_register.assert_any_call(
+            "holding_15", 1
+        )
+        mock_runtime_data.manager.write_holding_register.assert_any_call(
+            "holding_16", 4500
+        )
+
+    async def test_set_power_limit_success(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_POWER_LIMIT,
+            {"power_limit": 3.5},
+        )
+        await async_set_power_limit(hass, call)
+        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+            "holding_58", 3500
+        )
+
+    async def test_set_heating_offset_success(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_HEATING_OFFSET,
+            {"offset": 2.5},
+        )
+        await async_set_heating_offset(hass, call)
+        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+            "holding_54", 250
+        )
+
+    async def test_set_cooling_offset_success(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_COOLING_OFFSET,
+            {"offset": -1.5},
+        )
+        await async_set_cooling_offset(hass, call)
+        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+            "holding_55", -150
+        )
+
+    async def test_set_room_heating_setpoint_success(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_ROOM_HEATING_SETPOINT,
+            {"setpoint": 21.0},
+        )
+        await async_set_room_heating_setpoint(hass, call)
+        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+            "holding_6", 2100
+        )
+
+    async def test_set_room_cooling_setpoint_success(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_ROOM_COOLING_SETPOINT,
+            {"setpoint": 25.0},
+        )
+        await async_set_room_cooling_setpoint(hass, call)
+        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+            "holding_7", 2500
+        )
+
+    async def test_set_additional_zone_setpoint_success(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        call = self._call(
+            hass,
+            mock_config_entry,
+            mock_runtime_data,
+            SERVICE_SET_ADDITIONAL_ZONE_SETPOINT,
+            {"setpoint": 40.0},
+        )
+        await async_set_additional_zone_setpoint(hass, call)
+        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+            "holding_63", 4000
+        )
+
+    async def test_refresh_connection_success(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        mock_runtime_data.manager.refresh_connection = AsyncMock()
+        call = self._call(
+            hass, mock_config_entry, mock_runtime_data, SERVICE_REFRESH_CONNECTION, {}
+        )
+        await async_refresh_connection(hass, call)
+        mock_runtime_data.manager.refresh_connection.assert_awaited_once()
+
+
+class TestServiceWriteFailures:
+    """Transport failures must surface as HomeAssistantError (Silver)."""
+
+    async def test_write_failure_raises_homeassistant_error(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        """A dead transport during a service write raises HomeAssistantError."""
+        from homeassistant.exceptions import HomeAssistantError
+
+        mock_config_entry.runtime_data = mock_runtime_data
+        hass.config_entries.async_get_entry.return_value = mock_config_entry
+        mock_runtime_data.manager.write_holding_register = AsyncMock(
+            side_effect=OSError("dead gateway")
+        )
+
+        call = ServiceCall(
+            hass=hass,
+            domain=DOMAIN,
+            service=SERVICE_SET_OPERATION_MODE,
+            data={
+                "config_entry_id": "test_entry_id",
+                "operation_mode": "heat",
+            },
+        )
+
+        with pytest.raises(HomeAssistantError) as exc_info:
+            await async_set_operation_mode(hass, call)
+        assert "holding_3" in str(exc_info.value.translation_placeholders)
+
+    async def test_coil_write_failure_raises_homeassistant_error(
+        self, hass, mock_config_entry, mock_runtime_data
+    ):
+        """A dead transport during a coil write raises HomeAssistantError."""
+        from homeassistant.exceptions import HomeAssistantError
+
+        mock_config_entry.runtime_data = mock_runtime_data
+        hass.config_entries.async_get_entry.return_value = mock_config_entry
+        mock_runtime_data.manager.write_coil_register = AsyncMock(
+            side_effect=OSError("dead gateway")
+        )
+
+        call = ServiceCall(
+            hass=hass,
+            domain=DOMAIN,
+            service=SERVICE_SET_DHW_STATE,
+            data={
+                "config_entry_id": "test_entry_id",
+                "state": True,
+            },
+        )
+
+        with pytest.raises(HomeAssistantError):
+            await async_set_dhw_state(hass, call)
+
+    def test_unknown_coil_raises_homeassistant_error(self):
+        """An unknown coil register raises HomeAssistantError, not ValueError."""
+        from homeassistant.exceptions import HomeAssistantError
+
+        from custom_components.ha_daikin_altherma4_modbus.integration.services import (
+            _get_coil_address,
+        )
+
+        with pytest.raises(HomeAssistantError):
+            _get_coil_address("coil_999")

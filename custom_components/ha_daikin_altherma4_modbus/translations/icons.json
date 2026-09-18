@@ -1,10 +1,202 @@
 {
   "climate": {
+    "daikin_thermostat_climate": {
+      "icon": "mdi:thermostat"
+    },
     "daikin_dhw_manual_thermostat": {
       "icon": "mdi:water-boiler"
     },
     "daikin_dhw_booster_thermostat": {
       "icon": "mdi:water-boiler-alert"
+    }
+  },
+  "binary_sensor": {
+    "discrete_1": {
+      "icon": "mdi:pipe-valve"
+    },
+    "discrete_2": {
+      "icon": "mdi:heater"
+    },
+    "discrete_3": {
+      "icon": "mdi:heater"
+    },
+    "discrete_4": {
+      "icon": "mdi:heater"
+    },
+    "discrete_5": {
+      "icon": "mdi:heater"
+    },
+    "discrete_6": {
+      "icon": "mdi:heater"
+    },
+    "discrete_7": {
+      "icon": "mdi:heater"
+    },
+    "discrete_8": {
+      "icon": "mdi:heater"
+    },
+    "discrete_9": {
+      "icon": "mdi:water-boiler"
+    },
+    "discrete_10": {
+      "icon": "mdi:heat-pump"
+    },
+    "discrete_11": {
+      "icon": "mdi:compressor"
+    },
+    "discrete_12": {
+      "icon": "mdi:volume-off"
+    },
+    "discrete_13": {
+      "icon": "mdi:palm-tree"
+    },
+    "discrete_14": {
+      "icon": "mdi:snowflake-alert"
+    },
+    "discrete_15": {
+      "icon": "mdi:snowflake"
+    },
+    "discrete_16": {
+      "icon": "mdi:water-boiler"
+    },
+    "discrete_17": {
+      "icon": "mdi:snowflake-melt"
+    },
+    "discrete_18": {
+      "icon": "mdi:fire"
+    },
+    "discrete_19": {
+      "icon": "mdi:water-boiler"
+    },
+    "discrete_20": {
+      "icon": "mdi:radiator"
+    },
+    "discrete_21": {
+      "icon": "mdi:radiator"
+    },
+    "discrete_22": {
+      "icon": "mdi:lightning-bolt"
+    },
+    "discrete_23": {
+      "icon": "mdi:information"
+    },
+    "discrete_24": {
+      "icon": "mdi:alert"
+    },
+    "discrete_25": {
+      "icon": "mdi:water-pump"
+    },
+    "discrete_26": {
+      "icon": "mdi:gauge"
+    },
+    "input_30": {
+      "icon": "mdi:pump"
+    },
+    "input_31": {
+      "icon": "mdi:compressor"
+    },
+    "input_32": {
+      "icon": "mdi:heater"
+    },
+    "input_33": {
+      "icon": "mdi:water-boiler"
+    },
+    "input_35": {
+      "icon": "mdi:snowflake-melt"
+    },
+    "input_36": {
+      "icon": "mdi:fire"
+    },
+    "input_64": {
+      "icon": "mdi:palm-tree"
+    },
+    "connection_active": {
+      "icon": "mdi:connection"
+    },
+    "device_reachable": {
+      "icon": "mdi:lan-check"
+    }
+  },
+  "number": {
+    "holding_1": {
+      "icon": "mdi:thermometer"
+    },
+    "holding_2": {
+      "icon": "mdi:snowflake"
+    },
+    "holding_6": {
+      "icon": "mdi:thermometer"
+    },
+    "holding_7": {
+      "icon": "mdi:snowflake"
+    },
+    "holding_10": {
+      "icon": "mdi:water-boiler"
+    },
+    "holding_14": {
+      "icon": "mdi:water-plus"
+    },
+    "holding_16": {
+      "icon": "mdi:water-boiler"
+    },
+    "holding_54": {
+      "icon": "mdi:tune"
+    },
+    "holding_55": {
+      "icon": "mdi:tune"
+    },
+    "holding_58": {
+      "icon": "mdi:gauge"
+    },
+    "holding_63": {
+      "icon": "mdi:thermometer"
+    },
+    "holding_64": {
+      "icon": "mdi:snowflake"
+    },
+    "holding_66": {
+      "icon": "mdi:tune"
+    },
+    "holding_67": {
+      "icon": "mdi:tune"
+    },
+    "holding_76": {
+      "icon": "mdi:thermometer"
+    },
+    "holding_77": {
+      "icon": "mdi:snowflake"
+    },
+    "holding_78": {
+      "icon": "mdi:thermometer"
+    },
+    "holding_79": {
+      "icon": "mdi:snowflake"
+    }
+  },
+  "select": {
+    "holding_3": {
+      "icon": "mdi:cog"
+    },
+    "holding_9": {
+      "icon": "mdi:volume-off"
+    },
+    "holding_56": {
+      "icon": "mdi:power-plug"
+    },
+    "holding_68": {
+      "icon": "mdi:weather-partly-cloudy"
+    },
+    "holding_69": {
+      "icon": "mdi:weather-partly-cloudy"
+    },
+    "holding_74": {
+      "icon": "mdi:thermostat"
+    },
+    "holding_75": {
+      "icon": "mdi:thermostat"
+    },
+    "holding_80": {
+      "icon": "mdi:water-boiler"
     }
   },
   "switch": {
@@ -123,6 +315,9 @@
     },
     "external_electric_power": {
       "icon": "mdi:flash"
+    },
+    "connection_consecutive_failures": {
+      "icon": "mdi:counter"
     }
   }
 }

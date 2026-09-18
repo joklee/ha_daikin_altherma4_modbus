@@ -1,11 +1,17 @@
 import logging
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntity,
+)
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..common import get_coordinator_from_entry, get_register_value, is_entity_available
 from ..core.const import DOMAIN
 from ..core.register_constants import (
+    CALCULATED_DEVICE_INFO,
+    CONNECTION_SENSORS,
     DISCRETE_INPUT_DEVICE_INFO,
     DISCRETE_REGISTERS,
     INPUT_DEVICE_INFO,
@@ -55,6 +61,43 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 register_name=discrete.register_name,
                 unique_id=discrete.register_name,
                 translation_key=discrete.translation_key,
+                disabled_by_default=discrete.disabled_by_default,
+            )
+        )
+
+    # Connection diagnostic sensor on the "Enhanced" device: whether any
+    # coordinator currently holds a connected transport client.
+    for conn in CONNECTION_SENSORS:
+        if conn.calc_type != "connection_active":
+            continue
+        entities.append(
+            ConnectionActiveSensor(
+                coordinator=coordinator,
+                entry=entry,
+                unique_id=conn.register_name,
+                device_class=conn.device_class or BinarySensorDeviceClass.CONNECTIVITY,
+                entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
+                device_info=CALCULATED_DEVICE_INFO,
+                translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
+            )
+        )
+
+    # Primary device-health metric on the "Enhanced" device: did the heat
+    # pump recently answer polls (vs. merely holding a shared link)?
+    for conn in CONNECTION_SENSORS:
+        if conn.calc_type != "device_reachable":
+            continue
+        entities.append(
+            DeviceReachableSensor(
+                coordinator=coordinator,
+                entry=entry,
+                unique_id=conn.register_name,
+                device_class=conn.device_class or BinarySensorDeviceClass.CONNECTIVITY,
+                entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
+                device_info=CALCULATED_DEVICE_INFO,
+                translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
             )
         )
 
@@ -118,6 +161,7 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
         entity_category=None,
         unique_id=None,
         translation_key=None,
+        disabled_by_default=False,
     ):
         super().__init__(coordinator)
         self._entry = entry
@@ -128,6 +172,7 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_entity_category = entity_category
         self._attr_device_info = DISCRETE_INPUT_DEVICE_INFO
         self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
 
     @property
     def available(self) -> bool:
@@ -142,3 +187,101 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
             return False
         val = get_register_value(data)
         return val == 1
+
+
+class ConnectionActiveSensor(CoordinatorEntity, BinarySensorEntity):
+    """Diagnostic sensor: is the shared Modbus transport connected?
+
+    Lives on the "Enhanced" device. The value is served live from the
+    CoordinatorManager (any coordinator holding a connected client), so it
+    keeps reporting during polling outages instead of going unavailable.
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        device_class=None,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+        disabled_by_default=False,
+    ):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = unique_id
+        self._attr_device_class = device_class
+        self._attr_entity_category = entity_category
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
+
+    def _manager(self):
+        """Return the CoordinatorManager behind the unified coordinator."""
+        return getattr(self.coordinator, "manager", None)
+
+    @property
+    def available(self) -> bool:
+        """Available whenever the manager is reachable."""
+        return self._manager() is not None
+
+    @property
+    def is_on(self):
+        """True while any coordinator holds a connected transport client."""
+        manager = self._manager()
+        if manager is None:
+            return None
+        return bool(manager.connection_active)
+
+
+class DeviceReachableSensor(CoordinatorEntity, BinarySensorEntity):
+    """Primary health metric: did the device recently answer polls?
+
+    Lives on the "Enhanced" device. Unlike :class:`ConnectionActiveSensor`
+    (shared-link state), this reflects observed poll outcomes, so a link
+    that is up while the heat pump stopped answering reads OFF here.
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        device_class=None,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+        disabled_by_default=False,
+    ):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = unique_id
+        self._attr_device_class = device_class
+        self._attr_entity_category = entity_category
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
+
+    def _manager(self):
+        """Return the CoordinatorManager behind the unified coordinator."""
+        return getattr(self.coordinator, "manager", None)
+
+    @property
+    def available(self) -> bool:
+        """Available whenever the manager is reachable."""
+        return self._manager() is not None
+
+    @property
+    def is_on(self):
+        """True while the device recently answered polls."""
+        manager = self._manager()
+        if manager is None:
+            return None
+        return bool(manager.device_reachable)

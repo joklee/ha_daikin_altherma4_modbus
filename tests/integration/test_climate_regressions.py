@@ -8,6 +8,29 @@ from unittest.mock import AsyncMock
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _restore_module_state():
+    """Snapshot & restore ``sys.modules`` for stubbed namespaces.
+
+    The loader below re-imports the climate module while stub modules are
+    installed; without a restore, the re-import caches poisoned modules in
+    ``sys.modules`` and breaks later real-HA tests in the same process.
+    (Same pattern as tests/modbus/test_unload_shared_endpoint.py.)
+    """
+    prefixes = ("homeassistant", "custom_components")
+
+    def _is_tracked(key: str) -> bool:
+        return key.startswith(prefixes)
+
+    snapshot = {key: module for key, module in sys.modules.items() if _is_tracked(key)}
+
+    yield
+
+    for key in [key for key in list(sys.modules) if _is_tracked(key)]:
+        sys.modules.pop(key, None)
+    sys.modules.update(snapshot)
+
+
 def _reset_modules(*names: str) -> None:
     for name in names:
         sys.modules.pop(name, None)
@@ -152,6 +175,233 @@ def _make_thermostat(module, quiet_raw=0, op_mode_raw=0):
         data_manager=SimpleNamespace(write_holding_register=AsyncMock()),
     )
     return module.DaikinThermostatClimate(coordinator, entry=SimpleNamespace())
+
+
+def _make_dhw_thermostat(module, dhw_type="manual", **overrides):
+    data = {
+        "coil_1": {"value": 1},
+        "discrete_19": {"value": 1},
+        "input_43": {"value": 50.0},
+        "holding_80": {"value": 45, "scale": 1},
+        "holding_13": {"value": 1},
+        "holding_81": {"value": 45, "scale": 1},
+    }
+    data.update(overrides)
+    coordinator = SimpleNamespace(
+        data=data,
+        data_manager=SimpleNamespace(
+            write_holding_register=AsyncMock(),
+            write_coil_register=AsyncMock(),
+        ),
+    )
+    return module.DaikinDHWThermostat(
+        coordinator, entry=SimpleNamespace(), dhw_type=dhw_type
+    )
+
+
+def test_thermostat_current_temperature_scaled_and_unscaled(monkeypatch):
+    """Current temperature honors pre-scaled values and scales raw ones."""
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    assert thermostat.current_temperature == pytest.approx(21.5)
+
+    thermostat.coordinator.data["input_37"] = {"value": 2150}
+    assert thermostat.current_temperature == pytest.approx(2150.0)
+
+
+def test_thermostat_target_temperature_heating_and_cooling(monkeypatch):
+    """Target temperature follows the mode-selected offset register."""
+    module = _load_climate_module(monkeypatch)
+    assert _make_thermostat(module).target_temperature == pytest.approx(0.0)
+
+    cool = _make_thermostat(module, op_mode_raw=2)
+    cool.coordinator.data["holding_6"] = {"value": 200}
+    assert cool.target_temperature == pytest.approx(200.0)
+
+
+def test_thermostat_fan_and_hvac_modes(monkeypatch):
+    """Fan and hvac modes map raw values to HA modes."""
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    assert thermostat.fan_mode == "OFF"
+    assert thermostat.fan_modes == ["OFF", "Auto", "Manual"]
+    assert thermostat.hvac_mode == "auto"
+
+    thermostat.coordinator.data["holding_3"] = {"value": 1}
+    assert thermostat.hvac_mode == "heat"
+    thermostat.coordinator.data["holding_3"] = {"value": 2}
+    assert thermostat.hvac_mode == "cool"
+    thermostat.coordinator.data["holding_9"] = {"value": 1}
+    assert thermostat.fan_mode == "Auto"
+
+
+def test_thermostat_hvac_action(monkeypatch):
+    """Running action follows compressor state and current mode."""
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    assert thermostat.hvac_action == "idle"
+
+    thermostat.coordinator.data["discrete_11"] = {"value": 1}
+    thermostat.coordinator.data["holding_3"] = {"value": 1}
+    assert thermostat.hvac_action == "heating"
+    thermostat.coordinator.data["holding_3"] = {"value": 2}
+    assert thermostat.hvac_action == "cooling"
+
+
+def test_thermostat_step_min_max_from_catalog_and_fallback(monkeypatch):
+    """Step/min/max come from the register catalog, with safe fallbacks."""
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    # Real catalog: holding_7 (heating offset) step 1, range 12..35.
+    assert thermostat.target_temperature_step == pytest.approx(1.0)
+    assert thermostat.min_temp == pytest.approx(12)
+    assert thermostat.max_temp == pytest.approx(35)
+
+    monkeypatch.setattr(module, "HOLDING_REGISTERS", [])
+    assert thermostat.target_temperature_step == pytest.approx(0.1)
+    assert thermostat.min_temp == pytest.approx(-5)
+    assert thermostat.max_temp == pytest.approx(5)
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_temperature_heating_and_cooling(monkeypatch):
+    """Setpoint writes go to the mode-selected offset register."""
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    await thermostat.async_set_temperature(temperature=20.0)
+    thermostat.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_7", 20
+    )
+
+    cool = _make_thermostat(module, op_mode_raw=2)
+    await cool.async_set_temperature(temperature=25.0)
+    cool.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_6", 25
+    )
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_temperature_clamps_to_limits(monkeypatch):
+    """Out-of-range setpoints are clamped to the catalog limits."""
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    await thermostat.async_set_temperature(temperature=2.0)
+    thermostat.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_7", 12
+    )
+
+
+@pytest.mark.asyncio
+async def test_thermostat_set_temperature_without_value_is_noop(monkeypatch):
+    """A missing temperature parameter only warns."""
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    await thermostat.async_set_temperature()
+    thermostat.coordinator.data_manager.write_holding_register.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_thermostat_extra_attributes_and_power_switch(monkeypatch):
+    """Attributes expose quiet mode/offset/setpoint; on/off map to AUTO."""
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    attrs = thermostat.extra_state_attributes
+    assert attrs["quiet_mode"] == "Off"
+    assert attrs["offset"] == pytest.approx(0.0)
+    assert attrs["calculated_setpoint"] == pytest.approx(21.5)
+    assert attrs["register_config"]["address"] == "holding_7"
+
+    await thermostat.async_turn_on()
+    await thermostat.async_turn_off()
+    assert thermostat.coordinator.data_manager.write_holding_register.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_dhw_thermostat_modes_and_temps(monkeypatch):
+    """DHW thermostat reports mode, action and temperatures."""
+    module = _load_climate_module(monkeypatch)
+    dhw = _make_dhw_thermostat(module)
+    assert dhw.hvac_mode == "heat"
+    assert dhw.hvac_action == "heating"
+    assert dhw.current_temperature == pytest.approx(50.0)
+    assert dhw.target_temperature == pytest.approx(45)
+    assert dhw.available is True
+
+    dhw.coordinator.data["coil_1"] = {"value": 0}
+    assert dhw.hvac_mode == "off"
+    assert dhw.hvac_action == "off"
+    assert dhw.available is True
+
+    del dhw.coordinator.data["coil_1"]
+    assert dhw.available is False
+
+
+@pytest.mark.asyncio
+async def test_dhw_thermostat_idle_when_not_running(monkeypatch):
+    """Heat mode without a running flag reports idle."""
+    module = _load_climate_module(monkeypatch)
+    dhw = _make_dhw_thermostat(module, discrete_19={"value": 0})
+    assert dhw.hvac_mode == "heat"
+    assert dhw.hvac_action == "idle"
+
+
+@pytest.mark.asyncio
+async def test_dhw_thermostat_writes(monkeypatch):
+    """Mode and setpoint writes reach the mode-selected registers."""
+    module = _load_climate_module(monkeypatch)
+    dhw = _make_dhw_thermostat(module)
+    await dhw.async_set_hvac_mode("heat")
+    dhw.coordinator.data_manager.write_coil_register.assert_awaited_with("coil_1", 1)
+    await dhw.async_set_hvac_mode("off")
+    dhw.coordinator.data_manager.write_coil_register.assert_awaited_with("coil_1", 0)
+
+    await dhw.async_set_temperature(temperature=50.0)
+    dhw.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_80", 50
+    )
+    dhw.coordinator.data_manager.write_holding_register.reset_mock()
+    await dhw.async_set_temperature()
+    dhw.coordinator.data_manager.write_holding_register.assert_not_awaited()
+
+    await dhw.async_turn_on()
+    await dhw.async_turn_off()
+
+
+@pytest.mark.asyncio
+async def test_dhw_booster_thermostat(monkeypatch):
+    """Booster variant wires holding registers for mode and setpoint."""
+    module = _load_climate_module(monkeypatch)
+    booster = _make_dhw_thermostat(module, dhw_type="booster")
+    assert booster.hvac_mode == "heat"
+    assert booster.available is True
+    await booster.async_set_hvac_mode("heat")
+    booster.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_13", 1
+    )
+    await booster.async_set_temperature(temperature=50.0)
+    booster.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_81", 50
+    )
+
+
+def test_thermostat_available_requires_core_registers(monkeypatch):
+    """Availability tracks the operation-mode and current-temp registers.
+
+    Silver ``entity-unavailable``: the stub maps REGISTER_CURRENT_TEMP to
+    ``input_37``, which the fixture seeds, so the thermostat starts
+    available and goes unavailable when a core register drops out or
+    reports a special (unsupported) value.
+    """
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    assert thermostat.available is True
+
+    del thermostat.coordinator.data["holding_3"]
+    assert thermostat.available is False
+
+    thermostat.coordinator.data["holding_3"] = {"value": 0}
+    thermostat.coordinator.data["input_37"] = {"value": 32767}
+    assert thermostat.available is False
 
 
 @pytest.mark.asyncio

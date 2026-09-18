@@ -12,6 +12,29 @@ import pytest
 pytestmark = [pytest.mark.ha, pytest.mark.demo_mode]
 
 
+@pytest.fixture(autouse=True)
+def _restore_module_state():
+    """Snapshot & restore ``sys.modules`` for stubbed namespaces.
+
+    The loaders below re-import the integration while stub modules are
+    installed; without a restore, the re-import caches poisoned modules in
+    ``sys.modules`` and breaks later real-HA tests in the same process.
+    (Same pattern as tests/modbus/test_unload_shared_endpoint.py.)
+    """
+    prefixes = ("homeassistant", "custom_components")
+
+    def _is_tracked(key: str) -> bool:
+        return key.startswith(prefixes)
+
+    snapshot = {key: module for key, module in sys.modules.items() if _is_tracked(key)}
+
+    yield
+
+    for key in [key for key in list(sys.modules) if _is_tracked(key)]:
+        sys.modules.pop(key, None)
+    sys.modules.update(snapshot)
+
+
 def _reset_modules(*names: str) -> None:
     """Reset modules for clean testing."""
     for name in names:
@@ -94,7 +117,17 @@ def _load_integration_module(monkeypatch):
     class FakeCoordinatorManager:
         last_instance = None
 
-        def __init__(self, hass, host, port, normal_interval, slow_interval, demo_mode):
+        def __init__(
+            self,
+            hass,
+            host,
+            port,
+            normal_interval,
+            slow_interval,
+            demo_mode,
+            entry=None,
+            unit_id=None,
+        ):
             self.host = host
             self.port = port
             self.demo_mode = demo_mode
@@ -147,7 +180,6 @@ def _load_integration_module(monkeypatch):
         def connected(self):
             return self._connected
 
-    FakeRealModbusTcpClient.async_close_cached_client = AsyncMock()
     modbus_client_module.RealModbusTcpClient = FakeRealModbusTcpClient
     monkeypatch.setitem(sys.modules, modbus_client_name, modbus_client_module)
 
@@ -334,7 +366,7 @@ async def test_demo_mode_skips_connection_test(monkeypatch):
     assert result is True
 
     # In demo mode, connection test should be skipped
-    # The RealModbusTcpClient.create should NOT be called during setup
+    # The RealModbusTcpClient should NOT be instantiated during setup
     assert len(connection_attempts) == 0
 
     # Trigger teardown

@@ -99,8 +99,12 @@ This test runs a full Home Assistant boot with the integration to verify:
 - Platform module resolution
 - No "Flow handler not found" errors
 - Entity platform setup
+- Demo-mode coordinator setup (normal + slow) without ERROR-level log lines
+- Automatic config entry migration v1 → v2 (the fixture entry carries no
+  `unit_id`; the migrated entry contains `unit_id: 1`)
 
-Requires Docker and a Home Assistant Docker image.
+Requires Docker and a Home Assistant Docker image (`:stable`, opt-in via
+`HA_DOCKER_DEMO_TESTS=1`).
 
 ## Running Specific Test Files
 

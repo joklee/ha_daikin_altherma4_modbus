@@ -10,7 +10,10 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.ha_daikin_altherma4_modbus.core.const import DOMAIN
+from custom_components.ha_daikin_altherma4_modbus.core.const import (
+    CONF_UNIT_ID,
+    DOMAIN,
+)
 from custom_components.ha_daikin_altherma4_modbus.integration import (
     config_flow as config_flow_module,
 )
@@ -18,29 +21,6 @@ from custom_components.ha_daikin_altherma4_modbus.integration.config_flow import
     ConfigFlow,
     OptionsFlow,
 )
-from custom_components.ha_daikin_altherma4_modbus.modbus.modbus_client import (
-    RealModbusTcpClient,
-)
-
-
-class _FakeModbusClient:
-    """Minimal Modbus client double for config-flow connection tests."""
-
-    def __init__(self, connected: bool = True) -> None:
-        self._connected = connected
-
-    @property
-    def connected(self) -> bool:
-        return self._connected
-
-    async def connect(self) -> None:
-        """Keep connection state controlled by the constructor."""
-
-    async def disconnect(self) -> None:
-        self._connected = False
-
-    async def read_input_registers(self, address: int, count: int):
-        return type("Response", (), {"registers": [0] * count})()
 
 
 @pytest.mark.asyncio
@@ -61,7 +41,11 @@ async def test_config_flow_success(hass, enable_custom_integrations):
 
     assert result["type"] == "create_entry"
     assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
-    assert result["data"] == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
+    assert result["data"] == {
+        CONF_HOST: "192.168.1.100",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     assert result["options"] == {
         "scan_interval": 15,
         "slow_scan_interval": 300,
@@ -93,10 +77,12 @@ async def test_config_flow_invalid_host(hass, enable_custom_integrations):
 @pytest.mark.asyncio
 async def test_config_flow_connection_error(hass, enable_custom_integrations):
     """Test config flow with connection error - connection test fails."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=False)),
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(False, "cannot_connect"),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -123,8 +109,8 @@ async def test_config_flow_connection_success_demo_mode(
     # Even when the Modbus connection would fail, demo mode should bypass the
     # connection test entirely.
     with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
+        config_flow_module,
+        "_test_connection",
         new=mock.AsyncMock(side_effect=ConnectionError("device not reachable")),
     ):
         result = await hass.config_entries.flow.async_init(
@@ -261,10 +247,18 @@ async def test_config_flow_empty_electric_power_sensor(
     hass, enable_custom_integrations
 ):
     """Test config flow excludes empty electric_power_sensor from options."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -281,7 +275,11 @@ async def test_config_flow_empty_electric_power_sensor(
 
     assert result["type"] == "create_entry"
     assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
-    assert result["data"] == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
+    assert result["data"] == {
+        CONF_HOST: "192.168.1.100",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     # Empty electric_power_sensor should not be in options
     assert "electric_power_sensor" not in result["options"]
     assert result["options"]["scan_interval"] == 15
@@ -462,10 +460,18 @@ async def test_options_flow_empty_electric_power_sensor(
 @pytest.mark.asyncio
 async def test_config_flow_ipv6_host(hass, enable_custom_integrations):
     """Test config flow with IPv6 address."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -486,10 +492,18 @@ async def test_config_flow_ipv6_host(hass, enable_custom_integrations):
 @pytest.mark.asyncio
 async def test_config_flow_valid_hostname(hass, enable_custom_integrations):
     """Test config flow with valid hostname."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -618,19 +632,27 @@ async def test_async_get_options_flow(hass, enable_custom_integrations):
 
 
 @pytest.mark.asyncio
-async def test_config_flow_connection_read_register_exception(
+async def test_config_flow_probe_read_failure_still_creates_entry(
     hass, enable_custom_integrations
 ):
-    """Test config flow when read_input_registers raises but connection succeeds."""
+    """A failed probe read must not block entry creation once connected.
 
-    class _FakeModbusClientReadError(_FakeModbusClient):
-        async def read_input_registers(self, address: int, count: int):
-            raise ConnectionError("Read failed but connection is valid")
-
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClientReadError(connected=True)),
+    The probe seam reports success (connection verified); the read inside the
+    temporary unit is what exercises the device, so an exception there must
+    not be surfaced to the user.
+    """
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -644,20 +666,26 @@ async def test_config_flow_connection_read_register_exception(
             },
         )
 
-    # Should still create entry even if read_input_registers raises
     assert result["type"] == "create_entry"
     assert result["title"] == "Daikin Altherma 4 (192.168.1.100)"
 
 
 @pytest.mark.asyncio
-async def test_config_flow_connection_client_create_exception(
+async def test_config_flow_probe_exception_becomes_cannot_connect(
     hass, enable_custom_integrations
 ):
-    """Test config flow when RealModbusTcpClient.create raises exception."""
+    """An unexpected probe exception is surfaced as cannot_connect.
+
+    The probe runs inside ``config_flow._test_connection``'s own error
+    handling; the flow must present the failure as a normal form error
+    instead of letting the exception escape.
+    """
+    import custom_components.ha_daikin_altherma4_modbus.modbus.connection_manager as cm
+
     with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(side_effect=ConnectionError("Failed to create client")),
+        cm,
+        "async_test_connection_with_temporary_unit",
+        new=mock.AsyncMock(side_effect=ConnectionError("probe crashed")),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -671,7 +699,6 @@ async def test_config_flow_connection_client_create_exception(
             },
         )
 
-    # Should return form with connection error
     assert result["type"] == "form"
     assert "errors" in result
     assert result["errors"][CONF_HOST] == "cannot_connect"
@@ -680,10 +707,18 @@ async def test_config_flow_connection_client_create_exception(
 @pytest.mark.asyncio
 async def test_config_flow_single_label_hostname(hass, enable_custom_integrations):
     """Test config flow with single label hostname."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -704,10 +739,18 @@ async def test_config_flow_single_label_hostname(hass, enable_custom_integration
 @pytest.mark.asyncio
 async def test_config_flow_hostname_with_only_numbers(hass, enable_custom_integrations):
     """Test config flow with hostname containing only numbers."""
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
+        ),
+        # Prevent auto-setup after entry creation from opening real sockets
+        # (blocked by pytest-socket in the HA test harness).
+        mock.patch(
+            "custom_components.ha_daikin_altherma4_modbus.async_setup_entry",
+            new=mock.AsyncMock(return_value=True),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -933,9 +976,9 @@ async def test_config_flow_reauth_connection_success(hass, enable_custom_integra
 
     with (
         mock.patch.object(
-            RealModbusTcpClient,
-            "create",
-            new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
         ),
         mock.patch.object(
             hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
@@ -965,22 +1008,22 @@ async def test_config_flow_reauth_connection_success(hass, enable_custom_integra
 
 @pytest.mark.asyncio
 async def test_config_flow_reauth_duplicate_host_port(hass, enable_custom_integrations):
-    """Test reauth aborts when the target host/port already exists.
+    """Test reauth aborts when the target host/port/unit already exists.
 
     Reauth must not be able to give two entries the same identity
-    (host:port) by reauthenticating one entry onto another entry's
-    connection details.
+    (host:port:unit_id) by reauthenticating one entry onto another
+    entry's connection details.
     """
     entry_a = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.100:502",
+        unique_id="192.168.1.100:502:1",
         data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={"scan_interval": 15},
     )
     entry_b = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.200:502",
-        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502},
+        unique_id="192.168.1.200:502:1",
+        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502, CONF_UNIT_ID: 1},
         options={"scan_interval": 15},
     )
     entry_a.add_to_hass(hass)
@@ -1008,7 +1051,11 @@ async def test_config_flow_reauth_duplicate_host_port(hass, enable_custom_integr
     assert result["reason"] == "already_configured"
     # Neither entry may have been modified.
     assert entry_a.data == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
-    assert entry_b.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry_b.data == {
+        CONF_HOST: "192.168.1.200",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     reload_mock.assert_not_called()
 
 
@@ -1052,10 +1099,12 @@ async def test_config_flow_reauth_connection_error(hass, enable_custom_integrati
     )
     entry.add_to_hass(hass)
 
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=False)),
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(False, "cannot_connect"),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -1138,14 +1187,18 @@ async def test_config_flow_reconfigure_success(hass, enable_custom_integrations)
 
     assert result["type"] == "abort"
     assert result["reason"] == "reconfigure_successful"
-    assert entry.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry.data == {
+        CONF_HOST: "192.168.1.200",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     assert entry.options == {
         "electric_power_sensor": "sensor.power",
         "scan_interval": 20,
         "slow_scan_interval": 400,
         "demo_mode": True,
     }
-    assert entry.unique_id == "192.168.1.200:502"
+    assert entry.unique_id == "192.168.1.200:502:1"
     reload_mock.assert_called_once_with(entry.entry_id)
 
 
@@ -1212,9 +1265,9 @@ async def test_config_flow_reconfigure_connection_success_not_demo(
 
     with (
         mock.patch.object(
-            RealModbusTcpClient,
-            "create",
-            new=mock.AsyncMock(return_value=_FakeModbusClient(connected=True)),
+            config_flow_module,
+            "_test_connection",
+            return_value=(True, None),
         ),
         mock.patch.object(
             hass.config_entries, "async_schedule_reload", new=mock.MagicMock()
@@ -1237,10 +1290,14 @@ async def test_config_flow_reconfigure_connection_success_not_demo(
 
     assert result["type"] == "abort"
     assert result["reason"] == "reconfigure_successful"
-    assert entry.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry.data == {
+        CONF_HOST: "192.168.1.200",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     assert entry.options["scan_interval"] == 20
     assert entry.options["electric_power_sensor"] == "sensor.power"
-    assert entry.unique_id == "192.168.1.200:502"
+    assert entry.unique_id == "192.168.1.200:502:1"
     reload_mock.assert_called_once_with(entry.entry_id)
 
 
@@ -1379,10 +1436,12 @@ async def test_config_flow_reconfigure_connection_error(
     )
     entry.add_to_hass(hass)
 
-    with mock.patch.object(
-        RealModbusTcpClient,
-        "create",
-        new=mock.AsyncMock(return_value=_FakeModbusClient(connected=False)),
+    with (
+        mock.patch.object(
+            config_flow_module,
+            "_test_connection",
+            return_value=(False, "cannot_connect"),
+        ),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN,
@@ -1411,17 +1470,17 @@ async def test_config_flow_reconfigure_connection_error(
 async def test_config_flow_reconfigure_duplicate_host_port(
     hass, enable_custom_integrations
 ):
-    """Test reconfigure aborts when the target host/port already exists."""
+    """Test reconfigure aborts when the target host/port/unit already exists."""
     entry_a = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.100:502",
+        unique_id="192.168.1.100:502:1",
         data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={"scan_interval": 15},
     )
     entry_b = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.200:502",
-        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502},
+        unique_id="192.168.1.200:502:1",
+        data={CONF_HOST: "192.168.1.200", CONF_PORT: 502, CONF_UNIT_ID: 1},
         options={"scan_interval": 15},
     )
     entry_a.add_to_hass(hass)
@@ -1450,7 +1509,11 @@ async def test_config_flow_reconfigure_duplicate_host_port(
     assert result["reason"] == "already_configured"
     # Neither entry may have been modified.
     assert entry_a.data == {CONF_HOST: "192.168.1.100", CONF_PORT: 502}
-    assert entry_b.data == {CONF_HOST: "192.168.1.200", CONF_PORT: 502}
+    assert entry_b.data == {
+        CONF_HOST: "192.168.1.200",
+        CONF_PORT: 502,
+        CONF_UNIT_ID: 1,
+    }
     reload_mock.assert_not_called()
 
 
@@ -1461,7 +1524,7 @@ async def test_config_flow_unique_id_prevents_duplicates(
     """Test that unique ID prevents duplicate entries."""
     existing = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="192.168.1.100:502",
+        unique_id="192.168.1.100:502:1",
         data={CONF_HOST: "192.168.1.100", CONF_PORT: 502},
         options={"scan_interval": 15, "demo_mode": True},
     )
@@ -1495,7 +1558,8 @@ def test_config_flow_registers_as_handler_for_domain():
     # Importing the module above registers the class in the HA handler registry.
     assert config_entries.HANDLERS.get(DOMAIN) is ConfigFlow
 
-    # Entries stored by HA/the Docker demo test use version 1 / minor_version
-    # 1; matching handler versions keep the boot-time migration a no-op.
-    assert ConfigFlow.VERSION == 1
+    # Since config schema version 2 the entry ``data`` carries ``unit_id``.
+    # Stored version-1 entries (existing installs, Docker demo test) are
+    # migrated at boot by ``async_migrate_entry`` without user interaction.
+    assert ConfigFlow.VERSION == 2
     assert ConfigFlow.MINOR_VERSION == 1

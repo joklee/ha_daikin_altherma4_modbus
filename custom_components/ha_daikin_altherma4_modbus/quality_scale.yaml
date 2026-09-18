@@ -1,0 +1,86 @@
+# Integration quality scale tracking for ha_daikin_altherma4_modbus.
+#
+# Custom (HACS) integrations are not graded by Home Assistant; this file
+# records our self-assessed tier progress and documents rules that
+# intentionally do not apply, so a future core submission starts from a
+# reviewed baseline. Rule names follow the official checklist
+# (developers.home-assistant.io/docs/core/integration-quality-scale/checklist).
+rules:
+  # --- Bronze ---
+  action-setup: done
+  appropriate-polling: done
+  brands: done
+  common-modules: done
+  config-flow-test-coverage: done
+  config-flow: done
+  dependency-transparency: done
+  docs-actions: done
+  docs-conditions: done
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  docs-triggers: done
+  entity-event-setup: done
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
+  # --- Silver ---
+  action-exceptions: done
+  config-entry-unloading: done
+  docs-configuration-parameters: done
+  docs-installation-parameters: done
+  entity-unavailable: done
+  integration-owner: done
+  log-when-unavailable: done
+  parallel-updates: done
+  reauthentication-flow: done
+  # Suite is in the low 90s; register_repository/services/climate are
+  # covered, coordinator/setup edge paths remain to reach 95%.
+  test-coverage: todo
+  # --- Gold ---
+  devices: done
+  diagnostics: done
+  discovery:
+    status: exempt
+    comment: >
+      The heat pump has a static user-configured IP and advertises no
+      discovery protocol (no mDNS/SSDP/DHCP/HomeKit); network discovery is
+      impossible, so setup stays manual via host/port.
+  discovery-update-info:
+    status: exempt
+    comment: Same as discovery - no discovery info exists to update from.
+  docs-data-update: done
+  docs-examples: done
+  docs-known-limitations: done
+  docs-supported-devices: done
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
+  dynamic-devices:
+    status: exempt
+    comment: >
+      The entity set is fully determined by the static register map at
+      setup time; no devices can appear later (registers returning 32767
+      are skipped once during setup instead).
+  entity-category: done
+  entity-device-class: done
+  entity-disabled-by-default: done
+  entity-translations: done
+  exception-translations: done
+  icon-translations: done
+  reconfiguration-flow: done
+  repair-issues: done
+  stale-devices:
+    status: exempt
+    comment: >
+      Companion to dynamic-devices - with a static device set nothing can
+      go stale; unload drops all runtime data and coordinators.
+  # --- Platinum ---
+  async-dependency: done
+  inject-websession:
+    status: exempt
+    comment: No HTTP client exists in the integration (Modbus TCP only).
+  strict-typing: todo

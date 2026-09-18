@@ -54,6 +54,50 @@ async def test_async_setup_entry_creates_binary_sensors():
 
 
 @pytest.mark.asyncio
+async def test_noisy_discrete_inputs_start_disabled():
+    """Granular discrete inputs start disabled (Gold entity-disabled-by-default)."""
+    from custom_components.ha_daikin_altherma4_modbus.entities.binary_sensor import (
+        ConnectionActiveSensor,
+    )
+
+    entry = _mock_entry()
+    hass = SimpleNamespace()
+    hass.config_entries = SimpleNamespace(async_entries=lambda domain: [])
+
+    added = []
+    await async_setup_entry(hass, entry, added.extend)
+
+    by_id = {e._attr_unique_id: e for e in added}
+    # Noisy relay/status flags start disabled ...
+    for register_name in (
+        "discrete_2",
+        "discrete_3",
+        "discrete_4",
+        "discrete_5",
+        "discrete_6",
+        "discrete_7",
+        "discrete_12",
+        "discrete_13",
+        "discrete_14",
+        "discrete_15",
+        "discrete_22",
+        "discrete_23",
+        "discrete_26",
+    ):
+        assert by_id[register_name].entity_registry_enabled_default is False, (
+            register_name
+        )
+    # ... while headline status sensors stay enabled.
+    for register_name in ("discrete_1", "discrete_11", "discrete_19", "discrete_24"):
+        assert by_id[register_name].entity_registry_enabled_default is True, (
+            register_name
+        )
+    active = [e for e in added if isinstance(e, ConnectionActiveSensor)]
+    assert len(active) == 1
+    assert active[0].entity_registry_enabled_default is True
+
+
+@pytest.mark.asyncio
 async def test_async_setup_entry_returns_on_no_coordinator():
     """Test that async_setup_entry returns early if coordinator is None."""
     entry = _mock_entry()

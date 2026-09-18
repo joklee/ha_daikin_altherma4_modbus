@@ -7,12 +7,14 @@ from homeassistant import config_entries
 
 try:
     from homeassistant.const import CONF_HOST, CONF_PORT
-except ImportError:
+except ImportError:  # pragma: no cover - fallback only without Home Assistant
     # Fallback for testing when homeassistant is not available
     CONF_HOST = "host"
     CONF_PORT = "port"
 
 from ..core.const import (
+    CONF_UNIT_ID,
+    DEFAULT_UNIT_ID,
     DOMAIN,
     NORMAL_SCAN_INTERVAL,
     SLOW_SCAN_INTERVAL,
@@ -28,8 +30,19 @@ DEFAULT_PORT = 502
 HOSTNAME_PATTERN = re.compile(r"^[A-Za-z0-9-]{1,63}$")
 
 
-async def _test_connection(host: str, port: int) -> tuple[bool, str | None]:
+async def _test_connection(
+    hass, host: str, port: int, unit_id: int = DEFAULT_UNIT_ID
+) -> tuple[bool, str | None]:
     """Test Modbus connection to the device.
+
+    Uses HA's async_get_temporary_unit to test the connection without
+    a config entry.
+
+    Args:
+        hass: Home Assistant instance
+        host: Modbus server host
+        port: Modbus server port
+        unit_id: Modbus unit id (1-247)
 
     Returns:
         Tuple of (success, error_message)
@@ -38,32 +51,13 @@ async def _test_connection(host: str, port: int) -> tuple[bool, str | None]:
     """
     try:
         # Import here to avoid issues during testing without dependencies
-        from ..modbus.modbus_client import RealModbusTcpClient
+        from ..modbus.connection_manager import (
+            async_test_connection_with_temporary_unit,
+        )
 
-        _LOGGER.debug(f"Testing connection to {host}:{port}")
-        client = await RealModbusTcpClient.create(host, port, timeout=10)
-
-        # Try to connect
-        await client.connect()
-
-        if not client.connected:
-            return False, "cannot_connect"
-
-        # Try to read a basic register to verify device is responsive
-        # Using input register 1 which should exist on most Modbus devices
-        try:
-            await client.read_input_registers(1, 1)
-        except Exception as err:
-            _LOGGER.debug(f"Connection test read failed: {err}")
-            # Even if read fails, connection might be valid
-            # Just verify we can connect
-
-        # Disconnect after test
-        await client.disconnect()
-
-        _LOGGER.debug(f"Connection test successful to {host}:{port}")
-        return True, None
-
+        return await async_test_connection_with_temporary_unit(
+            hass, host, port, unit_id
+        )
     except Exception as err:
         _LOGGER.debug(f"Connection test failed to {host}:{port}: {err}")
         return False, "cannot_connect"
@@ -93,17 +87,27 @@ def _is_valid_host(host: str) -> bool:
     return True
 
 
-def _connection_unique_id(host: str, port: int) -> str:
-    """Build the config entry unique_id from connection details."""
-    return f"{host}:{port}"
+def _connection_unique_id(host: str, port: int, unit_id: int = DEFAULT_UNIT_ID) -> str:
+    """Build the config entry unique_id from connection details.
+
+    The unit id is part of the identity: several units may share one
+    host/port (shared Modbus connection), while the same host/port/unit
+    triple must map to exactly one entry.
+    """
+    return f"{host}:{port}:{unit_id}"
 
 
-def _build_reauth_schema(host: str, port: int) -> vol.Schema:
+def _build_reauth_schema(
+    host: str, port: int, unit_id: int = DEFAULT_UNIT_ID
+) -> vol.Schema:
     """Build the schema for the reauth step."""
     return vol.Schema(
         {
             vol.Required(CONF_HOST, default=host): str,
             vol.Optional(CONF_PORT, default=port): int,
+            vol.Optional(CONF_UNIT_ID, default=unit_id): vol.All(
+                vol.Coerce(int), vol.Range(min=1, max=247)
+            ),
             vol.Optional("scan_interval", default=NORMAL_SCAN_INTERVAL): int,
             vol.Optional("slow_scan_interval", default=SLOW_SCAN_INTERVAL): int,
             vol.Optional("electric_power_sensor"): str,
@@ -112,12 +116,17 @@ def _build_reauth_schema(host: str, port: int) -> vol.Schema:
     )
 
 
-def _build_reconfigure_schema(host: str, port: int) -> vol.Schema:
+def _build_reconfigure_schema(
+    host: str, port: int, unit_id: int = DEFAULT_UNIT_ID
+) -> vol.Schema:
     """Build the schema for the reconfigure step."""
     return vol.Schema(
         {
             vol.Required(CONF_HOST, default=host): str,
             vol.Optional(CONF_PORT, default=port): int,
+            vol.Optional(CONF_UNIT_ID, default=unit_id): vol.All(
+                vol.Coerce(int), vol.Range(min=1, max=247)
+            ),
             vol.Optional("scan_interval", default=NORMAL_SCAN_INTERVAL): int,
             vol.Optional("slow_scan_interval", default=SLOW_SCAN_INTERVAL): int,
             vol.Optional("electric_power_sensor"): str,
@@ -141,6 +150,7 @@ def _validate_common_values(
     port: int | None,
     scan_interval: int,
     slow_scan_interval: int,
+    unit_id: int | None = None,
 ) -> dict:
     """Validate config/options values and return HA form errors."""
     errors = {}
@@ -150,6 +160,9 @@ def _validate_common_values(
 
     if port is not None and not (1 <= port <= 65535):
         errors[CONF_PORT] = "invalid_port"
+
+    if unit_id is not None and not (1 <= unit_id <= 247):
+        errors[CONF_UNIT_ID] = "invalid_unit_id"
 
     if scan_interval <= 0:
         errors["scan_interval"] = "invalid_scan_interval"
@@ -163,7 +176,8 @@ def _validate_common_values(
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Minimaler Config Flow für Daikin Altherma 4 Modbus."""
 
-    VERSION = 1
+    VERSION = 2
+    MINOR_VERSION = 1
 
     async def async_step_user(self, user_input=None):
         """Handle the user step."""
@@ -172,6 +186,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_HOST, default=""): str,
                 vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
+                vol.Optional(CONF_UNIT_ID, default=DEFAULT_UNIT_ID): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=247)
+                ),
                 vol.Optional("scan_interval", default=NORMAL_SCAN_INTERVAL): int,
                 vol.Optional("slow_scan_interval", default=SLOW_SCAN_INTERVAL): int,
                 vol.Optional("electric_power_sensor"): str,
@@ -182,6 +199,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input.get(CONF_HOST, "").strip()
             port = user_input.get(CONF_PORT, DEFAULT_PORT)
+            unit_id = user_input.get(CONF_UNIT_ID, DEFAULT_UNIT_ID)
             scan_interval = user_input.get("scan_interval", NORMAL_SCAN_INTERVAL)
             slow_scan_interval = user_input.get(
                 "slow_scan_interval", SLOW_SCAN_INTERVAL
@@ -191,6 +209,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 port=port,
                 scan_interval=scan_interval,
                 slow_scan_interval=slow_scan_interval,
+                unit_id=unit_id,
             )
             if errors:
                 return self.async_show_form(
@@ -203,7 +222,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Test connection to device (unless in demo mode)
             demo_mode = user_input.get("demo_mode", False)
             if not demo_mode:
-                connection_ok, error_key = await _test_connection(host, port)
+                connection_ok, error_key = await _test_connection(
+                    self.hass, host, port, unit_id
+                )
                 if not connection_ok:
                     errors = {CONF_HOST: error_key}
                     return self.async_show_form(
@@ -214,12 +235,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
 
             # Set unique ID to prevent duplicate entries for the same device
-            await self.async_set_unique_id(_connection_unique_id(host, port))
+            await self.async_set_unique_id(_connection_unique_id(host, port, unit_id))
             self._abort_if_unique_id_configured()
 
             data = {
                 CONF_HOST: host,
                 CONF_PORT: port,
+                CONF_UNIT_ID: unit_id,
             }
             options = {
                 "scan_interval": scan_interval,
@@ -255,10 +277,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         host = entry_data_value(config_entry, "host", "")
         port = entry_data_value(config_entry, "port", 502)
+        current_unit_id = entry_data_value(config_entry, "unit_id", DEFAULT_UNIT_ID)
 
         if user_input is not None:
             host = user_input.get(CONF_HOST, "").strip()
             port = user_input.get(CONF_PORT, DEFAULT_PORT)
+            unit_id = user_input.get(CONF_UNIT_ID, current_unit_id)
             scan_interval = user_input.get("scan_interval", NORMAL_SCAN_INTERVAL)
             slow_scan_interval = user_input.get(
                 "slow_scan_interval", SLOW_SCAN_INTERVAL
@@ -270,27 +294,33 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 port=port,
                 scan_interval=scan_interval,
                 slow_scan_interval=slow_scan_interval,
+                unit_id=unit_id,
             )
             if errors:
                 return self.async_show_form(
                     step_id="reauth",
-                    data_schema=_build_reauth_schema(host, port),
+                    data_schema=_build_reauth_schema(host, port, unit_id),
                     errors=errors,
                 )
 
             # Test connection (unless in demo mode)
             if not demo_mode:
-                connection_ok, error_key = await _test_connection(host, port)
+                connection_ok, error_key = await _test_connection(
+                    self.hass, host, port, unit_id
+                )
                 if not connection_ok:
                     return self.async_show_form(
                         step_id="reauth",
-                        data_schema=_build_reauth_schema(host, port),
+                        data_schema=_build_reauth_schema(host, port, unit_id),
                         errors={CONF_HOST: error_key},
                     )
 
-            # Abort if another config entry already uses this host/port
-            # (prevents two entries sharing the same unique_id "host:port")
-            self._async_abort_entries_match({CONF_HOST: host, CONF_PORT: port})
+            # Abort if another config entry already uses this host/port/unit
+            # (prevents two entries sharing the same unique_id
+            # "host:port:unit_id")
+            self._async_abort_entries_match(
+                {CONF_HOST: host, CONF_PORT: port, CONF_UNIT_ID: unit_id}
+            )
 
             new_options = {
                 "scan_interval": scan_interval,
@@ -304,10 +334,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # data_updates preserves unknown data keys on the entry
             return self.async_update_reload_and_abort(
                 config_entry,
-                unique_id=_connection_unique_id(host, port),
+                unique_id=_connection_unique_id(host, port, unit_id),
                 data_updates={
                     CONF_HOST: host,
                     CONF_PORT: port,
+                    CONF_UNIT_ID: unit_id,
                 },
                 options=new_options,
                 reason="reauth_successful",
@@ -315,7 +346,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reauth",
-            data_schema=_build_reauth_schema(host, port),
+            data_schema=_build_reauth_schema(host, port, current_unit_id),
             errors={},
         )
 
@@ -332,10 +363,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         current_host = entry_data_value(reconfigure_entry, "host", "")
         current_port = entry_data_value(reconfigure_entry, "port", 502)
+        current_unit_id = entry_data_value(
+            reconfigure_entry, "unit_id", DEFAULT_UNIT_ID
+        )
 
         if user_input is not None:
             host = user_input.get(CONF_HOST, "").strip()
             port = user_input.get(CONF_PORT, DEFAULT_PORT)
+            unit_id = user_input.get(CONF_UNIT_ID, current_unit_id)
             scan_interval = user_input.get("scan_interval", NORMAL_SCAN_INTERVAL)
             slow_scan_interval = user_input.get(
                 "slow_scan_interval", SLOW_SCAN_INTERVAL
@@ -346,28 +381,34 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 port=port,
                 scan_interval=scan_interval,
                 slow_scan_interval=slow_scan_interval,
+                unit_id=unit_id,
             )
             if errors:
                 return self.async_show_form(
                     step_id="reconfigure",
-                    data_schema=_build_reconfigure_schema(host, port),
+                    data_schema=_build_reconfigure_schema(host, port, unit_id),
                     errors=errors,
                 )
 
             # Test connection (unless in demo mode)
             demo_mode = user_input.get("demo_mode", False)
             if not demo_mode:
-                connection_ok, error_key = await _test_connection(host, port)
+                connection_ok, error_key = await _test_connection(
+                    self.hass, host, port, unit_id
+                )
                 if not connection_ok:
                     return self.async_show_form(
                         step_id="reconfigure",
-                        data_schema=_build_reconfigure_schema(host, port),
+                        data_schema=_build_reconfigure_schema(host, port, unit_id),
                         errors={CONF_HOST: error_key},
                     )
 
-            # Abort if another config entry already uses this host/port
-            # (prevents two entries sharing the same unique_id "host:port")
-            self._async_abort_entries_match({CONF_HOST: host, CONF_PORT: port})
+            # Abort if another config entry already uses this host/port/unit
+            # (prevents two entries sharing the same unique_id
+            # "host:port:unit_id")
+            self._async_abort_entries_match(
+                {CONF_HOST: host, CONF_PORT: port, CONF_UNIT_ID: unit_id}
+            )
 
             new_options = dict(reconfigure_entry.options)
             new_options["scan_interval"] = scan_interval
@@ -380,10 +421,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # data_updates preserves unknown data keys on the entry
             return self.async_update_reload_and_abort(
                 reconfigure_entry,
-                unique_id=_connection_unique_id(host, port),
+                unique_id=_connection_unique_id(host, port, unit_id),
                 data_updates={
                     CONF_HOST: host,
                     CONF_PORT: port,
+                    CONF_UNIT_ID: unit_id,
                 },
                 options=new_options,
                 reason="reconfigure_successful",
@@ -391,7 +433,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=_build_reconfigure_schema(current_host, current_port),
+            data_schema=_build_reconfigure_schema(
+                current_host, current_port, current_unit_id
+            ),
             errors={},
         )
 

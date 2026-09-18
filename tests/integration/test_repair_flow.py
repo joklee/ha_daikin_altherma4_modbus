@@ -7,6 +7,32 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
+def _restore_module_state():
+    """Snapshot & restore ``sys.modules`` for stubbed namespaces.
+
+    The stub fixture below overwrites real integration modules in
+    ``sys.modules`` without restore; without this guard, later real-HA
+    tests in the same process would resolve the stubs instead of the
+    production modules. Defined first so it tears down last.
+    (Same pattern as tests/modbus/test_unload_shared_endpoint.py.)
+    """
+    import sys
+
+    prefixes = ("homeassistant", "custom_components")
+
+    def _is_tracked(key: str) -> bool:
+        return key.startswith(prefixes)
+
+    snapshot = {key: module for key, module in sys.modules.items() if _is_tracked(key)}
+
+    yield
+
+    for key in [key for key in list(sys.modules) if _is_tracked(key)]:
+        sys.modules.pop(key, None)
+    sys.modules.update(snapshot)
+
+
+@pytest.fixture(autouse=True)
 def _stub_config_flow():
     """Stub config_flow module imports needed by repair_flow."""
     import sys
@@ -33,7 +59,9 @@ def _stub_config_flow():
     }
     cf_mod._is_valid_host = lambda host: bool(host)
     cf_mod._test_connection = AsyncMock(return_value=(True, None))
-    cf_mod._connection_unique_id = lambda host, port: f"{host}:{port}"
+    cf_mod._connection_unique_id = lambda host, port, unit_id=1: (
+        f"{host}:{port}:{unit_id}"
+    )
 
     class _StubConfigFlow:
         def async_abort(self, *, reason):

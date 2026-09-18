@@ -15,6 +15,7 @@ from ..core.const import DOMAIN, SPECIAL_REGISTER_NOT_SUPPORTED
 from ..core.register_constants import (
     CALCULATED_DEVICE_INFO,
     CALCULATED_SENSORS,
+    CONNECTION_SENSORS,
     INPUT_DEVICE_INFO,
     INPUT_REGISTERS,
 )
@@ -161,6 +162,81 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     translation_key=calc.translation_key,
                 )
             )
+
+    # Connection diagnostic sensors on the "Enhanced" device: timestamps of
+    # the last successful read/write through the shared Modbus backend.
+    for conn in CONNECTION_SENSORS:
+        if conn.calc_type not in ("connection_last_read", "connection_last_write"):
+            continue
+        entities.append(
+            ConnectionTimestampSensor(
+                coordinator=unified_coordinator,
+                entry=entry,
+                unique_id=conn.register_name,
+                stamp_kind=(
+                    "read" if conn.calc_type == "connection_last_read" else "write"
+                ),
+                device_class=conn.device_class,
+                entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
+                device_info=CALCULATED_DEVICE_INFO,
+                translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
+            )
+        )
+
+    # Connection error counters on the "Enhanced" device: failed reads/writes
+    # by category, aggregated across coordinators.
+    for conn in CONNECTION_SENSORS:
+        if conn.calc_type not in ("connection_read_errors", "connection_write_errors"):
+            continue
+        entities.append(
+            ConnectionErrorSensor(
+                coordinator=unified_coordinator,
+                entry=entry,
+                unique_id=conn.register_name,
+                error_kind=(
+                    "read" if conn.calc_type == "connection_read_errors" else "write"
+                ),
+                entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
+                device_info=CALCULATED_DEVICE_INFO,
+                translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
+            )
+        )
+
+    # Connection state on the "Enhanced" device: "connected"/"disconnected"
+    # text sensor served live from the CoordinatorManager.
+    for conn in CONNECTION_SENSORS:
+        if conn.calc_type != "connection_state":
+            continue
+        entities.append(
+            ConnectionStateSensor(
+                coordinator=unified_coordinator,
+                entry=entry,
+                unique_id=conn.register_name,
+                entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
+                device_info=CALCULATED_DEVICE_INFO,
+                translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
+            )
+        )
+
+    # Consecutive-failure counter on the "Enhanced" device: tracks the
+    # transient/persistent outage classification (repair issue threshold).
+    for conn in CONNECTION_SENSORS:
+        if conn.calc_type != "connection_consecutive_failures":
+            continue
+        entities.append(
+            ConsecutiveFailuresSensor(
+                coordinator=unified_coordinator,
+                entry=entry,
+                unique_id=conn.register_name,
+                entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
+                device_info=CALCULATED_DEVICE_INFO,
+                translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
+            )
+        )
 
     async_add_entities(entities)
 
@@ -661,3 +737,227 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
         _LOGGER.debug(f"Delta-T: {flow_temp} - {return_temp}")
         delta_t = flow_temp - return_temp
         return round(delta_t, 2)
+
+
+class ConnectionTimestampSensor(CoordinatorEntity, SensorEntity):
+    """Diagnostic sensor: last successful read/write via the Modbus backend.
+
+    Lives on the "Enhanced" device. The value is served live from the
+    CoordinatorManager (newest client timestamp across coordinators), so it
+    shows `unknown` until the first successful read/write instead of a
+    fabricated value.
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        stamp_kind,
+        device_class=None,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+        disabled_by_default=False,
+    ):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._stamp_kind = stamp_kind
+        self._attr_unique_id = unique_id
+        self._attr_device_class = device_class
+        self._attr_entity_category = entity_category
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
+
+    def _manager(self):
+        """Return the CoordinatorManager behind the unified coordinator."""
+        return getattr(self.coordinator, "manager", None)
+
+    def _stamp(self):
+        """Return the newest epoch timestamp for the configured kind."""
+        manager = self._manager()
+        if manager is None:
+            return None
+        if self._stamp_kind == "write":
+            return manager.last_write_at
+        return manager.last_read_at
+
+    @property
+    def available(self) -> bool:
+        """Available once a first timestamp exists."""
+        return self._stamp() is not None
+
+    @property
+    def native_value(self):
+        """Return the timestamp of the last successful read/write."""
+        stamp = self._stamp()
+        if stamp is None:
+            return None
+        return dt_util.utc_from_timestamp(stamp)
+
+
+class ConnectionErrorSensor(CoordinatorEntity, SensorEntity):
+    """Diagnostic sensor: failed reads/writes via the Modbus backend.
+
+    Lives on the "Enhanced" device. The native value is the total failure
+    count for one direction; the per-category breakdown plus the newest
+    failure are exposed as attributes.
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        error_kind,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+        disabled_by_default=False,
+    ):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._error_kind = error_kind
+        self._attr_unique_id = unique_id
+        self._attr_entity_category = entity_category
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
+        self._attr_state_class = SensorStateClass.TOTAL_INCREASING
+        self._attr_entity_registry_enabled_default = not disabled_by_default
+
+    def _manager(self):
+        """Return the CoordinatorManager behind the unified coordinator."""
+        return getattr(self.coordinator, "manager", None)
+
+    @property
+    def available(self) -> bool:
+        """Available whenever the manager is reachable (zero is valid)."""
+        return self._manager() is not None
+
+    @property
+    def native_value(self):
+        """Return the total failure count for the configured direction."""
+        manager = self._manager()
+        if manager is None:
+            return None
+        if self._error_kind == "write":
+            return manager.write_errors
+        return manager.read_errors
+
+    @property
+    def extra_state_attributes(self):
+        """Return the per-category breakdown and the newest failure."""
+        manager = self._manager()
+        if manager is None:
+            return None
+        last_error_at = manager.last_error_at
+        return {
+            **manager.error_breakdown(self._error_kind),
+            "last_error": manager.last_error,
+            "last_error_at": (
+                dt_util.utc_from_timestamp(last_error_at).isoformat()
+                if last_error_at is not None
+                else None
+            ),
+        }
+
+
+class ConnectionStateSensor(CoordinatorEntity, SensorEntity):
+    """Diagnostic sensor: connection state as text.
+
+    Lives on the "Enhanced" device. Reports ``connected`` while any
+    coordinator holds a connected transport client, ``disconnected``
+    otherwise. Stays available in both states so outages remain visible.
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+        disabled_by_default=False,
+    ):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = unique_id
+        self._attr_entity_category = entity_category
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
+
+    def _manager(self):
+        """Return the CoordinatorManager behind the unified coordinator."""
+        return getattr(self.coordinator, "manager", None)
+
+    @property
+    def available(self) -> bool:
+        """Available whenever the manager is reachable."""
+        return self._manager() is not None
+
+    @property
+    def native_value(self):
+        """Return "connected" or "disconnected"."""
+        manager = self._manager()
+        if manager is None:
+            return None
+        return "connected" if manager.connection_active else "disconnected"
+
+
+class ConsecutiveFailuresSensor(CoordinatorEntity, SensorEntity):
+    """Diagnostic sensor: highest consecutive-failure count across coordinators.
+
+    Lives on the "Enhanced" device. Counts down to a repair issue: 0 means
+    healthy, higher values track the transient/persistent classification
+    (see ``REPAIR_ISSUE_CONSECUTIVE_FAILURES``).
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+        disabled_by_default=False,
+    ):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = unique_id
+        self._attr_entity_category = entity_category
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
+
+    def _manager(self):
+        """Return the CoordinatorManager behind the unified coordinator."""
+        return getattr(self.coordinator, "manager", None)
+
+    @property
+    def available(self) -> bool:
+        """Available whenever the manager is reachable (zero is valid)."""
+        return self._manager() is not None
+
+    @property
+    def native_value(self):
+        """Return the highest consecutive-failure count."""
+        manager = self._manager()
+        if manager is None:
+            return None
+        return manager.max_consecutive_failures

@@ -4,7 +4,7 @@ try:
     from homeassistant.components.binary_sensor import BinarySensorDeviceClass
     from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
     from homeassistant.const import EntityCategory
-except ImportError:
+except ImportError:  # pragma: no cover - fallback only without Home Assistant
     # Fallback for testing when homeassistant is not available
     from enum import StrEnum
 
@@ -1023,6 +1023,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_2",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 2",
@@ -1033,6 +1034,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_3",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 3",
@@ -1043,6 +1045,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_4",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 4",
@@ -1053,6 +1056,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_5",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 5",
@@ -1063,6 +1067,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_6",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Backup heater relay 6",
@@ -1073,6 +1078,7 @@ DISCRETE_REGISTERS = [
         device_class=BinarySensorDeviceClass.RUNNING,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_7",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Booster heater",
@@ -1122,6 +1128,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_12",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Holiday mode active",
@@ -1131,6 +1138,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_13",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Antifrost status",
@@ -1140,6 +1148,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_14",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Water pipe freeze prevention status",
@@ -1149,6 +1158,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_15",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Disinfection operation",
@@ -1218,6 +1228,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_22",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Manual tank heat up request",
@@ -1227,6 +1238,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_23",
+        disabled_by_default=True,
     ),
     SensorRegister(
         name="Emergency active",
@@ -1256,6 +1268,7 @@ DISCRETE_REGISTERS = [
         data_type=BIT,
         entity_category=EntityCategory.DIAGNOSTIC,
         translation_key="discrete_26",
+        disabled_by_default=True,
     ),
 ]
 
@@ -1372,5 +1385,117 @@ CALCULATED_SENSORS = [
         unit="K",
         device_class=None,
         translation_key="delta_t",
+    ),
+]
+
+
+# Connection diagnostic sensors for the "Enhanced" device. Unlike register
+# sensors these expose the state of the shared modbus-connection backend
+# itself (connection status, last read/write); their values are served live
+# from the CoordinatorManager, not from coordinator data.
+CONNECTION_SENSORS = [
+    CalculatedRegister(
+        name="Connection active",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_active",
+        data_type=INT16,
+        calc_type="connection_active",
+        unit="",
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_active",
+    ),
+    CalculatedRegister(
+        name="Last read",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_last_read",
+        data_type=TIMESTAMP16,
+        calc_type="connection_last_read",
+        unit="",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_last_read",
+        disabled_by_default=True,
+    ),
+    CalculatedRegister(
+        name="Last write",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_last_write",
+        data_type=TIMESTAMP16,
+        calc_type="connection_last_write",
+        unit="",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_last_write",
+        disabled_by_default=True,
+    ),
+    CalculatedRegister(
+        name="Read errors",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_read_errors",
+        data_type=INT16,
+        calc_type="connection_read_errors",
+        unit="",
+        device_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_read_errors",
+        disabled_by_default=True,
+    ),
+    CalculatedRegister(
+        name="Write errors",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_write_errors",
+        data_type=INT16,
+        calc_type="connection_write_errors",
+        unit="",
+        device_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_write_errors",
+        disabled_by_default=True,
+    ),
+    # NOTE: connection_active and connection_state stay enabled (headline
+    # connection status); only the deep-dive timestamps/counters above
+    # start disabled.
+    CalculatedRegister(
+        name="Connection state",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_state",
+        data_type=TEXT16,
+        calc_type="connection_state",
+        unit="",
+        device_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_state",
+    ),
+    CalculatedRegister(
+        name="Device reachable",
+        address=0,
+        input_type="diagnostic",
+        register_name="device_reachable",
+        data_type=INT16,
+        calc_type="device_reachable",
+        unit="",
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="device_reachable",
+    ),
+    CalculatedRegister(
+        name="Consecutive failures",
+        address=0,
+        input_type="diagnostic",
+        register_name="connection_consecutive_failures",
+        data_type=INT16,
+        calc_type="connection_consecutive_failures",
+        unit="",
+        device_class=None,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="connection_consecutive_failures",
+        disabled_by_default=True,
     ),
 ]

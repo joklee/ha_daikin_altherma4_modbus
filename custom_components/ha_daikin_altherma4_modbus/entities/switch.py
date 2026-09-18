@@ -6,7 +6,7 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..common import get_register_value, safe_write_register
+from ..common import get_register_value, is_entity_available, safe_write_register
 from ..core.const import DOMAIN
 from ..core.register_constants import (
     COIL_DEVICE_INFO,
@@ -85,6 +85,11 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
         self._attr_unique_id = f"{DOMAIN}_{register_name}"
         self._attr_device_info = COIL_DEVICE_INFO
         self._attr_translation_key = translation_key
+
+    @property
+    def available(self) -> bool:
+        """Return True if the coil register reports a valid value."""
+        return is_entity_available(self.coordinator.data, self._register_name)
 
     @property
     def is_on(self):

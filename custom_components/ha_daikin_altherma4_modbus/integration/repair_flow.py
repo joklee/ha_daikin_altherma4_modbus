@@ -6,10 +6,11 @@ from homeassistant import config_entries
 
 try:
     from homeassistant.const import CONF_HOST, CONF_PORT
-except ImportError:
+except ImportError:  # pragma: no cover - fallback only without Home Assistant
     CONF_HOST = "host"
     CONF_PORT = "port"
 
+from ..core.const import CONF_UNIT_ID, DEFAULT_UNIT_ID
 from .config_entry_utils import entry_data_value
 from .config_flow import (
     _build_fix_schema,
@@ -64,7 +65,10 @@ class ConnectionLostFixFlow(config_entries.ConfigFlow):
                 )
 
             # Test connection
-            connection_ok, error_key = await _test_connection(host, port)
+            unit_id = entry_data_value(entry, CONF_UNIT_ID, DEFAULT_UNIT_ID)
+            connection_ok, error_key = await _test_connection(
+                self.hass, host, port, unit_id
+            )
             if not connection_ok:
                 return self.async_show_form(
                     step_id="fix_connection",
@@ -72,10 +76,13 @@ class ConnectionLostFixFlow(config_entries.ConfigFlow):
                     errors={CONF_HOST: error_key},
                 )
 
-            # Update the config entry
+            # Update the config entry.  ``unit_id`` is part of the connection
+            # identity: keep the configured value so a repair cannot silently
+            # reset it (the fix schema only edits host/port).
             new_data = {
                 CONF_HOST: host,
                 CONF_PORT: port,
+                CONF_UNIT_ID: entry_data_value(entry, "unit_id", DEFAULT_UNIT_ID),
             }
             self.hass.config_entries.async_update_entry(
                 entry,

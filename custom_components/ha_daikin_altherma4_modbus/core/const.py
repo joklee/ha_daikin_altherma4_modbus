@@ -1,6 +1,6 @@
 try:
     from homeassistant.const import CONF_HOST, CONF_PORT, EntityCategory
-except ImportError:
+except ImportError:  # pragma: no cover - fallback only without Home Assistant
     # Fallback for testing when homeassistant is not available
     class EntityCategory:
         DIAGNOSTIC = "diagnostic"
@@ -23,6 +23,8 @@ CONF_SCAN_INTERVAL = "scan_interval"
 CONF_SLOW = "slow"
 CONF_SLOW_SCAN_INTERVAL = "slow_scan_interval"
 CONF_UNIT = "unit"
+CONF_UNIT_ID = "unit_id"
+DEFAULT_UNIT_ID = 1  # Daikin Altherma 4 over a direct TCP link is unit 1
 
 SLOW_SCAN_INTERVAL = 30
 NORMAL_SCAN_INTERVAL = 5

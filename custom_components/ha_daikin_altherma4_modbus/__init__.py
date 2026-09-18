@@ -3,7 +3,15 @@ import logging
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .config_flow import ConfigFlow as ConfigFlow
-from .core.const import DOMAIN, NORMAL_SCAN_INTERVAL, SLOW_SCAN_INTERVAL
+from .core.const import (
+    CONF_HOST,
+    CONF_PORT,
+    CONF_UNIT_ID,
+    DEFAULT_UNIT_ID,
+    DOMAIN,
+    NORMAL_SCAN_INTERVAL,
+    SLOW_SCAN_INTERVAL,
+)
 from .integration.config_entry_utils import entry_data_value, entry_value
 from .integration.coordinator_manager import CoordinatorManager, UnifiedCoordinator
 from .integration.repair import (
@@ -12,9 +20,37 @@ from .integration.repair import (
 )
 from .integration.runtime_data import RuntimeData
 from .integration.services import register_services
-from .modbus.modbus_client import RealModbusTcpClient
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_migrate_entry(hass, entry):
+    """Migrate a stored config entry to a newer version.
+
+    Version 2 introduces the Modbus unit id (``unit_id``) to the entry
+    ``data`` and includes it in the ``unique_id`` (``host:port:unit_id``).
+    Old version-1 entries receive the default unit id (1) while every
+    other value is preserved, so no reconfiguration is required.
+    The function is idempotent: calling it again on an already-migrated
+    entry is a no-op.
+    """
+    if entry.version < 2:
+        data = {**entry.data}
+        data.setdefault(CONF_UNIT_ID, DEFAULT_UNIT_ID)
+        updates: dict = {"data": data, "version": 2}
+        # Rewrite old-style unique_ids ("host:port") so the same triple
+        # keeps matching after the scheme change. Anything else (already
+        # new-style, None, custom) is left untouched.
+        host = data.get(CONF_HOST)
+        port = data.get(CONF_PORT)
+        if (
+            host is not None
+            and port is not None
+            and entry.unique_id == f"{host}:{port}"
+        ):
+            updates["unique_id"] = f"{host}:{port}:{data[CONF_UNIT_ID]}"
+        hass.config_entries.async_update_entry(entry, **updates)
+    return True
 
 
 def _has_other_entry_for_endpoint(
@@ -43,30 +79,43 @@ async def async_setup_entry(hass, entry):
     # Test connection before setting up (unless in demo mode)
     if not demo_mode:
         _LOGGER.debug(f"Testing connection during setup to {host}:{port}")
+        unit_id = entry_data_value(entry, CONF_UNIT_ID, DEFAULT_UNIT_ID)
         try:
-            client = await RealModbusTcpClient.create(host, port, timeout=10)
-            await client.connect()
-            if not client.connected:
+            # Local import: same helper the config/repair flows use, so the
+            # real-HA tests can stub one seam (config_flow._test_connection).
+            from .integration.config_flow import _test_connection
+
+            connection_ok, _error_key = await _test_connection(
+                hass, host, port, unit_id
+            )
+            if not connection_ok:
                 _LOGGER.error(f"Cannot connect to {host}:{port} during setup")
-                await RealModbusTcpClient.async_close_cached_client(host, port)
                 async_create_connection_issue(
                     hass, entry, f"Cannot connect to {host}:{port}"
                 )
                 raise ConfigEntryNotReady(f"Cannot connect to {host}:{port}")
-            # Disconnect after test - coordinators will create their own connections
-            await client.disconnect()
             _LOGGER.debug(f"Connection test successful during setup to {host}:{port}")
+        except ConfigEntryNotReady:
+            raise
         except Exception as err:
             _LOGGER.error(
                 f"Connection test failed during setup to {host}:{port}: {err}"
             )
-            await RealModbusTcpClient.async_close_cached_client(host, port)
             async_create_connection_issue(
                 hass, entry, f"Connection failed to {host}:{port}"
             )
             raise ConfigEntryNotReady(f"Connection failed to {host}:{port}") from err
+    unit_id = entry_data_value(entry, CONF_UNIT_ID, DEFAULT_UNIT_ID)
+
     manager = CoordinatorManager(
-        hass, host, port, scan_interval, slow_scan_interval, demo_mode
+        hass,
+        host,
+        port,
+        scan_interval,
+        slow_scan_interval,
+        demo_mode,
+        entry,
+        unit_id,
     )
     normal_coordinator = manager.get_coordinator("normal")
     slow_coordinator = manager.get_coordinator("slow")
@@ -140,9 +189,6 @@ async def async_setup_entry(hass, entry):
                 "Failed shutting down manager after setup failure: %s", shutdown_err
             )
 
-        if not shared_endpoint_in_use:
-            await RealModbusTcpClient.async_close_cached_client(host, port)
-
         if not domain_data and DOMAIN in hass.data:
             hass.data.pop(DOMAIN, None)
 
@@ -190,14 +236,6 @@ async def async_unload_entry(hass, entry):
         except Exception as shutdown_err:
             _LOGGER.debug(
                 "Failed shutting down manager during unload: %s", shutdown_err
-            )
-
-    if not shared_endpoint_in_use:
-        try:
-            await RealModbusTcpClient.async_close_cached_client(host, port)
-        except Exception as shutdown_err:
-            _LOGGER.debug(
-                "Failed closing cached client during unload: %s", shutdown_err
             )
 
     # Clean up hass.data
