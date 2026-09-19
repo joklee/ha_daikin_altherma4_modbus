@@ -28,6 +28,7 @@ from custom_components.ha_daikin_altherma4_modbus.core.const import (
     SERVICE_SET_ROOM_COOLING_SETPOINT,
     SERVICE_SET_ROOM_HEATING_SETPOINT,
     SERVICE_SET_SMART_GRID_MODE,
+    SERVICE_START_DHW_SINGLE_HEATUP,
 )
 from custom_components.ha_daikin_altherma4_modbus.integration.services import (
     SERVICE_REFRESH_CONNECTION_SCHEMA,
@@ -45,6 +46,7 @@ from custom_components.ha_daikin_altherma4_modbus.integration.services import (
     SERVICE_SET_ROOM_COOLING_SETPOINT_SCHEMA,
     SERVICE_SET_ROOM_HEATING_SETPOINT_SCHEMA,
     SERVICE_SET_SMART_GRID_MODE_SCHEMA,
+    SERVICE_START_DHW_SINGLE_HEATUP_SCHEMA,
     async_refresh_connection,
     async_set_additional_zone_setpoint,
     async_set_additional_zone_state,
@@ -121,7 +123,7 @@ class TestServiceSetup:
         register_services = fresh_services.register_services
         register_services(hass)
 
-        assert hass.services.async_register.call_count == 15
+        assert hass.services.async_register.call_count == 16
 
         # Check service registration calls
         calls = hass.services.async_register.call_args_list
@@ -139,6 +141,10 @@ class TestServiceSetup:
             (SERVICE_SET_QUIET_MODE, SERVICE_SET_QUIET_MODE_SCHEMA),
             (SERVICE_SET_DHW_BOOSTER_MODE, SERVICE_SET_DHW_BOOSTER_MODE_SCHEMA),
             (SERVICE_SET_DHW_SINGLE_HEATUP, SERVICE_SET_DHW_SINGLE_HEATUP_SCHEMA),
+            (
+                SERVICE_START_DHW_SINGLE_HEATUP,
+                SERVICE_START_DHW_SINGLE_HEATUP_SCHEMA,
+            ),
             (SERVICE_SET_POWER_LIMIT, SERVICE_SET_POWER_LIMIT_SCHEMA),
             (SERVICE_SET_HEATING_OFFSET, SERVICE_SET_HEATING_OFFSET_SCHEMA),
             (SERVICE_SET_COOLING_OFFSET, SERVICE_SET_COOLING_OFFSET_SCHEMA),

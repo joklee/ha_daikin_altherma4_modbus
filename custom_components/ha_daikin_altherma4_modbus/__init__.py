@@ -19,7 +19,7 @@ from .integration.repair import (
     async_delete_connection_issue,
 )
 from .integration.runtime_data import RuntimeData
-from .integration.services import register_services
+from .integration.services import async_cancel_single_heatup, register_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -207,6 +207,10 @@ async def async_unload_entry(hass, entry):
 
     unified_coordinator = runtime_data.coordinator
     manager = runtime_data.manager
+
+    # Stop any running DHW single heat-up first so no write targets a
+    # torn-down device after this point.
+    await async_cancel_single_heatup(entry.entry_id)
 
     unload_ok = await hass.config_entries.async_unload_platforms(
         entry, ["sensor", "binary_sensor", "number", "select", "climate", "switch"]

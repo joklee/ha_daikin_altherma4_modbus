@@ -424,6 +424,7 @@ The integration provides the following Home Assistant services.
 | `set_quiet_mode` | Set quiet/night mode | `quiet_mode` | `off`, `on (automatic)`, `on (manual)` |
 | `set_dhw_booster_mode` | DHW booster (Powerful) | `booster_mode` | `true`, `false` |
 | `set_dhw_single_heatup` | DHW one-time heat-up | `single_heatup`, `setpoint` | `true`, `false`; 30-85°C (optional) |
+| `start_dhw_single_heatup` | DHW one-time heat-up to target with timeout (background run, fires `..._dhw_single_heatup_finished`) | `target_temperature`, `timeout`, `hysteresis` | 30-85°C; 1 min-6 h (default 2 h); 0-5 K (default 0.5) |
 | `set_power_limit` | Imposed power limit | `power_limit` | 0-20 kW |
 | `set_heating_offset` | Weather-dependent heating offset | `offset` | -10 to +10 K |
 | `set_cooling_offset` | Weather-dependent cooling offset | `offset` | -10 to +10 K |
@@ -548,6 +549,42 @@ automation:
           config_entry_id: "abc123def456"
           booster_mode: true
 ```
+
+### DHW Single Heat-Up to Target Temperature
+
+Heat the DHW tank once to a target temperature (see issue #21). The
+`start_dhw_single_heatup` service runs the whole sequence in the
+background — setpoint, start, wait for target or timeout, stop — and
+fires a `ha_daikin_altherma4_modbus_dhw_single_heatup_finished` event
+with the outcome (`reached`, `timeout` or `cancelled`):
+
+```yaml
+automation:
+  - alias: "Heat DHW once to target"
+    trigger:
+      - platform: time
+        at: "05:30:00"
+    action:
+      - service: ha_daikin_altherma4_modbus.start_dhw_single_heatup
+        data:
+          config_entry_id: "abc123def456"
+          target_temperature: 48
+          timeout: "02:00:00"
+
+  - alias: "Notify on DHW heat-up finished"
+    trigger:
+      - platform: event
+        event_type: ha_daikin_altherma4_modbus_dhw_single_heatup_finished
+    action:
+      - service: notify.notify
+        data:
+          title: "DHW single heat-up {{ trigger.event.data.outcome }}"
+          message: "DHW temperature: {{ trigger.event.data.current_temperature }} °C (target: {{ trigger.event.data.target_temperature }} °C)."
+```
+
+Tip: to start or stop the request immediately without target or timeout
+handling, use the `set_dhw_single_heatup` service with `single_heatup: true`
+or `false`.
 
 ### Room Temperature Based on Occupancy
 

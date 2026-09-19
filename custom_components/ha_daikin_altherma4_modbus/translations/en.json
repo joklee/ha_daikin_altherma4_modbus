@@ -757,6 +757,9 @@
     "invalid_quiet_mode": {
       "message": "Invalid Quiet mode: {quiet_mode}"
     },
+    "single_heatup_already_running": {
+      "message": "DHW single heat-up is already running for entry {config_entry_id}."
+    },
     "write_failed": {
       "message": "Failed to {operation_name} {register_type} {register_name}: {error}"
     },

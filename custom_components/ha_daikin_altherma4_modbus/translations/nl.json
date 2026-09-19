@@ -757,6 +757,9 @@
     "invalid_quiet_mode": {
       "message": "Ongeldige stille modus: {quiet_mode}"
     },
+    "single_heatup_already_running": {
+      "message": "Eenmalige tapwaterverwarming loopt al voor item {config_entry_id}."
+    },
     "write_failed": {
       "message": "Kan {operation_name} {register_type} {register_name} niet uitvoeren: {error}"
     },

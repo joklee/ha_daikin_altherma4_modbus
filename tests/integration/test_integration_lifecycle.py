@@ -260,6 +260,11 @@ def _load_integration_module(monkeypatch):
     # Mock services module
     services_module = types.ModuleType(services_name)
     services_module.register_services = lambda hass: None
+
+    async def _noop_cancel_single_heatup(config_entry_id):
+        return None
+
+    services_module.async_cancel_single_heatup = _noop_cancel_single_heatup
     monkeypatch.setitem(sys.modules, services_name, services_module)
 
     return importlib.import_module(module_name)

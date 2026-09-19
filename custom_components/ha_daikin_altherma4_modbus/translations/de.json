@@ -745,6 +745,9 @@
     "invalid_quiet_mode": {
       "message": "Ungültiger Geräuscharmer-Modus: {quiet_mode}"
     },
+    "single_heatup_already_running": {
+      "message": "WW-Einmalaufheizung läuft bereits für Eintrag {config_entry_id}."
+    },
     "write_failed": {
       "message": "Fehler beim {operation_name} von {register_type} {register_name}: {error}"
     },
