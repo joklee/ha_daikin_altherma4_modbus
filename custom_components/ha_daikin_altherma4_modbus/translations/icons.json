@@ -220,6 +220,9 @@
     }
   },
   "sensor": {
+    "abnormality_decoded": {
+      "icon": "mdi:alert-decagram"
+    },
     "input_21": {
       "icon": "mdi:alert-circle"
     },

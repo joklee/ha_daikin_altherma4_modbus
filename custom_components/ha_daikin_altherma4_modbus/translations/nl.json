@@ -261,6 +261,9 @@
       }
     },
     "sensor": {
+      "abnormality_decoded": {
+        "name": "Afwijking gedecodeerd"
+      },
       "connection_last_read": {
         "name": "Laatste leesopdracht"
       },
