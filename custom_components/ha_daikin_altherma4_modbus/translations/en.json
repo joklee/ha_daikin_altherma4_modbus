@@ -261,6 +261,9 @@
       }
     },
     "sensor": {
+      "abnormality_decoded": {
+        "name": "Abnormality decoded"
+      },
       "connection_last_read": {
         "name": "Last read"
       },

@@ -257,9 +257,17 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 | Sensor | Address | State Class | Description |
 |--------|---------|-------------|-------------|
 | Unit abnormality | 21 | – | 0=No error, 1=Fault, 2=Warning |
-| Abnormality code | 22 | – | Text code |
-| Abnormality sub code | 23 | – | Numeric code |
+| Abnormality code | 22 | – | Raw 16-bit code (e.g. 14152) |
+| Abnormality sub code | 23 | – | Numeric sub code (e.g. 19) |
+| Abnormality decoded | – | – | Decoded fault code (e.g. `7H-19`, `unknown` when no fault); description as attribute |
 | Abnormality counter | 82 | total_increasing | User abnormality counter |
+
+The decoded code combines the two ASCII bytes of register 22 with the
+sub code from register 23, matching the fault codes in the Daikin
+installer reference guide (e.g. `7H-19`). Meanings for all ~195
+documented codes (4PEN820808-1) are built in; codes outside the table
+still decode structurally, only the description stays empty and the
+main-code family title applies.
 
 #### Setpoint Limits
 | Sensor | Address | Unit | Description |

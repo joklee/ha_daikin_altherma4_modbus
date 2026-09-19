@@ -150,6 +150,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
                     translation_key=calc.translation_key,
                 )
             )
+        elif calc.calc_type == "abnormality_decoded":
+            entities.append(
+                AbnormalityDecodedSensor(
+                    coordinator=unified_coordinator,
+                    entry=entry,
+                    unique_id=calc.register_name,
+                    device_info=CALCULATED_DEVICE_INFO,
+                    translation_key=calc.translation_key,
+                )
+            )
         elif calc.calc_type == "delta_t":
             entities.append(
                 DeltaTSensor(
@@ -259,11 +269,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
         sub_code_val = get_register_value(sub_code_data) if sub_code_data else None
 
         if val in (1, 2) and not _abnormality_state["issue_created"]:
-            # fault=1 or warning=2
+            # fault=1 or warning=2; report the decoded fault code (issue
+            # #79, e.g. "7H-19") alongside the raw register values.
+            from ..core.fault_codes import format_abnormality_label
+
+            code_label = format_abnormality_label(code_val, sub_code_val)
             async_create_abnormality_issue(
                 hass,
                 entry,
-                abnormality_code=str(code_val) if code_val is not None else "unknown",
+                abnormality_code=code_label,
                 abnormality_sub_code=int(sub_code_val)
                 if sub_code_val is not None
                 else 0,
@@ -737,6 +751,73 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
         _LOGGER.debug(f"Delta-T: {flow_temp} - {return_temp}")
         delta_t = flow_temp - return_temp
         return round(delta_t, 2)
+
+
+class AbnormalityDecodedSensor(CoordinatorEntity, SensorEntity):
+    """Decoded abnormality fault code, e.g. "7H-19" (issue #79).
+
+    Decodes input_22 (16-bit decimal with ASCII bytes) and combines it
+    with the sub code from input_23. Reports unknown unless input_21
+    signals an active fault or warning.
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        device_info=None,
+        translation_key=None,
+    ):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = unique_id
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
+
+    def _fault_parts(self):
+        """Return (code_raw, sub_raw) or (None, None) without active fault."""
+        status = get_register_value(self.coordinator.data.get("input_21"))
+        if status not in (1, 2):
+            return None, None
+        code_raw = get_register_value(self.coordinator.data.get("input_22"))
+        sub_raw = get_register_value(self.coordinator.data.get("input_23"))
+        return code_raw, sub_raw
+
+    @property
+    def available(self) -> bool:
+        """Available when coordinator data is present at all."""
+        return bool(self.coordinator.data)
+
+    @property
+    def native_value(self):
+        """Return the decoded fault code like "7H-19", else None (unknown)."""
+        from ..core.fault_codes import format_fault_code
+
+        code_raw, sub_raw = self._fault_parts()
+        if code_raw is None and sub_raw is None:
+            return None
+        return format_fault_code(code_raw, sub_raw)
+
+    @property
+    def extra_state_attributes(self):
+        """Expose the fault meaning and raw values for automations."""
+        from ..core.fault_codes import describe_fault_code, format_fault_code
+
+        code_raw, sub_raw = self._fault_parts()
+        full_code = format_fault_code(code_raw, sub_raw)
+        try:
+            sub = int(sub_raw) if sub_raw is not None else None
+        except (TypeError, ValueError):
+            sub = None
+        return {
+            "description": describe_fault_code(full_code),
+            "code_raw": code_raw,
+            "sub_code_raw": sub,
+        }
 
 
 class ConnectionTimestampSensor(CoordinatorEntity, SensorEntity):
