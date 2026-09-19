@@ -5,7 +5,30 @@ from custom_components.ha_daikin_altherma4_modbus.core.fault_codes import (
     describe_fault_code,
     format_abnormality_label,
     format_fault_code,
+    raw_sub_code,
 )
+
+
+def test_raw_sub_code_accepts_only_raw_values():
+    """Mapped display strings must never parse as sub codes."""
+    assert raw_sub_code(19) == 19
+    assert raw_sub_code(0) == 0
+    assert raw_sub_code("19") == 19
+    assert raw_sub_code(" 19 ") == 19
+    assert raw_sub_code(None) is None
+    assert raw_sub_code(True) is None
+    assert raw_sub_code(-1) is None
+    assert raw_sub_code("error_19") is None
+    assert raw_sub_code("no_error") is None
+    assert raw_sub_code(19.0) == 19
+
+
+def test_mapped_sub_code_never_leaks_into_format():
+    """An enum-mapped sub value degrades to the main code only."""
+    assert format_fault_code(14152, "error_19") == "7H"
+    assert format_abnormality_label(14152, "error_19") == (
+        "7H - Water flow problem (raw 14152/?)"
+    )
 
 
 def test_decode_issue_example():

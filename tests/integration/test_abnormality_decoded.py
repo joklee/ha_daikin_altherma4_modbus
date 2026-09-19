@@ -89,6 +89,19 @@ def test_undecodable_code_is_unknown():
     assert sensor.native_value is None
 
 
+def test_mapped_sub_code_value_is_ignored():
+    """An enum-mapped sub ("error_19") must not parse as sub code 19."""
+    sensor = _make_sensor(
+        {
+            "input_21": {"value": 1},
+            "input_22": {"value": 14152},
+            "input_23": {"value": "error_19"},
+        }
+    )
+    assert sensor.native_value == "7H"
+    assert sensor.extra_state_attributes["sub_code_raw"] is None
+
+
 def test_missing_data_is_unknown_but_available_with_any_data():
     sensor = _make_sensor({})
     assert sensor.native_value is None

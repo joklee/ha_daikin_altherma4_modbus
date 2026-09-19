@@ -309,7 +309,32 @@ def decode_fault_code(value: int | str | None) -> str | None:
     return chr(high_byte) + chr(low_byte)
 
 
-def format_fault_code(code_raw: int | str | None, sub_raw: int | None) -> str | None:
+def raw_sub_code(value: int | str | None) -> int | None:
+    """Normalize a sub-code register value to a raw integer.
+
+    The coordinator stores raw register values, but input_23 also has an
+    enum map (0..99 -> "error_0"..) applied at the display entity. This
+    helper accepts only raw numeric values and explicitly rejects already
+    mapped display strings like "error_19", so a mapped value can never
+    be mistaken for a sub code.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text.isdigit():
+            return None
+        return int(text)
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number >= 0 else None
+
+
+def format_fault_code(
+    code_raw: int | str | None, sub_raw: int | str | None
+) -> str | None:
     """Combine decoded main code and sub code, e.g. "7H-19".
 
     Returns just the main code when the sub code is missing/invalid,
@@ -318,11 +343,8 @@ def format_fault_code(code_raw: int | str | None, sub_raw: int | None) -> str | 
     code = decode_fault_code(code_raw)
     if code is None:
         return None
-    try:
-        sub = int(sub_raw) if sub_raw is not None else None
-    except (TypeError, ValueError):
-        sub = None
-    if sub is None or sub < 0:
+    sub = raw_sub_code(sub_raw)
+    if sub is None:
         return code
     return f"{code}-{sub}"
 
@@ -340,17 +362,22 @@ def describe_fault_code(code: str | None) -> str | None:
     return FAULT_MAIN_TITLES.get(code.split("-")[0])
 
 
-def format_abnormality_label(code_raw: int | str | None, sub_raw: int | None) -> str:
+def format_abnormality_label(
+    code_raw: int | str | None, sub_raw: int | str | None
+) -> str:
     """Build the repair-issue label, e.g. "7H-19 (raw 14152/19)".
 
     Falls back to the raw code or "unknown" when nothing decodes, and
-    appends the known short title when the code is in the table.
+    appends the known short title when the code is in the table. The
+    displayed raw values are the normalized register values, never
+    enum-mapped display strings.
     """
     decoded = format_fault_code(code_raw, sub_raw)
     if decoded is None:
         return str(code_raw) if code_raw is not None else "unknown"
     raw_code = str(code_raw) if code_raw is not None else "unknown"
-    raw_sub = str(sub_raw) if sub_raw is not None else "?"
+    sub = raw_sub_code(sub_raw)
+    raw_sub = str(sub) if sub is not None else "?"
     title = describe_fault_code(decoded)
     label = f"{decoded} - {title}" if title else decoded
     return f"{label} (raw {raw_code}/{raw_sub})"

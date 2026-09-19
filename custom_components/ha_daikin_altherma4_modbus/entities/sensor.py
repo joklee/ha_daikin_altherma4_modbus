@@ -271,16 +271,17 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if val in (1, 2) and not _abnormality_state["issue_created"]:
             # fault=1 or warning=2; report the decoded fault code (issue
             # #79, e.g. "7H-19") alongside the raw register values.
-            from ..core.fault_codes import format_abnormality_label
+            from ..core.fault_codes import (
+                format_abnormality_label,
+                raw_sub_code,
+            )
 
             code_label = format_abnormality_label(code_val, sub_code_val)
             async_create_abnormality_issue(
                 hass,
                 entry,
                 abnormality_code=code_label,
-                abnormality_sub_code=int(sub_code_val)
-                if sub_code_val is not None
-                else 0,
+                abnormality_sub_code=raw_sub_code(sub_code_val) or 0,
             )
             _abnormality_state["issue_created"] = True
         elif val == 0 and _abnormality_state["issue_created"]:
@@ -805,18 +806,18 @@ class AbnormalityDecodedSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Expose the fault meaning and raw values for automations."""
-        from ..core.fault_codes import describe_fault_code, format_fault_code
+        from ..core.fault_codes import (
+            describe_fault_code,
+            format_fault_code,
+            raw_sub_code,
+        )
 
         code_raw, sub_raw = self._fault_parts()
         full_code = format_fault_code(code_raw, sub_raw)
-        try:
-            sub = int(sub_raw) if sub_raw is not None else None
-        except (TypeError, ValueError):
-            sub = None
         return {
             "description": describe_fault_code(full_code),
             "code_raw": code_raw,
-            "sub_code_raw": sub,
+            "sub_code_raw": raw_sub_code(sub_raw),
         }
 
 
