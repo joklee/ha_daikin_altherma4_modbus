@@ -30,6 +30,22 @@ def test_decode_boundaries():
     assert decode_fault_code("not-a-number") is None
 
 
+def test_decode_accepts_already_decoded_text():
+    """A decoded "7H" passes through; other strings do not."""
+    assert decode_fault_code("7H") == "7H"
+    assert decode_fault_code(" 7H ") == "7H"
+    assert decode_fault_code("14152") == "7H"
+    assert decode_fault_code("7H-19") is None
+    assert decode_fault_code("X") is None
+    assert decode_fault_code("") is None
+
+
+def test_format_accepts_decoded_main_code():
+    """format works with raw integers and pre-decoded text alike."""
+    assert format_fault_code("7H", 19) == "7H-19"
+    assert format_abnormality_label("7H", 19).startswith("7H-19 - ")
+
+
 def test_format_combines_code_and_sub():
     """Main + sub code combine; missing sub yields the main code only."""
     assert format_fault_code(14152, 19) == "7H-19"

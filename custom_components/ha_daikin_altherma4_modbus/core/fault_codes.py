@@ -279,11 +279,12 @@ FAULT_MAIN_TITLES: dict[str, str] = {
 }
 
 
-def decode_fault_code(value: int | None) -> str | None:
+def decode_fault_code(value: int | str | None) -> str | None:
     """Decode a 16-bit abnormality code into two ASCII characters.
 
     Args:
-        value: Raw register value (e.g. 14152).
+        value: Raw register value (e.g. 14152) or an already-decoded
+            two-character code (e.g. "7H", passed through when valid).
 
     Returns:
         Two-character code (e.g. "7H"), or None when the value encodes
@@ -291,6 +292,10 @@ def decode_fault_code(value: int | None) -> str | None:
     """
     if value is None:
         return None
+    if isinstance(value, str):
+        text = value.strip()
+        if len(text) == 2 and all(32 <= ord(char) <= 126 for char in text):
+            return text
     try:
         number = int(value)
     except (TypeError, ValueError):
@@ -304,7 +309,7 @@ def decode_fault_code(value: int | None) -> str | None:
     return chr(high_byte) + chr(low_byte)
 
 
-def format_fault_code(code_raw: int | None, sub_raw: int | None) -> str | None:
+def format_fault_code(code_raw: int | str | None, sub_raw: int | None) -> str | None:
     """Combine decoded main code and sub code, e.g. "7H-19".
 
     Returns just the main code when the sub code is missing/invalid,
@@ -335,7 +340,7 @@ def describe_fault_code(code: str | None) -> str | None:
     return FAULT_MAIN_TITLES.get(code.split("-")[0])
 
 
-def format_abnormality_label(code_raw: int | None, sub_raw: int | None) -> str:
+def format_abnormality_label(code_raw: int | str | None, sub_raw: int | None) -> str:
     """Build the repair-issue label, e.g. "7H-19 (raw 14152/19)".
 
     Falls back to the raw code or "unknown" when nothing decodes, and
