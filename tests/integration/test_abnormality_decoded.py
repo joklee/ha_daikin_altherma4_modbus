@@ -34,7 +34,10 @@ def test_decoded_value_and_attributes_on_fault():
     sensor = _make_sensor(_data(status=1))
     assert sensor.native_value == "7H-19"
     assert sensor.available is True
-    assert sensor.extra_state_attributes["description"] == "Water flow malfunction"
+    assert (
+        sensor.extra_state_attributes["description"]
+        == "Water flow requirement problem at tank heat-up request"
+    )
     assert sensor.extra_state_attributes["code_raw"] == 14152
     assert sensor.extra_state_attributes["sub_code_raw"] == 19
 

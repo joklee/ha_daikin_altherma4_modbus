@@ -40,20 +40,40 @@ def test_format_combines_code_and_sub():
 
 
 def test_describe_known_and_unknown():
-    """Seed table titles known codes; unknown codes stay untitled."""
-    assert describe_fault_code("7H") == "Water flow malfunction"
+    """Full codes resolve specifically, main codes via family fallback."""
+    assert (
+        describe_fault_code("7H-19")
+        == "Water flow requirement problem at tank heat-up request"
+    )
+    assert describe_fault_code("7H") == "Water flow problem"
+    assert describe_fault_code("7H-99") == "Water flow problem"
     assert describe_fault_code("ZZ") is None
+    assert describe_fault_code("ZZ-01") is None
     assert describe_fault_code(None) is None
+
+
+def test_table_covers_documented_codes():
+    """Every extracted code resolves; spot-check across families."""
+    from custom_components.ha_daikin_altherma4_modbus.core.fault_codes import (
+        FAULT_CODE_TITLES,
+    )
+
+    assert len(FAULT_CODE_TITLES) >= 190
+    assert FAULT_CODE_TITLES["89-05"].startswith("Heat exchanger freeze-up")
+    assert FAULT_CODE_TITLES["E1-00"] == "OU: PCB defect"
+    assert FAULT_CODE_TITLES["U4-00"] == "Indoor/outdoor unit communication problem"
+    assert describe_fault_code("U4-00") == FAULT_CODE_TITLES["U4-00"]
 
 
 def test_label_for_repair_issue():
     """Repair labels carry decoded code, title and raw values."""
     assert (
         format_abnormality_label(14152, 19)
-        == "7H-19 - Water flow malfunction (raw 14152/19)"
+        == "7H-19 - Water flow requirement problem at tank heat-up request"
+        " (raw 14152/19)"
     )
     assert format_abnormality_label(14152, None) == (
-        "7H - Water flow malfunction (raw 14152/?)"
+        "7H - Water flow problem (raw 14152/?)"
     )
     assert format_abnormality_label(None, None) == "unknown"
     assert format_abnormality_label(None, 19) == "unknown"

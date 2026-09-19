@@ -805,16 +805,16 @@ class AbnormalityDecodedSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Expose the fault meaning and raw values for automations."""
-        from ..core.fault_codes import decode_fault_code, describe_fault_code
+        from ..core.fault_codes import describe_fault_code, format_fault_code
 
         code_raw, sub_raw = self._fault_parts()
-        code = decode_fault_code(code_raw) if code_raw is not None else None
+        full_code = format_fault_code(code_raw, sub_raw)
         try:
             sub = int(sub_raw) if sub_raw is not None else None
         except (TypeError, ValueError):
             sub = None
         return {
-            "description": describe_fault_code(code),
+            "description": describe_fault_code(full_code),
             "code_raw": code_raw,
             "sub_code_raw": sub,
         }

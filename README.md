@@ -264,9 +264,10 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 
 The decoded code combines the two ASCII bytes of register 22 with the
 sub code from register 23, matching the fault codes in the Daikin
-installer reference guide (e.g. `7H-19`). Known fault meanings come from
-a short built-in table; unknown codes still decode, only the description
-stays empty.
+installer reference guide (e.g. `7H-19`). Meanings for all ~195
+documented codes (4PEN820808-1) are built in; codes outside the table
+still decode structurally, only the description stays empty and the
+main-code family title applies.
 
 #### Setpoint Limits
 | Sensor | Address | Unit | Description |
