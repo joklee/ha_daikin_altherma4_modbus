@@ -1,6 +1,8 @@
 """Services for Daikin Altherma 4 Modbus integration."""
 
+import asyncio
 import logging
+from datetime import timedelta
 
 try:
     import voluptuous as vol
@@ -14,6 +16,7 @@ except ImportError:
     # Fallback for testing when homeassistant is not available
     HAS_HA = False
 
+from ..common.helpers import get_register_value
 from ..core.const import (
     DOMAIN,
     HVAC_COOL,
@@ -36,6 +39,7 @@ from ..core.const import (
     SERVICE_SET_ROOM_COOLING_SETPOINT,
     SERVICE_SET_ROOM_HEATING_SETPOINT,
     SERVICE_SET_SMART_GRID_MODE,
+    SERVICE_START_DHW_SINGLE_HEATUP,
 )
 from ..core.register_constants import COIL_REGISTERS, HOLDING_REGISTERS
 
@@ -51,6 +55,19 @@ ATTR_SINGLE_HEATUP = "single_heatup"
 ATTR_SETPOINT = "setpoint"
 ATTR_POWER_LIMIT = "power_limit"
 ATTR_OFFSET = "offset"
+ATTR_TARGET_TEMPERATURE = "target_temperature"
+ATTR_TIMEOUT = "timeout"
+ATTR_HYSTERESIS = "hysteresis"
+
+# DHW single heat-up run (issue #21): status poll interval and finish event.
+_DHW_RUN_STATUS_POLL_INTERVAL = 30.0
+EVENT_DHW_SINGLE_HEATUP_FINISHED = (
+    "ha_daikin_altherma4_modbus_dhw_single_heatup_finished"
+)
+
+# Running single heat-up runs by config entry id. Cancelled on unload so no
+# write ever targets a torn-down device.
+_SINGLE_HEATUP_TASKS: dict = {}
 
 # Operation mode mapping for service calls (lowercase keys for service API)
 OPERATION_MODE_MAP = {
@@ -145,6 +162,22 @@ if HAS_HA:
         }
     )
 
+    SERVICE_START_DHW_SINGLE_HEATUP_SCHEMA = vol.Schema(
+        {
+            vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
+            vol.Required(ATTR_TARGET_TEMPERATURE): vol.All(
+                vol.Coerce(float), vol.Range(min=30, max=85)
+            ),
+            vol.Optional(ATTR_TIMEOUT, default=timedelta(hours=2)): vol.All(
+                cv.time_period,
+                vol.Range(min=timedelta(seconds=60), max=timedelta(hours=6)),
+            ),
+            vol.Optional(ATTR_HYSTERESIS, default=0.5): vol.All(
+                vol.Coerce(float), vol.Range(min=0, max=5)
+            ),
+        }
+    )
+
     SERVICE_SET_POWER_LIMIT_SCHEMA = vol.Schema(
         {
             vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string,
@@ -221,6 +254,7 @@ else:
     SERVICE_SET_QUIET_MODE_SCHEMA = _make_dummy_schema(None)
     SERVICE_SET_DHW_BOOSTER_MODE_SCHEMA = _make_dummy_schema(None)
     SERVICE_SET_DHW_SINGLE_HEATUP_SCHEMA = _make_dummy_schema(None)
+    SERVICE_START_DHW_SINGLE_HEATUP_SCHEMA = _make_dummy_schema(None)
     SERVICE_SET_POWER_LIMIT_SCHEMA = _make_dummy_schema(None)
     SERVICE_SET_HEATING_OFFSET_SCHEMA = _make_dummy_schema(None)
     SERVICE_SET_COOLING_OFFSET_SCHEMA = _make_dummy_schema(None)
@@ -652,6 +686,149 @@ if HAS_HA:
             config_entry_id,
         )
 
+    def _dhw_temperature(manager) -> float | None:
+        """Return the latest DHW temperature from coordinator data, if known."""
+        try:
+            data = manager.get_all_data()
+        except Exception:  # pragma: no cover - defensive
+            return None
+        raw = get_register_value(data.get("input_43"))
+        try:
+            return float(raw) if raw is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    async def _run_dhw_single_heatup(
+        hass, config_entry_id, manager, writer, target, timeout_s, hysteresis
+    ) -> None:
+        """Background run: heat DHW once until target, timeout or cancel.
+
+        Fires ``EVENT_DHW_SINGLE_HEATUP_FINISHED`` with the outcome and
+        always leaves the request register cleared. Uses coordinator data
+        (no extra Modbus traffic) for the temperature check.
+        """
+        outcome = "timeout"
+        current = None
+        try:
+            start = hass.loop.time()
+            while True:
+                current = _dhw_temperature(manager)
+                if current is not None and current >= target - hysteresis:
+                    outcome = "reached"
+                    break
+                elapsed = hass.loop.time() - start
+                if elapsed >= timeout_s:
+                    break
+                await asyncio.sleep(
+                    min(_DHW_RUN_STATUS_POLL_INTERVAL, timeout_s - elapsed)
+                )
+        except asyncio.CancelledError:
+            outcome = "cancelled"
+            raise
+        finally:
+            try:
+                await writer.write_holding_register("holding_15", 0)
+            except Exception as err:
+                _LOGGER.debug(
+                    "Could not clear DHW heat-up request for entry %s: %s",
+                    config_entry_id,
+                    err,
+                )
+            _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
+            hass.bus.async_fire(
+                EVENT_DHW_SINGLE_HEATUP_FINISHED,
+                {
+                    "config_entry_id": config_entry_id,
+                    "outcome": outcome,
+                    "target_temperature": target,
+                    "current_temperature": current,
+                },
+            )
+            _LOGGER.info(
+                "DHW single heat-up for entry %s finished: %s (target %s°C, now %s°C)",
+                config_entry_id,
+                outcome,
+                target,
+                current,
+            )
+
+    async def async_start_dhw_single_heatup(hass, call) -> None:
+        """Heat DHW once to a target temperature with timeout (issue #21).
+
+        Writes the setpoint, starts the request and returns immediately;
+        a background task watches the DHW temperature, stops the request
+        on target/timeout and fires ``EVENT_DHW_SINGLE_HEATUP_FINISHED``.
+        """
+        config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
+        target = float(call.data[ATTR_TARGET_TEMPERATURE])
+        # Schema defaults only apply through HA's service layer; fall back
+        # explicitly so direct handler calls stay valid too.
+        timeout = call.data.get(ATTR_TIMEOUT, timedelta(hours=2))
+        timeout_s = (
+            timeout.total_seconds()
+            if isinstance(timeout, timedelta)
+            else float(timeout)
+        )
+        hysteresis = float(call.data.get(ATTR_HYSTERESIS, 0.5))
+
+        entry = _get_entry_and_validate(hass, config_entry_id)
+        runtime_data = entry.runtime_data
+        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
+
+        running = _SINGLE_HEATUP_TASKS.get(config_entry_id)
+        if running is not None and not running.done():
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="single_heatup_already_running",
+                translation_placeholders={"config_entry_id": config_entry_id},
+            )
+
+        register_value = int(target / 0.01)
+        await _guarded_write(
+            "holding_16",
+            lambda: writer.write_holding_register("holding_16", register_value),
+        )
+        await _guarded_write(
+            "holding_15",
+            lambda: writer.write_holding_register("holding_15", 1),
+        )
+
+        task = hass.async_create_task(
+            _run_dhw_single_heatup(
+                hass, config_entry_id, manager, writer, target, timeout_s, hysteresis
+            ),
+            name=f"{DOMAIN}_dhw_single_heatup_{config_entry_id}",
+        )
+        _SINGLE_HEATUP_TASKS[config_entry_id] = task
+        if task.done():
+            # Eager task already finalized before registration (stop
+            # written, event fired); drop the stale handle.
+            _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
+        _LOGGER.debug(
+            "Started DHW single heat-up to %s°C for entry %s (timeout %ss)",
+            target,
+            config_entry_id,
+            timeout_s,
+        )
+
+    async def async_cancel_single_heatup(config_entry_id: str) -> None:
+        """Cancel a running DHW single heat-up, if any (used on unload)."""
+        task = _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
+        if task is None or task.done():
+            return
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        except Exception as err:
+            _LOGGER.debug(
+                "DHW single heat-up task for entry %s ended with: %s",
+                config_entry_id,
+                err,
+            )
+
 else:  # pragma: no cover - dummies only without Home Assistant
     # Dummy functions for testing imports
     async def async_set_operation_mode(hass, call):
@@ -676,6 +853,12 @@ else:  # pragma: no cover - dummies only without Home Assistant
         pass
 
     async def async_set_dhw_single_heatup(hass, call):
+        pass
+
+    async def async_start_dhw_single_heatup(hass, call):
+        pass
+
+    async def async_cancel_single_heatup(config_entry_id: str):
         pass
 
     async def async_set_power_limit(hass, call):
@@ -759,6 +942,13 @@ def register_services(hass) -> None:
         SERVICE_SET_DHW_SINGLE_HEATUP,
         async_set_dhw_single_heatup,
         schema=SERVICE_SET_DHW_SINGLE_HEATUP_SCHEMA,
+    )
+    async_register_admin_service(
+        hass,
+        DOMAIN,
+        SERVICE_START_DHW_SINGLE_HEATUP,
+        async_start_dhw_single_heatup,
+        schema=SERVICE_START_DHW_SINGLE_HEATUP_SCHEMA,
     )
     async_register_admin_service(
         hass,

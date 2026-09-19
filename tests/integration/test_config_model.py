@@ -542,6 +542,11 @@ def _load_integration_module(monkeypatch):
     # Production calls register_services(hass) synchronously (a plain def),
     # so the mock must not be an AsyncMock.
     services_module.register_services = Mock()
+
+    async def _noop_cancel_single_heatup(config_entry_id):
+        return None
+
+    services_module.async_cancel_single_heatup = _noop_cancel_single_heatup
     monkeypatch.setitem(sys.modules, services_name, services_module)
 
     return importlib.import_module(package_name), FakeCoordinatorManager
