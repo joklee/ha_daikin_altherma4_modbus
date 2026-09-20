@@ -12,9 +12,6 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.ha_daikin_altherma4_modbus.common.helpers import (
-    get_register_value,
-)
 from custom_components.ha_daikin_altherma4_modbus.core.const import (
     CONF_UNIT_ID,
     DOMAIN,
@@ -198,7 +195,9 @@ def test_production_mapping_yields_raw_integer():
     mapping = ModbusMappingTransform()
     data = mapping.process_input_register_block(raw_block, INPUT_REGISTERS, 21, 87, 21)
 
-    stored = get_register_value(data["input_22"])
+    # Explicit raw access (no helper in between): the payload carries the
+    # untouched Modbus integer, not a mapped display string.
+    stored = data["input_22"].value
     assert stored == 14152
     assert isinstance(stored, int)
     assert _make_sensor(data).native_value == "7H-19"
