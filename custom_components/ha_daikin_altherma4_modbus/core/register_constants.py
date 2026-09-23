@@ -1303,6 +1303,17 @@ COIL_REGISTERS = [
 # Calculated Sensors using dataclasses
 CALCULATED_SENSORS = [
     CalculatedRegister(
+        name="Abnormality decoded",
+        address=0,
+        input_type="calculated",
+        register_name="abnormality_decoded",
+        data_type=TEXT16,
+        calc_type="abnormality_decoded",
+        unit="",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="abnormality_decoded",
+    ),
+    CalculatedRegister(
         name="Thermal Heat Output",
         address=0,
         input_type="calculated",

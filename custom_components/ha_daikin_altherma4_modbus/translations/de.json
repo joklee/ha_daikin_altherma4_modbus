@@ -252,6 +252,9 @@
       }
     },
     "sensor": {
+      "abnormality_decoded": {
+        "name": "Abnormität dekodiert"
+      },
       "connection_last_read": {
         "name": "Letzte lesende Abfrage"
       },
