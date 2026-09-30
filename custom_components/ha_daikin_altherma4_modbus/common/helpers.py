@@ -9,7 +9,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
 from ..core.data_types import EntityStatePayload, StateMapping
-from .const import DOMAIN, SPECIAL_REGISTER_VALUES
+from .const import (
+    DOMAIN,
+    SCALED_SPECIAL_REGISTER_VALUES,
+    SPECIAL_REGISTER_VALUES,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,26 +33,23 @@ def get_coordinator_from_entry(hass: HomeAssistant, entry: ConfigType) -> Any:
 def validate_register_value(value: Any) -> bool:
     """Validate that a register value is available.
 
-    Returns False for None or any special Daikin HomeHub return value:
+    Primary check is the raw 16-bit value; scaled equivalents
+    (327.65/327.66/327.67 for 0.01-scaled types) are treated as
+    unavailable as a defensive guard. Returns False for None or any
+    special Daikin HomeHub return value:
       - 32767: Register not supported
       - 32766: Register not available in current configuration
       - 32765: Waiting for value (not yet loaded)
     """
-    if value is None:
-        return False
-
-    try:
-        val = int(value)
-    except (ValueError, TypeError):
-        return False
-
-    return val not in SPECIAL_REGISTER_VALUES
+    return not is_unavailable_value(value)
 
 
 def is_unavailable_value(value: Any) -> bool:
     """Check if a register value indicates unavailability.
 
-    Returns True for None or any special Daikin HomeHub return value:
+    Handles raw ints, already-scaled floats (327.65/327.66/327.67),
+    numeric strings and None without int() truncation. Returns True for
+    None or any special Daikin HomeHub return value:
       - 32767: Register not supported
       - 32766: Register not available in current configuration
       - 32765: Waiting for value (not yet loaded)
@@ -56,12 +57,34 @@ def is_unavailable_value(value: Any) -> bool:
     if value is None:
         return True
 
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in ("", "unknown", "unavailable", "none"):
+            return True
+        try:
+            value = float(text) if "." in text else int(text)
+        except (ValueError, TypeError):
+            return True
+
+    if isinstance(value, bool):
+        return False
+
+    if isinstance(value, int):
+        return value in SPECIAL_REGISTER_VALUES
+
+    if isinstance(value, float):
+        if value in SPECIAL_REGISTER_VALUES:
+            return True
+        # Defensive guard for already-scaled specials (0.01 types).
+        # round() avoids binary float artefacts (e.g. 327.659999).
+        # Note: integer-valued floats (e.g. 32766.0) are already caught
+        # above via numeric equality, no separate is_integer check needed.
+        return round(value, 2) in SCALED_SPECIAL_REGISTER_VALUES
+
     try:
-        val = int(value)
+        return int(value) in SPECIAL_REGISTER_VALUES
     except (ValueError, TypeError):
         return True
-
-    return val in SPECIAL_REGISTER_VALUES
 
 
 class BaseEntityMixin:

@@ -363,6 +363,11 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         if val is None:
             return None
 
+        # Central unavailable check BEFORE conversion (raw + scaled guard).
+        # Must run before float()/int() to avoid int(327.66) -> 327 truncation.
+        if is_unavailable_value(val):
+            return None
+
         # Handle string data types directly
         if self._data_type is TEXT16:
             return str(val) if val is not None else None
@@ -376,10 +381,6 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
             else:
                 val = int(val)
         except (ValueError, TypeError):
-            return None
-
-        # Return None for unavailable value (32765 or 32766)
-        if is_unavailable_value(val):
             return None
 
         # ENUM Mapping

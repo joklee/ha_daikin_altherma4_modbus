@@ -121,18 +121,21 @@ class ModbusMappingTransform:
         if hasattr(item, "data_type") and item.data_type is not None:
             scale = getattr(item.data_type, "scaling", 1)
 
-        if scale is not None and scale != 1:
-            if raw_value in SPECIAL_REGISTER_VALUES:
-                return update_value_if_changed(
-                    register_name,
-                    raw_value,
-                    previous_data,
-                    description,
-                    input_type=input_type,
-                    address=address,
-                    scale=scale,
-                )
+        # Central guarantee: specials are NEVER scaled, regardless of scale.
+        # Stored as raw value + scale so downstream helpers can detect both
+        # raw (32766) and defensively scaled (327.66) forms.
+        if raw_value in SPECIAL_REGISTER_VALUES:
+            return update_value_if_changed(
+                register_name,
+                raw_value,
+                previous_data,
+                description,
+                input_type=input_type,
+                address=address,
+                scale=scale,
+            )
 
+        if scale is not None and scale != 1:
             scaled_value = round(raw_value * scale, 2)
             return update_value_if_changed(
                 register_name,

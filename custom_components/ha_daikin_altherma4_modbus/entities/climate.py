@@ -17,6 +17,7 @@ from ..common import (
     get_register_scale,
     get_register_value,
     is_entity_available,
+    is_unavailable_value,
     safe_write_register,
     to_unsigned_16bit,
 )
@@ -90,15 +91,19 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         return get_coordinator_register_data(self.coordinator, register_name)
 
     def _get_operation_mode(self):
-        """Get the current operation mode value."""
+        """Get the current operation mode value (None if unavailable)."""
         op_mode_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OPERATION_MODE}")
-        return get_register_value(op_mode_data) or 0
+        val = get_register_value(op_mode_data)
+        if val is None or is_unavailable_value(val):
+            return None
+        return val
 
     def _get_offset_register_config(self):
         """Get the appropriate offset register config based on operation mode."""
         op_mode_raw = self._get_operation_mode()
 
         # Use cooling offset when operation mode is COOL (2), otherwise heating offset
+        # (None/unavailable defaults to heating so min/max/step stay resolvable).
         if op_mode_raw == HVAC_COOL:
             return self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_COOLING}")
         else:
@@ -106,26 +111,22 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def current_temperature(self):
-        """Return the current temperature."""
+        """Return the current temperature (None if unavailable)."""
         temp_data = self._get_register_data(f"{DOMAIN}_{REGISTER_CURRENT_TEMP}")
-        temp_raw = get_register_value(temp_data) or 0
+        temp_raw = get_register_value(temp_data)
+        if temp_raw is None or is_unavailable_value(temp_raw):
+            return None
 
-        # Check if value is already scaled by checking if scale is stored in data
-        data_scale = get_register_scale(temp_data)
-
-        if data_scale is not None:
-            # Value is already scaled by data_manager
-            temp = temp_raw
-        else:
-            # Value is not scaled yet, apply scaling from register_types
-            temp = temp_raw * (get_register_scale(temp_data) or 1)
-
-        return round(temp, 2)
+        # Value is already scaled by data_manager (mapping_transform never
+        # scales specials, so a stored 32766 stays detectable above).
+        return round(float(temp_raw), 2)
 
     @property
     def target_temperature(self):
         """Return the current offset value as temperature."""
         offset_data = self._get_offset_data()
+        if offset_data is None or offset_data["offset"] is None:
+            return None
         return round(offset_data["offset"], 1)
 
     def _get_offset_data(self):
@@ -138,22 +139,16 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
             offset_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_COOLING}")
         else:
             offset_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_HEATING}")
-        offset_raw = get_register_value(offset_data) or 0
-
-        # Check if value is already scaled by checking if scale is stored in data
-        data_scale = get_register_scale(offset_data)
+        offset_raw = get_register_value(offset_data)
+        if offset_raw is None or is_unavailable_value(offset_raw):
+            return None
 
         # Get scale from centralized config (always needed for return value)
         config = self._get_offset_register_config()
 
-        if data_scale is not None:
-            # Value is already scaled by data_manager
-            offset = offset_raw
-            scale = data_scale
-        else:
-            # Value is not scaled yet, apply scaling
-            scale = get_register_scale(config) or 1
-            offset = offset_raw * scale  # °C
+        # Value is already scaled by data_manager (specials stay raw, see above).
+        offset = float(offset_raw)
+        scale = get_register_scale(offset_data)
 
         return {
             "op_mode_raw": op_mode_raw,
@@ -199,7 +194,9 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     def fan_mode(self):
         """Return the current fan mode (quiet mode)."""
         quiet_data = self._get_register_data(f"{DOMAIN}_{REGISTER_QUIET_MODE}")
-        quiet_raw = get_register_value(quiet_data) or 0
+        quiet_raw = get_register_value(quiet_data)
+        if quiet_raw is None or is_unavailable_value(quiet_raw):
+            return FAN_OFF
 
         # Keep read mapping aligned with const.SELECT_REGISTERS enum_map for holding_9.
         quiet_modes = {0: FAN_OFF, 1: FAN_AUTO, 2: FAN_MANUAL}
@@ -226,7 +223,9 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     def hvac_action(self):
         """Return the current running hvac operation."""
         comp_data = self._get_register_data(f"{DOMAIN}_{REGISTER_COMPRESSOR}")
-        comp_raw = get_register_value(comp_data) or 0
+        comp_raw = get_register_value(comp_data)
+        if comp_raw is None or is_unavailable_value(comp_raw):
+            return HVACAction.IDLE
 
         if comp_raw:
             return (
@@ -259,6 +258,9 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
 
         # Get operation mode from input_38 before try block
         offset_data = self._get_offset_data()
+        if offset_data is None:
+            _LOGGER.debug("Skipping thermostat offset write: offset unavailable")
+            return
         op_mode_raw = offset_data["op_mode_raw"]
 
         if op_mode_raw == HVAC_COOL:
@@ -327,19 +329,30 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
     def extra_state_attributes(self):
         """Return additional state attributes."""
         quiet_data = self._get_register_data(f"{DOMAIN}_{REGISTER_QUIET_MODE}")
-        quiet_raw = get_register_value(quiet_data) or 0
+        quiet_raw = get_register_value(quiet_data)
         quiet_map = {0: "Off", 1: "On (Automatic)", 2: "On (Manual)"}
         quiet_mode = quiet_map.get(quiet_raw, "Unknown")
 
         # Get offset data using helper method
         offset_data_info = self._get_offset_data()
+        if offset_data_info is None:
+            return {
+                "quiet_mode": quiet_mode,
+                "offset": None,
+                "calculated_setpoint": None,
+                "current_temperature": self.current_temperature,
+            }
         offset = offset_data_info["offset"]
         op_mode_raw = offset_data_info["op_mode_raw"]
         config = offset_data_info["config"]
 
         # Berechnete Solltemperatur für Anzeige
         current_temp = self.current_temperature
-        calculated_setpoint = current_temp + offset
+        calculated_setpoint = (
+            round(current_temp + offset, 2)
+            if current_temp is not None and offset is not None
+            else None
+        )
 
         return {
             "quiet_mode": quiet_mode,
@@ -445,13 +458,19 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
         return get_coordinator_register_data(self.coordinator, register_name)
 
     def _get_register_value(self, register_name, register_type):
-        """Get scaled value from a register."""
+        """Get scaled value from a register (None if unavailable).
+
+        Values are already scaled by data_manager; specials are stored raw
+        (mapping_transform never scales them) and detected here centrally.
+        """
         data = self._get_register_data(f"{DOMAIN}_{register_name}")
         if data is None:
             return None
 
         raw_value = get_register_value(data)
-        return raw_value if raw_value is not None else None
+        if raw_value is None or is_unavailable_value(raw_value):
+            return None
+        return raw_value
 
     @property
     def hvac_mode(self):
@@ -460,6 +479,8 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
             return HVACMode.OFF
 
         val = get_register_value(data)
+        if val is None or is_unavailable_value(val):
+            return HVACMode.OFF
         return HVACMode.HEAT if val == DHW_ON else HVACMode.OFF
 
     @property
@@ -474,6 +495,8 @@ class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
             return HVACAction.IDLE
 
         val = get_register_value(data)
+        if val is None or is_unavailable_value(val):
+            return HVACAction.IDLE
         return HVACAction.HEATING if val == DHW_ON else HVACAction.IDLE
 
     @property

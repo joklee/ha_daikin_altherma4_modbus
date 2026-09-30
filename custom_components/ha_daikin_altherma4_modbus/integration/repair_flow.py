@@ -5,7 +5,11 @@ import logging
 from homeassistant import config_entries
 
 try:
-    from homeassistant.const import CONF_HOST, CONF_PORT
+    # Module alias: homeassistant declares these as Final (no direct rebinding).
+    from homeassistant import const as _ha_const
+
+    CONF_HOST = _ha_const.CONF_HOST
+    CONF_PORT = _ha_const.CONF_PORT
 except ImportError:  # pragma: no cover - fallback only without Home Assistant
     CONF_HOST = "host"
     CONF_PORT = "port"

@@ -169,7 +169,7 @@ class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self.coordinator.data.get(self._register_name) is not None
+        return is_entity_available(self.coordinator.data, self._register_name)
 
     @property
     def is_on(self):

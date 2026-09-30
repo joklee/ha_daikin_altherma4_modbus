@@ -72,6 +72,22 @@ def _load_number_module(monkeypatch):
         data.get("value") if isinstance(data, dict) else None
     )
     common_module.is_entity_available = lambda data, name: True
+
+    def _is_unavailable(value):
+        if value is None:
+            return True
+        if isinstance(value, float) and round(value, 2) in (
+            327.65,
+            327.66,
+            327.67,
+        ):
+            return True
+        try:
+            return int(value) in (32765, 32766, 32767)
+        except (ValueError, TypeError):
+            return True
+
+    common_module.is_unavailable_value = _is_unavailable
     common_module.safe_write_register = AsyncMock()
     common_module.to_signed_16bit = lambda x: x if x < 32768 else x - 65536
     common_module.to_unsigned_16bit = lambda x: x if x >= 0 else x + 65536
@@ -657,6 +673,22 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
         data.get("value") if isinstance(data, dict) else None
     )
     common_module.is_entity_available = lambda data, name: True
+
+    def _is_unavailable(value):
+        if value is None:
+            return True
+        if isinstance(value, float) and round(value, 2) in (
+            327.65,
+            327.66,
+            327.67,
+        ):
+            return True
+        try:
+            return int(value) in (32765, 32766, 32767)
+        except (ValueError, TypeError):
+            return True
+
+    common_module.is_unavailable_value = _is_unavailable
     common_module.to_signed_16bit = lambda x: x if x < 32768 else x - 65536
     common_module.to_unsigned_16bit = lambda x: x if x >= 0 else x + 65536
 

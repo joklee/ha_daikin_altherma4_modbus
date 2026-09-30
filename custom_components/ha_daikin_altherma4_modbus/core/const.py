@@ -84,20 +84,34 @@ DHW_ON = True
 
 # Special Modbus register return values (Daikin HomeHub)
 # These values are returned when reading a register as signed or unsigned 16-bit.
-SPECIAL_REGISTER_NOT_SUPPORTED = 32767  # Device does not support the requested register
-SPECIAL_REGISTER_NOT_AVAILABLE = (
-    32766  # Register not available in current configuration
-)
-SPECIAL_REGISTER_WAITING = 32765  # Register value not yet loaded
-
-# Set of all special/unavailable register values
-SPECIAL_REGISTER_VALUES = frozenset(
-    {
-        SPECIAL_REGISTER_NOT_SUPPORTED,
+# Single source of truth lives in common/const.py; re-exported here for
+# backwards compatibility (tests patch either module).
+try:
+    from ..common.const import (
+        SCALED_SPECIAL_REGISTER_VALUES,
         SPECIAL_REGISTER_NOT_AVAILABLE,
+        SPECIAL_REGISTER_NOT_SUPPORTED,
+        SPECIAL_REGISTER_VALUES,
         SPECIAL_REGISTER_WAITING,
-    }
-)
+    )
+except ImportError:  # pragma: no cover - fallback only without common module
+    SPECIAL_REGISTER_NOT_SUPPORTED = (
+        32767  # Device does not support the requested register
+    )
+    SPECIAL_REGISTER_NOT_AVAILABLE = (
+        32766  # Register not available in current configuration
+    )
+    SPECIAL_REGISTER_WAITING = 32765  # Register value not yet loaded
+
+    # Set of all special/unavailable register values
+    SPECIAL_REGISTER_VALUES = frozenset(
+        {
+            SPECIAL_REGISTER_NOT_SUPPORTED,
+            SPECIAL_REGISTER_NOT_AVAILABLE,
+            SPECIAL_REGISTER_WAITING,
+        }
+    )
+    SCALED_SPECIAL_REGISTER_VALUES = frozenset({327.67, 327.66, 327.65})
 
 # Service names
 SERVICE_SET_OPERATION_MODE = "set_operation_mode"

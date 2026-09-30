@@ -9,6 +9,7 @@ from ..common import (
     get_register_scale,
     get_register_value,
     is_entity_available,
+    is_unavailable_value,
     safe_write_register,
 )
 from ..core.const import DOMAIN
@@ -120,14 +121,14 @@ class DaikinNumber(CoordinatorEntity, NumberEntity):
         if val is None:
             return None
 
+        # Central unavailable check (raw 32765/66/67 + scaled 327.65/66/67).
+        if is_unavailable_value(val):
+            return None
+
         # Convert to integer if it's a string
         try:
             val = int(val)
         except (ValueError, TypeError):
-            return None
-
-        # Return None for unavailable value (32765 or 32766)
-        if val == 32765 or val == 32766:
             return None
 
         # Wenn enum_map vorhanden, den enum-Wert zurückgeben

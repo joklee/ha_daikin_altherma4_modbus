@@ -205,6 +205,47 @@ class TestIsUnavailableValue:
         assert is_unavailable_value(32766.0) is True
         assert is_unavailable_value(32765.0) is True
 
+    def test_scaled_guard_values_are_unavailable(self):
+        """Already-scaled specials (0.01 types) must stay unavailable.
+
+        mapping_transform never produces these (specials stay raw), but
+        legacy/cached/test payloads may carry 327.65/327.66/327.67.
+        """
+        assert is_unavailable_value(327.67) is True
+        assert is_unavailable_value(327.66) is True
+        assert is_unavailable_value(327.65) is True
+        assert validate_register_value(327.67) is False
+        assert validate_register_value(327.66) is False
+        assert validate_register_value(327.65) is False
+
+    def test_scaled_guard_float_artefact(self):
+        """Binary float artefacts must not slip through (327.659999...)."""
+        assert is_unavailable_value(327.6599999) is True
+        assert is_unavailable_value(327.6600001) is True
+
+    def test_scaled_guard_string_and_nearby_values(self):
+        """Numeric strings of scaled specials; nearby values stay valid."""
+        assert is_unavailable_value("327.66") is True
+        assert validate_register_value("327.66") is False
+        # 327.64 / 327.68 are ordinary scaled measurements, not markers.
+        assert is_unavailable_value(327.64) is False
+        assert is_unavailable_value(327.68) is False
+        assert validate_register_value(327.64) is True
+
+    def test_keyword_strings_and_bool_and_exotic_types(self):
+        """Keywords unavailable; bools are real states; exotic types safe."""
+        assert is_unavailable_value("unknown") is True
+        assert is_unavailable_value("unavailable") is True
+        assert is_unavailable_value("") is True
+        assert is_unavailable_value(True) is False
+        assert is_unavailable_value(False) is False
+        assert validate_register_value(True) is True
+        # datetime / arbitrary objects must not raise, count as unavailable.
+        from datetime import datetime, timezone
+
+        assert is_unavailable_value(datetime(2026, 1, 1, tzinfo=timezone.utc)) is True
+        assert is_unavailable_value(object()) is True
+
 
 # ── is_entity_available ─────────────────────────────────────────────────
 

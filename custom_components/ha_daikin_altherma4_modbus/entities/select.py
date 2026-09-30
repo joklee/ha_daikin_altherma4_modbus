@@ -10,6 +10,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from ..common import (
     get_coordinator_from_entry,
     get_register_value,
+    is_unavailable_value,
     safe_write_register,
 )
 from ..core.const import DOMAIN
@@ -99,12 +100,17 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
         if val is None:
             return False
         try:
-            int_val = int(val)
+            int_val = int(float(val))
         except (ValueError, TypeError):
             return False
         # For select entities, values in enum_map are always available
-        # even if they are 32765 or 32766 (e.g., DHW mode "Off" = 32766)
-        return int_val in self._enum_map or int_val not in [32765, 32766]
+        # even if they are 32765 or 32766 (e.g., DHW mode "Off" = 32766).
+        # 32767 (not supported) is never a valid option.
+        if int_val == 32767 and 32767 not in self._enum_map:
+            return False
+        if int_val in self._enum_map:
+            return True
+        return not is_unavailable_value(val)
 
     @property
     def current_option(self):
@@ -112,10 +118,12 @@ class DaikinSelect(CoordinatorEntity, SelectEntity):
 
         if data:
             val = get_register_value(data)
+            if val is None:
+                return None
 
             # Convert to integer if it's a string
             try:
-                val = int(val)
+                val = int(float(val))
             except (ValueError, TypeError):
                 return None
 
