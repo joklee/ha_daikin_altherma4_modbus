@@ -1,10 +1,12 @@
 try:
-    from homeassistant.const import CONF_HOST, CONF_PORT, EntityCategory
+    # Module alias: homeassistant declares CONF_HOST/CONF_PORT as Final, so
+    # importing the names directly would forbid the fallback assignments below.
+    from homeassistant import const as _ha_const
+
+    CONF_HOST = _ha_const.CONF_HOST
+    CONF_PORT = _ha_const.CONF_PORT
 except ImportError:  # pragma: no cover - fallback only without Home Assistant
     # Fallback for testing when homeassistant is not available
-    class EntityCategory:
-        DIAGNOSTIC = "diagnostic"
-
     CONF_HOST = "host"
     CONF_PORT = "port"
 

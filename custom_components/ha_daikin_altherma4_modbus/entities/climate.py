@@ -256,12 +256,14 @@ class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
         # Convert signed integer to unsigned 16-bit safely
         offset_raw = to_unsigned_16bit(offset_raw)
 
-        # Get operation mode from input_38 before try block
-        offset_data = self._get_offset_data()
-        if offset_data is None:
-            _LOGGER.debug("Skipping thermostat offset write: offset unavailable")
+        # Get operation mode directly: the write target depends only on the
+        # mode, not on the current offset value (which may be unavailable).
+        op_mode_raw = self._get_operation_mode()
+        if op_mode_raw is None:
+            _LOGGER.debug(
+                "Skipping thermostat offset write: operation mode unavailable"
+            )
             return
-        op_mode_raw = offset_data["op_mode_raw"]
 
         if op_mode_raw == HVAC_COOL:
             await safe_write_register(

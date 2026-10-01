@@ -31,9 +31,16 @@ def _restore_module_state():
     sys.modules.update(snapshot)
 
 
-def _reset_modules(*names: str) -> None:
+def _reset_modules(monkeypatch, *names: str) -> None:
+    """Remove modules via monkeypatch so teardown restores them exactly.
+
+    A raw sys.modules.pop() here would race with the snapshot fixture below:
+    fixture teardowns may run before monkeypatch teardown, in which case a
+    raw pop permanently deletes a module that monkeypatch later also deletes
+    instead of restoring. monkeypatch.delitem is LIFO-safe either way.
+    """
     for name in names:
-        sys.modules.pop(name, None)
+        monkeypatch.delitem(sys.modules, name, raising=False)
 
 
 def _install_fake_package(monkeypatch) -> str:
@@ -55,11 +62,44 @@ def _load_climate_module(monkeypatch):
     const_name = f"{package_name}.core.const"
 
     _reset_modules(
+        monkeypatch,
         module_name,
         const_name,
         "homeassistant.components.climate",
         "homeassistant.components.climate.const",
     )
+
+    # Stub sibling entity modules (not the SUT): the real entities/__init__
+    # imports every entity module, which would pull sensor/switch/select and
+    # the whole integration package against the minimal HA stubs. The package
+    # itself stays real, so no orphaned parent/child sys.modules state leaks
+    # into other test files.
+    _stub_names = {
+        f"{package_name}.entities.binary_sensor": (
+            "DaikinBinarySensor",
+            "DaikinDiscreteInputSensor",
+        ),
+        f"{package_name}.entities.number": ("DaikinNumber",),
+        f"{package_name}.entities.select": ("DaikinSelect",),
+        f"{package_name}.entities.sensor": (
+            "CalculatedCoPSensor",
+            "DaikinInputSensor",
+            "DeltaTSensor",
+            "ExternalElectricPowerSensor",
+            "LastTriggeredSensor",
+            "ThermalHeatOutput",
+        ),
+        f"{package_name}.entities.switch": (
+            "DaikinCoilSwitch",
+            "DaikinHoldingSwitch",
+        ),
+    }
+    _reset_modules(monkeypatch, *_stub_names)
+    for stub_name, attrs in _stub_names.items():
+        stub_module = types.ModuleType(stub_name)
+        for attr in attrs:
+            setattr(stub_module, attr, object)
+        monkeypatch.setitem(sys.modules, stub_name, stub_module)
 
     climate_component_module = types.ModuleType("homeassistant.components.climate")
     climate_component_module.ClimateEntity = object
