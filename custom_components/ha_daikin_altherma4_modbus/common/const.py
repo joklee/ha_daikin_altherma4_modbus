@@ -11,7 +11,9 @@ DOMAIN = "ha_daikin_altherma4_modbus"
 # Primary check is always the raw 16-bit value; the scaled set is only a
 # defensive guard for payloads that were already scaled (e.g. 32766 * 0.01).
 SPECIAL_REGISTER_NOT_SUPPORTED = 32767  # Register not supported by device
-SPECIAL_REGISTER_NOT_AVAILABLE = 32766  # Register not available in current configuration
+SPECIAL_REGISTER_NOT_AVAILABLE = (
+    32766  # Register not available in current configuration
+)
 SPECIAL_REGISTER_WAITING = 32765  # Waiting for value (not yet loaded)
 
 SPECIAL_REGISTER_VALUES = frozenset(
