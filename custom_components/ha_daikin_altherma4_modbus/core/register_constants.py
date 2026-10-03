@@ -682,7 +682,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=0,
         max_value=100,
-        step=1,
+        step=0.5,
         translation_key="holding_1",
     ),
     NumberRegister(
@@ -694,7 +694,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=0,
         max_value=100,
-        step=1,
+        step=0.5,
         translation_key="holding_2",
     ),
     SelectRegister(
@@ -726,7 +726,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=12,
         max_value=30,
-        step=1,
+        step=0.5,
         translation_key="holding_6",
     ),
     NumberRegister(
@@ -738,7 +738,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=12,
         max_value=35,
-        step=1,
+        step=0.5,
         translation_key="holding_7",
     ),
     SelectRegister(
@@ -759,7 +759,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=30,
         max_value=85,
-        step=1,
+        step=0.5,
         translation_key="holding_10",
     ),
     SwitchRegister(
@@ -780,7 +780,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=30,
         max_value=85,
-        step=1,
+        step=0.5,
         translation_key="holding_14",
     ),
     SwitchRegister(
@@ -801,7 +801,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=30,
         max_value=85,
-        step=1,
+        step=0.5,
         translation_key="holding_16",
     ),
     NumberRegister(
@@ -813,7 +813,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=-10,
         max_value=10,
-        step=1,
+        step=0.5,
         translation_key="holding_54",
     ),
     NumberRegister(
@@ -825,7 +825,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=-10,
         max_value=10,
-        step=1,
+        step=0.5,
         translation_key="holding_55",
     ),
     SelectRegister(
@@ -863,7 +863,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=3,
         max_value=85,
-        step=1,
+        step=0.5,
         translation_key="holding_63",
     ),
     NumberRegister(
@@ -875,7 +875,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=3,
         max_value=85,
-        step=1,
+        step=0.5,
         translation_key="holding_64",
     ),
     NumberRegister(
@@ -887,7 +887,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=-10,
         max_value=10,
-        step=1,
+        step=0.5,
         translation_key="holding_66",
     ),
     NumberRegister(
@@ -899,7 +899,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=-10,
         max_value=10,
-        step=1,
+        step=0.5,
         translation_key="holding_67",
     ),
     SelectRegister(
@@ -947,7 +947,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=12,
         max_value=30,
-        step=1,
+        step=0.5,
         translation_key="holding_76",
     ),
     NumberRegister(
@@ -959,7 +959,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=12,
         max_value=35,
-        step=1,
+        step=0.5,
         translation_key="holding_77",
     ),
     NumberRegister(
@@ -971,7 +971,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=12,
         max_value=30,
-        step=1,
+        step=0.5,
         translation_key="holding_78",
     ),
     NumberRegister(
@@ -983,7 +983,7 @@ HOLDING_REGISTERS = [
         unit="°C",
         min_value=12,
         max_value=35,
-        step=1,
+        step=0.5,
         translation_key="holding_79",
     ),
     SelectRegister(

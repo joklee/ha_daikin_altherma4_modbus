@@ -292,8 +292,8 @@ def test_thermostat_step_min_max_from_catalog_and_fallback(monkeypatch):
     """Step/min/max come from the register catalog, with safe fallbacks."""
     module = _load_climate_module(monkeypatch)
     thermostat = _make_thermostat(module)
-    # Real catalog: holding_7 (heating offset) step 1, range 12..35.
-    assert thermostat.target_temperature_step == pytest.approx(1.0)
+    # Real catalog: holding_7 (heating offset) step 0.5, range 12..35.
+    assert thermostat.target_temperature_step == pytest.approx(0.5)
     assert thermostat.min_temp == pytest.approx(12)
     assert thermostat.max_temp == pytest.approx(35)
 
