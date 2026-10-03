@@ -10,6 +10,11 @@
 
 # Daikin Altherma 4 Modbus Integration for Home Assistant
 
+> **⚠️ Warning**
+>
+> Do not update the MMI user interface firmware to 4.x (tested with 4.1.0) if you rely on the return water temperature, Delta-T, thermal power or CoP.
+> After the update, input_42 no longer reports the real return water temperature (see above). As far as I know, there is no way to roll back the MMI firmware via ONECTA, so the update cannot be easily undone.
+
 **Short description:** This integration connects Daikin Altherma 4 heat pumps (EPSX series) to Home Assistant via Modbus TCP. It provides comprehensive monitoring of temperatures, power consumption, and operating states, as well as control of heating zones, domestic hot water, and operation modes.
 
 **⚠️ WARNING: Use at your own risk! This integration modifies heat pump settings. Incorrect configuration may damage your equipment or void your warranty. Always consult the official Daikin documentation before making changes.**
