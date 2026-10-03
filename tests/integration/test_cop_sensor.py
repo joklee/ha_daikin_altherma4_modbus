@@ -312,6 +312,9 @@ def _load_sensor_module(monkeypatch):
     common_module.get_coordinator_from_entry = lambda hass, entry: getattr(
         getattr(entry, "runtime_data", None), "coordinator", None
     )
+    common_module.RegisterVersionDeviceInfoMixin = type(
+        "RegisterVersionDeviceInfoMixin", (), {}
+    )
     monkeypatch.setitem(sys.modules, common_module_name, common_module)
 
     # Create config_entry_utils module

@@ -256,8 +256,9 @@ class ModbusMappingTransform:
 
         Accepts legacy response objects (``.bits`` 1-based array) and flat
         ``list[bool]`` unit reads. Flat bit reads always start at address 1
-        (repository reads ``(1, 26)`` / ``(1, 3)``), so index ``address - 1``
-        applies; failures raise instead of returning error responses.
+        (repository reads ``(1, 26)`` on register map v3 / ``(1, 25)`` on v4,
+        plus ``(1, 3)`` for coils), so index ``address - 1`` applies; failures
+        raise instead of returning error responses.
         """
         data: StateData = {}
         is_flat = isinstance(result, (list, tuple))

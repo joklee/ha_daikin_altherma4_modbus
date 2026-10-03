@@ -6,7 +6,12 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..common import get_register_value, is_entity_available, safe_write_register
+from ..common import (
+    RegisterVersionDeviceInfoMixin,
+    get_register_value,
+    is_entity_available,
+    safe_write_register,
+)
 from ..core.const import DOMAIN
 from ..core.register_constants import (
     COIL_DEVICE_INFO,
@@ -67,7 +72,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(entities)
 
 
-class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
+class DaikinCoilSwitch(RegisterVersionDeviceInfoMixin, CoordinatorEntity, SwitchEntity):
     """A Switch for Coil Register."""
 
     _attr_has_entity_name = True
@@ -124,7 +129,9 @@ class DaikinCoilSwitch(CoordinatorEntity, SwitchEntity):
         _LOGGER.debug(f"Successfully turned off coil {self._address}")
 
 
-class DaikinHoldingSwitch(CoordinatorEntity, SwitchEntity):
+class DaikinHoldingSwitch(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SwitchEntity
+):
     """A Switch for Holding Register."""
 
     _attr_has_entity_name = True

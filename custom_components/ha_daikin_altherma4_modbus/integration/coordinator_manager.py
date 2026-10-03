@@ -253,6 +253,19 @@ class UnifiedWriteProxy:
         self._normal_coordinator = normal_coordinator
         self._slow_coordinator = slow_coordinator
 
+    @property
+    def register_version(self) -> str | None:
+        """Detected register-map version ("v2/v3"/"v4") or None if unknown."""
+        for coordinator in (self._normal_coordinator, self._slow_coordinator):
+            version = getattr(
+                getattr(coordinator, "data_manager", None),
+                "register_version",
+                None,
+            )
+            if version is not None:
+                return version
+        return None
+
     async def _async_fire_write_event(self, register_name: str, value: Any) -> None:
         """Fire domain event for write operations."""
         event_data = {
