@@ -60,7 +60,9 @@ async def test_snapshot_shape_and_raw_keying() -> None:
     assert snapshot["input"][50] == 32767
     assert len(snapshot["holding"]) == 80
     assert snapshot["holding"][0] == 42
-    assert len(snapshot["discrete"]) == 26
+    # Fallback while the register map is unknown: version-specific discrete
+    # input 26 is never requested, the batch goes straight to 1-25.
+    assert len(snapshot["discrete"]) == 25
     assert snapshot["discrete"][0] is True
     assert len(snapshot["coil"]) == 3
     assert snapshot["coil"][0] is True

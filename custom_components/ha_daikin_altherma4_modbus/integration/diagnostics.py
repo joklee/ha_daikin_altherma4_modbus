@@ -72,11 +72,20 @@ async def async_get_config_entry_diagnostics(
         "discrete": {},
     }
     failed: dict[str, str] = {}
+    register_version: str | None = None
     for coordinator in manager.coordinators.values():
         data_manager = getattr(coordinator, "data_manager", None)
         read_raw_snapshot = getattr(data_manager, "read_raw_snapshot", None)
         if not callable(read_raw_snapshot):
             continue
+        detect_register_version = getattr(data_manager, "detect_register_version", None)
+        if callable(detect_register_version) and register_version is None:
+            try:
+                register_version = await detect_register_version()
+            except Exception as err:
+                failed.setdefault("register_version", f"{type(err).__name__}: {err}")
+        if register_version is None:
+            register_version = getattr(data_manager, "register_version", None)
         try:
             space_map, space_failed = await read_raw_snapshot()
         except Exception as err:
@@ -88,6 +97,7 @@ async def async_get_config_entry_diagnostics(
             failed.setdefault(space, error)
     diagnostics_data["registers"] = registers
     diagnostics_data["failed"] = failed
+    diagnostics_data["register_version"] = register_version
     diagnostics_data["updated"] = sorted(
         space for space, values in registers.items() if values
     )
@@ -102,5 +112,6 @@ async def async_get_config_entry_diagnostics(
         "coordinator_data": diagnostics_data["coordinator_data"],
         "registers": diagnostics_data["registers"],
         "failed": diagnostics_data["failed"],
+        "register_version": diagnostics_data["register_version"],
         "updated": diagnostics_data["updated"],
     }

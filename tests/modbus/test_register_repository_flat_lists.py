@@ -9,7 +9,8 @@ code over a scripted flat-list client:
 * optimized batch reads succeed without any ``is_error()`` inspection;
 * ``ModbusInvalidAddressException`` (from ``IllegalDataAddressError``) is
   treated as "device does not support this range": holding fallback runs,
-  discrete/coils degrade to ``None``, no reconnect retry is spent;
+  a refused discrete 1-26 batch falls back to 1-25 (register map v4
+  learning), coils degrade to ``None``, no reconnect retry is spent;
 * transient read failures still retry once (discrete/coils/holding chunks);
 * writes returning ``None`` (unit ``write_register``/``write_coil`` contract)
   report success with exact address + raw value preserved.
@@ -166,11 +167,35 @@ async def test_input_invalid_address_degrades_without_retry() -> None:
     assert session.reconnect_count == 0
 
 
-async def test_discrete_invalid_address_returns_none_without_retry() -> None:
-    repository, _client, session = _repository(
-        [ModbusInvalidAddressException("illegal data address")]
+async def test_discrete_invalid_address_falls_back_to_v4_batch() -> None:
+    # Known v2/v3 map, but the device refuses 1-26: narrow to v4 and retry
+    # as 1-25 (no reconnect — a refused register cannot reappear).
+    repository, client, session = _repository(
+        [ModbusInvalidAddressException("illegal data address"), [True] * 25]
+    )
+    repository._supports_discrete_26 = True
+    assert await repository.read_discrete_inputs() == [True] * 25
+    assert client.calls == [("discrete", 1, 26), ("discrete", 1, 25)]
+    assert session.reconnect_count == 0
+
+
+async def test_discrete_unknown_map_polls_reduced_batch() -> None:
+    # Fallback while the register map is unknown: version-specific register
+    # 26 is never requested, the batch goes straight to 1-25.
+    repository, client, session = _repository([[True] * 25])
+    assert await repository.read_discrete_inputs() == [True] * 25
+    assert client.calls == [("discrete", 1, 25)]
+    assert session.reconnect_count == 0
+
+
+async def test_discrete_v4_batch_invalid_address_returns_none_without_retry() -> None:
+    # Unknown map polls the reduced 1-25 batch straight away; a refusal
+    # there degrades to None without a reconnect retry.
+    repository, client, session = _repository(
+        [ModbusInvalidAddressException("no discretes at all")]
     )
     assert await repository.read_discrete_inputs() is None
+    assert client.calls == [("discrete", 1, 25)]
     assert session.reconnect_count == 0
 
 

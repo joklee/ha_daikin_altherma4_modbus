@@ -2,7 +2,9 @@
 
 from .helpers import (
     BaseEntityMixin,
+    RegisterVersionDeviceInfoMixin,
     clamp_16bit,
+    device_info_with_register_version,
     get_coordinator_from_entry,
     get_coordinator_register_data,
     get_register_config,
@@ -10,6 +12,7 @@ from .helpers import (
     get_register_value,
     is_entity_available,
     is_unavailable_value,
+    resolve_register_version,
     safe_write_register,
     to_signed_16bit,
     to_unsigned_16bit,
@@ -19,7 +22,9 @@ from .helpers import (
 
 __all__ = [
     "BaseEntityMixin",
+    "RegisterVersionDeviceInfoMixin",
     "clamp_16bit",
+    "device_info_with_register_version",
     "get_coordinator_from_entry",
     "get_coordinator_register_data",
     "get_register_config",
@@ -27,6 +32,7 @@ __all__ = [
     "get_register_value",
     "is_entity_available",
     "is_unavailable_value",
+    "resolve_register_version",
     "safe_write_register",
     "to_signed_16bit",
     "to_unsigned_16bit",

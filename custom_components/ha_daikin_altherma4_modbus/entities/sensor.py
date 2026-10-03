@@ -7,6 +7,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from ..common import (
+    RegisterVersionDeviceInfoMixin,
     get_register_value,
     is_entity_available,
     is_unavailable_value,
@@ -292,7 +293,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     unified_coordinator.async_add_listener(_check_abnormality)
 
 
-class DaikinInputSensor(CoordinatorEntity, SensorEntity):
+class DaikinInputSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity
+):
     """A Sensor for Input-Register."""
 
     _attr_has_entity_name = True
@@ -440,7 +443,9 @@ def calculate_thermal_heat_output(coordinator):
     return round(thermal_heat_output, 2)
 
 
-class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
+class ThermalHeatOutput(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity
+):
     """Berechneter Sensor für Wärmepumpenleistung."""
 
     _attr_has_entity_name = True
@@ -478,7 +483,9 @@ class ThermalHeatOutput(CoordinatorEntity, SensorEntity):
         return self._calculate_thermal_heat_output()
 
 
-class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
+class CalculatedCoPSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity
+):
     """Berechneter Sensor für Coefficient of Performance (CoP)."""
 
     _attr_has_entity_name = True
@@ -556,7 +563,9 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
             return None
 
 
-class LastTriggeredSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
+class LastTriggeredSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity, RestoreEntity
+):
     """Sensor für das letzte Auslösen eines Binärsensors."""
 
     _attr_has_entity_name = True
@@ -637,7 +646,9 @@ class LastTriggeredSensor(CoordinatorEntity, SensorEntity, RestoreEntity):
         return self._restored_value
 
 
-class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
+class ExternalElectricPowerSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity
+):
     """Sensor für externen elektrischen Leistungssensor."""
 
     _attr_has_entity_name = True
@@ -708,7 +719,7 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
         return None
 
 
-class DeltaTSensor(CoordinatorEntity, SensorEntity):
+class DeltaTSensor(RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity):
     """Calculated sensor for temperature difference (Delta-T)."""
 
     _attr_has_entity_name = True
@@ -755,7 +766,9 @@ class DeltaTSensor(CoordinatorEntity, SensorEntity):
         return round(delta_t, 2)
 
 
-class AbnormalityDecodedSensor(CoordinatorEntity, SensorEntity):
+class AbnormalityDecodedSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity
+):
     """Decoded abnormality fault code, e.g. "7H-19" (issue #79).
 
     Decodes input_22 (16-bit decimal with ASCII bytes) and combines it
@@ -822,7 +835,9 @@ class AbnormalityDecodedSensor(CoordinatorEntity, SensorEntity):
         }
 
 
-class ConnectionTimestampSensor(CoordinatorEntity, SensorEntity):
+class ConnectionTimestampSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity
+):
     """Diagnostic sensor: last successful read/write via the Modbus backend.
 
     Lives on the "Enhanced" device. The value is served live from the
@@ -883,7 +898,9 @@ class ConnectionTimestampSensor(CoordinatorEntity, SensorEntity):
         return dt_util.utc_from_timestamp(stamp)
 
 
-class ConnectionErrorSensor(CoordinatorEntity, SensorEntity):
+class ConnectionErrorSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity
+):
     """Diagnostic sensor: failed reads/writes via the Modbus backend.
 
     Lives on the "Enhanced" device. The native value is the total failure
@@ -952,7 +969,9 @@ class ConnectionErrorSensor(CoordinatorEntity, SensorEntity):
         }
 
 
-class ConnectionStateSensor(CoordinatorEntity, SensorEntity):
+class ConnectionStateSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity
+):
     """Diagnostic sensor: connection state as text.
 
     Lives on the "Enhanced" device. Reports ``connected`` while any
@@ -999,7 +1018,9 @@ class ConnectionStateSensor(CoordinatorEntity, SensorEntity):
         return "connected" if manager.connection_active else "disconnected"
 
 
-class ConsecutiveFailuresSensor(CoordinatorEntity, SensorEntity):
+class ConsecutiveFailuresSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity
+):
     """Diagnostic sensor: highest consecutive-failure count across coordinators.
 
     Lives on the "Enhanced" device. Counts down to a repair issue: 0 means
