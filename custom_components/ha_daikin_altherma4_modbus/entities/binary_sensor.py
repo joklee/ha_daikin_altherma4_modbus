@@ -7,7 +7,12 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.const import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..common import get_coordinator_from_entry, get_register_value, is_entity_available
+from ..common import (
+    RegisterVersionDeviceInfoMixin,
+    get_coordinator_from_entry,
+    get_register_value,
+    is_entity_available,
+)
 from ..core.const import DOMAIN
 from ..core.register_constants import (
     CALCULATED_DEVICE_INFO,
@@ -104,7 +109,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(entities)
 
 
-class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class DaikinBinarySensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, BinarySensorEntity
+):
     """Ein Binary Sensor für Modbus-Register."""
 
     _attr_has_entity_name = True
@@ -145,7 +152,9 @@ class DaikinBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return val == 1
 
 
-class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
+class DaikinDiscreteInputSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, BinarySensorEntity
+):
     """A Binary Sensor for Discrete Input Register."""
 
     _attr_has_entity_name = True
@@ -189,7 +198,9 @@ class DaikinDiscreteInputSensor(CoordinatorEntity, BinarySensorEntity):
         return val == 1
 
 
-class ConnectionActiveSensor(CoordinatorEntity, BinarySensorEntity):
+class ConnectionActiveSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, BinarySensorEntity
+):
     """Diagnostic sensor: is the shared Modbus transport connected?
 
     Lives on the "Enhanced" device. The value is served live from the
@@ -238,7 +249,9 @@ class ConnectionActiveSensor(CoordinatorEntity, BinarySensorEntity):
         return bool(manager.connection_active)
 
 
-class DeviceReachableSensor(CoordinatorEntity, BinarySensorEntity):
+class DeviceReachableSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, BinarySensorEntity
+):
     """Primary health metric: did the device recently answer polls?
 
     Lives on the "Enhanced" device. Unlike :class:`ConnectionActiveSensor`

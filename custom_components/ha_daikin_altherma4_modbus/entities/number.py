@@ -5,6 +5,7 @@ from homeassistant.components.number import NumberEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..common import (
+    RegisterVersionDeviceInfoMixin,
     get_register_config,
     get_register_scale,
     get_register_value,
@@ -66,7 +67,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(entities)
 
 
-class DaikinNumber(CoordinatorEntity, NumberEntity):
+class DaikinNumber(RegisterVersionDeviceInfoMixin, CoordinatorEntity, NumberEntity):
     _attr_has_entity_name = True
     _attr_log_when_unavailable = False
 

@@ -99,6 +99,55 @@ class BaseEntityMixin:
         self._entry = entry
 
 
+REGISTER_VERSION_UNKNOWN_LABEL = "Register unbekannt"
+
+
+def resolve_register_version(coordinator: Any) -> str | None:
+    """Return the detected Modbus register-map version or None if unknown.
+
+    The version ("v2/v3" for MMI v2/v3, "v4" for MMI v4.x) is detected once
+    per connection by probing version-discriminating registers and cached on
+    the repository behind ``data_manager``.
+    """
+    data_manager = getattr(coordinator, "data_manager", None)
+    return getattr(data_manager, "register_version", None)
+
+
+def device_info_with_register_version(
+    base_device_info: dict | None, register_version: str | None
+) -> dict:
+    """Copy base device info with the register-map version as sw_version.
+
+    Shows "Register v2/v3" / "Register v4" once detected and
+    "Register unbekannt" while the map is still unknown.
+    """
+    info = dict(base_device_info or {})
+    info["sw_version"] = (
+        f"Register {register_version}"
+        if register_version
+        else REGISTER_VERSION_UNKNOWN_LABEL
+    )
+    return info
+
+
+class RegisterVersionDeviceInfoMixin:
+    """Merge the detected register-map version into the device info.
+
+    Reads the static ``_attr_device_info`` assigned by the entity and
+    returns a copy carrying the detected Modbus register map as
+    ``sw_version`` (visible under Geräte-Informationen), or
+    "Register unbekannt" while the map is still unknown.
+    """
+
+    @property
+    def device_info(self) -> dict:
+        """Return device info enriched with the register-map version."""
+        return device_info_with_register_version(
+            getattr(self, "_attr_device_info", None),
+            resolve_register_version(getattr(self, "coordinator", None)),
+        )
+
+
 def update_value_if_changed(
     unique_id: str,
     raw_value: Any,

@@ -13,6 +13,7 @@ from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..common import (
+    RegisterVersionDeviceInfoMixin,
     get_coordinator_register_data,
     get_register_scale,
     get_register_value,
@@ -57,7 +58,9 @@ _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
 
 
-class DaikinThermostatClimate(CoordinatorEntity, ClimateEntity):
+class DaikinThermostatClimate(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, ClimateEntity
+):
     """Climate Entity for Daikin Altherma 4 Thermostat Control."""
 
     _attr_has_entity_name = True
@@ -402,7 +405,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     _LOGGER.debug("Setup Daikin Thermostat Climate entities")
 
 
-class DaikinDHWThermostat(CoordinatorEntity, ClimateEntity):
+class DaikinDHWThermostat(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, ClimateEntity
+):
     """Climate Entity for DHW Heat-up (Manual or Booster)."""
 
     _attr_has_entity_name = True

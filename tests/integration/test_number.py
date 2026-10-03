@@ -108,6 +108,9 @@ def _load_number_module(monkeypatch):
         return None
 
     common_module.get_register_config = mock_get_register_config
+    common_module.RegisterVersionDeviceInfoMixin = type(
+        "RegisterVersionDeviceInfoMixin", (), {}
+    )
     monkeypatch.setitem(sys.modules, common_name, common_module)
 
     # Mock const module
@@ -710,6 +713,9 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
     common_module.get_register_config = get_register_config
     common_module.get_coordinator_from_entry = lambda hass, entry: getattr(
         getattr(entry, "runtime_data", None), "coordinator", None
+    )
+    common_module.RegisterVersionDeviceInfoMixin = type(
+        "RegisterVersionDeviceInfoMixin", (), {}
     )
     monkeypatch.setitem(sys.modules, common_name, common_module)
 
