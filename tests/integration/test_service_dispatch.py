@@ -100,7 +100,8 @@ def _sync_cases():
             "set_smart_grid_mode",
             {"smart_grid_mode": "recommended_on"},
             lambda m: m.write_holding_register.assert_called_once_with(
-                "holding_56", services_module.get_smart_grid_mode_map()["recommended_on"]
+                "holding_56",
+                services_module.get_smart_grid_mode_map()["recommended_on"],
             ),
         ),
         (
@@ -133,7 +134,9 @@ def _sync_cases():
         (
             "set_heating_offset",
             {"offset": 2.5},
-            lambda m: m.write_holding_register.assert_called_once_with("holding_54", 250),
+            lambda m: m.write_holding_register.assert_called_once_with(
+                "holding_54", 250
+            ),
         ),
         (
             "set_cooling_offset",

@@ -118,7 +118,8 @@ async def test_start_writes_setpoint_and_request(hass, enable_custom_integration
     entry = await _setup_demo(hass)
     writer, _ = _stub_io(entry, temp=30.0)
 
-    await async_start_dhw_single_heatup(_call(hass, entry.entry_id, target_temperature=48.0)
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0)
     )
 
     writer.write_holding_register.assert_any_call("holding_16", 4800)
@@ -132,10 +133,12 @@ async def test_second_start_while_running_rejected(hass, enable_custom_integrati
     entry = await _setup_demo(hass)
     _stub_io(entry, temp=30.0)
 
-    await async_start_dhw_single_heatup(_call(hass, entry.entry_id, target_temperature=48.0)
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0)
     )
     with pytest.raises(ServiceValidationError):
-        await async_start_dhw_single_heatup(_call(hass, entry.entry_id, target_temperature=50.0)
+        await async_start_dhw_single_heatup(
+            _call(hass, entry.entry_id, target_temperature=50.0)
         )
 
 
@@ -149,7 +152,8 @@ async def test_start_write_failure_raises_without_task(
     entry.runtime_data.coordinator.data_manager = writer
 
     with pytest.raises(HomeAssistantError):
-        await async_start_dhw_single_heatup(_call(hass, entry.entry_id, target_temperature=48.0)
+        await async_start_dhw_single_heatup(
+            _call(hass, entry.entry_id, target_temperature=48.0)
         )
     assert entry.entry_id not in _SINGLE_HEATUP_TASKS
 
@@ -161,7 +165,8 @@ async def test_run_reaches_target(hass, enable_custom_integrations):
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
 
-    await async_start_dhw_single_heatup(_call(hass, entry.entry_id, target_temperature=48.0, hysteresis=0.5)
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0, hysteresis=0.5)
     )
     # An eager task may already have finalized before registration.
     task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
@@ -185,7 +190,11 @@ async def test_run_timeout(hass, enable_custom_integrations, monkeypatch):
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
 
-    await async_start_dhw_single_heatup(_call(hass, entry.entry_id, target_temperature=48.0, timeout=timedelta(seconds=1)))
+    await async_start_dhw_single_heatup(
+        _call(
+            hass, entry.entry_id, target_temperature=48.0, timeout=timedelta(seconds=1)
+        )
+    )
     task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
     if task is not None:
         await asyncio.wait_for(task, timeout=10)
@@ -205,7 +214,9 @@ async def test_cancel_stops_run(hass, enable_custom_integrations, monkeypatch):
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
 
-    await async_start_dhw_single_heatup(_call(hass, entry.entry_id, target_temperature=48.0, timeout=timedelta(hours=2)))
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0, timeout=timedelta(hours=2))
+    )
     assert entry.entry_id in _SINGLE_HEATUP_TASKS
 
     await async_cancel_single_heatup(entry.entry_id)
@@ -222,7 +233,9 @@ async def test_unload_cancels_running_heatup(hass, enable_custom_integrations):
     entry = await _setup_demo(hass)
     _stub_io(entry, temp=30.0)
 
-    await async_start_dhw_single_heatup(_call(hass, entry.entry_id, target_temperature=48.0, timeout=timedelta(hours=2)))
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0, timeout=timedelta(hours=2))
+    )
     assert entry.entry_id in _SINGLE_HEATUP_TASKS
 
     assert await hass.config_entries.async_unload(entry.entry_id) is True
@@ -242,7 +255,11 @@ async def test_run_without_temperature_reading_waits_for_timeout(
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
 
-    await async_start_dhw_single_heatup(_call(hass, entry.entry_id, target_temperature=48.0, timeout=timedelta(seconds=1)))
+    await async_start_dhw_single_heatup(
+        _call(
+            hass, entry.entry_id, target_temperature=48.0, timeout=timedelta(seconds=1)
+        )
+    )
     task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
     if task is not None:
         await asyncio.wait_for(task, timeout=10)
