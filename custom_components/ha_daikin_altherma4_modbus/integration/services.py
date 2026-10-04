@@ -328,8 +328,9 @@ if HAS_HA:
             )
         return entry
 
-    async def async_set_operation_mode(hass, call) -> None:
+    async def async_set_operation_mode(call) -> None:
         """Set the heat pump operation mode."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         operation_mode = call.data[ATTR_OPERATION_MODE]
 
@@ -356,8 +357,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_dhw_state(hass, call) -> None:
+    async def async_set_dhw_state(call) -> None:
         """Enable or disable Domestic Hot Water."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         state = call.data[ATTR_STATE]
 
@@ -376,8 +378,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_main_zone_state(hass, call) -> None:
+    async def async_set_main_zone_state(call) -> None:
         """Enable or disable the main zone."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         state = call.data[ATTR_STATE]
 
@@ -396,8 +399,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_additional_zone_state(hass, call) -> None:
+    async def async_set_additional_zone_state(call) -> None:
         """Enable or disable the additional zone."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         state = call.data[ATTR_STATE]
 
@@ -416,8 +420,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_smart_grid_mode(hass, call) -> None:
+    async def async_set_smart_grid_mode(call) -> None:
         """Set the Smart Grid operation mode."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         smart_grid_mode = call.data.get(ATTR_SMART_GRID_MODE)
 
@@ -452,8 +457,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_quiet_mode(hass, call) -> None:
+    async def async_set_quiet_mode(call) -> None:
         """Set the Quiet mode operation."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         quiet_mode = call.data[ATTR_QUIET_MODE]
 
@@ -481,8 +487,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_dhw_booster_mode(hass, call) -> None:
+    async def async_set_dhw_booster_mode(call) -> None:
         """Set the DHW booster mode."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         booster_mode = call.data[ATTR_BOOSTER_MODE]
 
@@ -502,8 +509,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_dhw_single_heatup(hass, call) -> None:
+    async def async_set_dhw_single_heatup(call) -> None:
         """Set the DHW single heat-up mode and optional setpoint."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         single_heatup = call.data[ATTR_SINGLE_HEATUP]
         setpoint = call.data.get(ATTR_SETPOINT)
@@ -539,8 +547,9 @@ if HAS_HA:
                 config_entry_id,
             )
 
-    async def async_set_power_limit(hass, call) -> None:
+    async def async_set_power_limit(call) -> None:
         """Set the imposed power limit."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         power_limit = call.data[ATTR_POWER_LIMIT]
 
@@ -561,8 +570,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_heating_offset(hass, call) -> None:
+    async def async_set_heating_offset(call) -> None:
         """Set the weather-dependent heating offset."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         offset = call.data[ATTR_OFFSET]
 
@@ -583,8 +593,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_cooling_offset(hass, call) -> None:
+    async def async_set_cooling_offset(call) -> None:
         """Set the weather-dependent cooling offset."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         offset = call.data[ATTR_OFFSET]
 
@@ -605,8 +616,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_room_heating_setpoint(hass, call) -> None:
+    async def async_set_room_heating_setpoint(call) -> None:
         """Set the room thermostat heating setpoint."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         setpoint = call.data[ATTR_SETPOINT]
 
@@ -627,8 +639,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_room_cooling_setpoint(hass, call) -> None:
+    async def async_set_room_cooling_setpoint(call) -> None:
         """Set the room thermostat cooling setpoint."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         setpoint = call.data[ATTR_SETPOINT]
 
@@ -649,8 +662,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_additional_zone_setpoint(hass, call) -> None:
+    async def async_set_additional_zone_setpoint(call) -> None:
         """Set the additional zone setpoint."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         setpoint = call.data[ATTR_SETPOINT]
 
@@ -671,8 +685,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_refresh_connection(hass, call) -> None:
+    async def async_refresh_connection(call) -> None:
         """Refresh the Modbus connection for the specified entry."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
@@ -752,13 +767,14 @@ if HAS_HA:
                 current,
             )
 
-    async def async_start_dhw_single_heatup(hass, call) -> None:
+    async def async_start_dhw_single_heatup(call) -> None:
         """Heat DHW once to a target temperature with timeout (issue #21).
 
         Writes the setpoint, starts the request and returns immediately;
         a background task watches the DHW temperature, stops the request
         on target/timeout and fires ``EVENT_DHW_SINGLE_HEATUP_FINISHED``.
         """
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         target = float(call.data[ATTR_TARGET_TEMPERATURE])
         # Schema defaults only apply through HA's service layer; fall back
@@ -831,55 +847,55 @@ if HAS_HA:
 
 else:  # pragma: no cover - dummies only without Home Assistant
     # Dummy functions for testing imports
-    async def async_set_operation_mode(hass, call):
+    async def async_set_operation_mode(call):
         pass
 
-    async def async_set_dhw_state(hass, call):
+    async def async_set_dhw_state(call):
         pass
 
-    async def async_set_main_zone_state(hass, call):
+    async def async_set_main_zone_state(call):
         pass
 
-    async def async_set_additional_zone_state(hass, call):
+    async def async_set_additional_zone_state(call):
         pass
 
-    async def async_set_smart_grid_mode(hass, call):
+    async def async_set_smart_grid_mode(call):
         pass
 
-    async def async_set_quiet_mode(hass, call):
+    async def async_set_quiet_mode(call):
         pass
 
-    async def async_set_dhw_booster_mode(hass, call):
+    async def async_set_dhw_booster_mode(call):
         pass
 
-    async def async_set_dhw_single_heatup(hass, call):
+    async def async_set_dhw_single_heatup(call):
         pass
 
-    async def async_start_dhw_single_heatup(hass, call):
+    async def async_start_dhw_single_heatup(call):
         pass
 
     async def async_cancel_single_heatup(config_entry_id: str):
         pass
 
-    async def async_set_power_limit(hass, call):
+    async def async_set_power_limit(call):
         pass
 
-    async def async_set_heating_offset(hass, call):
+    async def async_set_heating_offset(call):
         pass
 
-    async def async_set_cooling_offset(hass, call):
+    async def async_set_cooling_offset(call):
         pass
 
-    async def async_set_room_heating_setpoint(hass, call):
+    async def async_set_room_heating_setpoint(call):
         pass
 
-    async def async_set_room_cooling_setpoint(hass, call):
+    async def async_set_room_cooling_setpoint(call):
         pass
 
-    async def async_set_additional_zone_setpoint(hass, call):
+    async def async_set_additional_zone_setpoint(call):
         pass
 
-    async def async_refresh_connection(hass, call):
+    async def async_refresh_connection(call):
         pass
 
 
