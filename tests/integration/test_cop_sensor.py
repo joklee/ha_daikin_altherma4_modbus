@@ -906,6 +906,108 @@ def test_cop_sensor_none_when_thermal_inputs_missing(monkeypatch):
     assert sensor.native_value is None
 
 
+def test_cop_sensor_with_kw_external_power_sensor(monkeypatch):
+    """CoP must interpret a kW external sensor as watts (consistency)."""
+    sensor_module = _load_sensor_module(monkeypatch)
+
+    states = {
+        "sensor.external_power": SimpleNamespace(
+            state="2.5", attributes={"unit_of_measurement": "kW"}
+        ),
+    }
+    hass = SimpleNamespace(
+        states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
+    )
+    coordinator = SimpleNamespace(
+        hass=hass,
+        data={
+            "input_49": {"value": 10.0},
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+        },
+    )
+    sensor = sensor_module.CalculatedCoPSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(
+            data={}, options={"electric_power_sensor": "sensor.external_power"}
+        ),
+        unique_id="cop",
+        unit="CoP",
+        device_class=None,
+    )
+
+    # heat_power = 10 * 5 * 70 = 3500W, electric_power = 2.5kW = 2500W
+    # CoP = 3500 / 2500 = 1.4
+    assert sensor.native_value == 1.4
+
+
+def test_cop_sensor_unsupported_unit_falls_back_to_modbus(monkeypatch):
+    """An unsupported external unit must not fabricate watts (Modbus fallback)."""
+    sensor_module = _load_sensor_module(monkeypatch)
+
+    states = {
+        "sensor.external_power": SimpleNamespace(
+            state="2.5", attributes={"unit_of_measurement": "MW"}
+        ),
+    }
+    hass = SimpleNamespace(
+        states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
+    )
+    coordinator = SimpleNamespace(
+        hass=hass,
+        data={
+            "input_49": {"value": 10.0},
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+            "input_51": {"value": 1.0},
+        },
+    )
+    sensor = sensor_module.CalculatedCoPSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(
+            data={}, options={"electric_power_sensor": "sensor.external_power"}
+        ),
+        unique_id="cop",
+        unit="CoP",
+        device_class=None,
+    )
+
+    # external MW ignored -> Modbus 1.0kW = 1000W -> CoP = 3500 / 1000 = 3.5
+    assert sensor.native_value == 3.5
+
+
+def test_cop_sensor_unsupported_unit_without_modbus_is_none(monkeypatch):
+    """Unsupported external unit without Modbus data must yield unknown."""
+    sensor_module = _load_sensor_module(monkeypatch)
+
+    states = {
+        "sensor.external_power": SimpleNamespace(
+            state="2.5", attributes={"unit_of_measurement": "MW"}
+        ),
+    }
+    hass = SimpleNamespace(
+        states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
+    )
+    coordinator = SimpleNamespace(
+        hass=hass,
+        data={
+            "input_49": {"value": 10.0},
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+        },
+    )
+    sensor = sensor_module.CalculatedCoPSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(
+            data={}, options={"electric_power_sensor": "sensor.external_power"}
+        ),
+        unique_id="cop",
+        unit="CoP",
+        device_class=None,
+    )
+    assert sensor.native_value is None
+
+
 def test_cop_sensor_none_when_modbus_power_missing(monkeypatch):
     """CoP must be unknown when no external sensor and no input_51."""
     sensor_module = _load_sensor_module(monkeypatch)

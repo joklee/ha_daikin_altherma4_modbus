@@ -919,6 +919,59 @@ def test_external_electric_power_sensor_uses_options_and_fallback(monkeypatch):
     assert unavailable_sensor.native_value is None
 
 
+def test_external_electric_power_sensor_converts_kw_to_w(monkeypatch):
+    """A kW external sensor must be shown as watts (consistent with CoP)."""
+    sensor_module = _load_sensor_module(monkeypatch)
+
+    states = {
+        "sensor.external_power": SimpleNamespace(
+            state="2.5", attributes={"unit_of_measurement": "kW"}
+        ),
+    }
+    hass = SimpleNamespace(
+        states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
+    )
+    coordinator = SimpleNamespace(hass=hass)
+
+    sensor = sensor_module.ExternalElectricPowerSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(
+            data={}, options={"electric_power_sensor": "sensor.external_power"}
+        ),
+        unique_id="test_kw",
+        unit="W",
+        device_class="power",
+    )
+    assert sensor.available is True
+    assert sensor.native_value == 2500.0
+
+
+def test_external_electric_power_sensor_rejects_unsupported_unit(monkeypatch):
+    """An unsupported unit must yield unknown instead of fake watts."""
+    sensor_module = _load_sensor_module(monkeypatch)
+
+    states = {
+        "sensor.external_power": SimpleNamespace(
+            state="2.5", attributes={"unit_of_measurement": "MW"}
+        ),
+    }
+    hass = SimpleNamespace(
+        states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
+    )
+    coordinator = SimpleNamespace(hass=hass)
+
+    sensor = sensor_module.ExternalElectricPowerSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(
+            data={}, options={"electric_power_sensor": "sensor.external_power"}
+        ),
+        unique_id="test_mw",
+        unit="W",
+        device_class="power",
+    )
+    assert sensor.native_value is None
+
+
 @pytest.mark.asyncio
 async def test_last_triggered_sensor_keeps_restored_value_when_coordinator_data_missing(
     monkeypatch,

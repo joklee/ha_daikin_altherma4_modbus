@@ -403,6 +403,41 @@ class DaikinInputSensor(CoordinatorEntity, SensorEntity):
         return val
 
 
+def _external_electric_power_watts(coordinator, entry) -> float | None:
+    """Read the configured external power sensor, normalized to watts.
+
+    Single source of truth for both the display sensor and the CoP
+    calculation so the same data point can never be interpreted twice:
+    ``W`` (or unitless, treated as W for backwards compatibility) is used
+    as-is, ``kW`` is converted. Any other unit yields None — a misconfigured
+    unit must never fabricate a power reading.
+    """
+    electric_power_sensor = entry_value(entry, "electric_power_sensor")
+    if not electric_power_sensor:
+        return None
+    state = coordinator.hass.states.get(electric_power_sensor)
+    if not state or state.state in [None, "unknown", "unavailable"]:
+        return None
+    unit = getattr(state, "attributes", {}).get("unit_of_measurement")
+    try:
+        value = float(state.state)
+    except (TypeError, ValueError):
+        _LOGGER.warning(
+            "ExternalElectricPowerSensor: Cannot convert %s to float",
+            state.state,
+        )
+        return None
+    if unit == "kW":
+        return value * 1000
+    if unit is None or unit == "W":
+        return value
+    _LOGGER.warning(
+        "ExternalElectricPowerSensor: Unsupported unit %s, expected W or kW",
+        unit,
+    )
+    return None
+
+
 def calculate_thermal_heat_output(coordinator):
     """Berechnet die thermische Leistung in W, oder None wenn Daten fehlen.
 
@@ -520,28 +555,8 @@ class CalculatedCoPSensor(CoordinatorEntity, SensorEntity):
         # Heizleistung aus der gleichen Berechnung wie ThermalHeatOutput
         heat_power = self._calculate_thermal_heat_output()  # in W
 
-        # Elektrische Leistung
-        electric_power_sensor = entry_value(self._entry, "electric_power_sensor")
-        if electric_power_sensor:
-            # Externer Sensor
-            state = self.coordinator.hass.states.get(electric_power_sensor)
-            unit = (
-                getattr(state, "attributes", {}).get("unit_of_measurement")
-                if state
-                else None
-            )
-            if state and state.state not in [None, "unknown", "unavailable"]:
-                try:
-                    if unit == "kW":
-                        electric_power = float(state.state) * 1000
-                    else:
-                        electric_power = float(state.state)
-                except ValueError:
-                    electric_power = None
-            else:
-                electric_power = None
-        else:
-            electric_power = None
+        # Elektrische Leistung (externer Sensor in W, sonst Modbus-Fallback)
+        electric_power = _external_electric_power_watts(self.coordinator, self._entry)
 
         if electric_power is None:
             # Modbus - value is already scaled by data_manager
@@ -706,19 +721,8 @@ class ExternalElectricPowerSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        """Gibt den Wert des externen elektrischen Leistungssensors zurück."""
-        electric_power_sensor = entry_value(self._entry, "electric_power_sensor")
-        if electric_power_sensor:
-            state = self.coordinator.hass.states.get(electric_power_sensor)
-            if state and state.state not in [None, "unknown", "unavailable"]:
-                try:
-                    return float(state.state)
-                except ValueError:
-                    _LOGGER.error(
-                        f"ExternalElectricPowerSensor: Cannot convert {state.state} to float"
-                    )
-                    return None
-        return None
+        """Gibt den Wert des externen elektrischen Leistungssensors in W zurück."""
+        return _external_electric_power_watts(self.coordinator, self._entry)
 
 
 class DeltaTSensor(CoordinatorEntity, SensorEntity):
