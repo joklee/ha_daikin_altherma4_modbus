@@ -6,7 +6,7 @@ transform runs, so fetch paths are exercised end to end without hardware.
 """
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -97,7 +97,11 @@ async def test_writes_update_coordinator_data():
     manager._repository = _repository()
     manager.coordinator = SimpleNamespace(
         data={"holding_3": {"value": 0}},
-        async_set_updated_data=AsyncMock(),
+        # NOTE: HA's DataUpdateCoordinator.async_set_updated_data is a
+        # synchronous callback (the async_ prefix only mandates event-loop
+        # context), so the double must be sync too. An AsyncMock here
+        # would leave a "coroutine was never awaited" RuntimeWarning.
+        async_set_updated_data=Mock(),
     )
     assert await manager.write_holding_register("holding_3", 1) is True
     assert manager.coordinator.data["holding_3"]["value"] == 1
@@ -110,7 +114,8 @@ async def test_writes_without_result_skip_coordinator_update():
         write_holding_register=AsyncMock(return_value=None),
         write_coil_register=AsyncMock(return_value=None),
     )
-    manager.coordinator = SimpleNamespace(data={}, async_set_updated_data=AsyncMock())
+    # Sync double, see note in test_writes_update_coordinator_data.
+    manager.coordinator = SimpleNamespace(data={}, async_set_updated_data=Mock())
     assert await manager.write_holding_register("holding_3", 1) is None
     assert await manager.write_coil_register("coil_1", True) is None
     manager.coordinator.async_set_updated_data.assert_not_called()
@@ -119,7 +124,10 @@ async def test_writes_without_result_skip_coordinator_update():
 async def test_coordinator_notify_failure_is_swallowed():
     """A failing async_set_updated_data only warns."""
 
-    async def raising_notify(_data):
+    # Sync double (HA callback is synchronous); must raise inline so the
+    # production try/except swallows it instead of leaving an
+    # un-awaited coroutine behind.
+    def raising_notify(_data):
         raise RuntimeError("listener boom")
 
     manager = _manager()
