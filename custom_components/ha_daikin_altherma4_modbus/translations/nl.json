@@ -785,5 +785,263 @@
       "title": "Daikin Altherma 4 meldt een afwijking",
       "description": "Uw Daikin Altherma 4 warmtepomp ({entry_name}) meldt een afwijking.\n\nAfwijkingscode: {abnormality_code}\nSubcode: {abnormality_sub_code}\n\nRaadpleeg de documentatie van het apparaat of neem contact op met Daikin support voor details over deze foutcode."
     }
+  },
+  "selector": {
+    "service_operation_mode": {
+      "options": {
+        "off": "Uit",
+        "heat": "Verwarmen",
+        "cool": "Koelen"
+      }
+    },
+    "service_smart_grid_mode": {
+      "options": {
+        "free_running": "Vrijlopend",
+        "forced_off": "Geforceerd uit",
+        "recommended_on": "Aanbevolen aan",
+        "forced_on": "Geforceerd aan"
+      }
+    },
+    "service_quiet_mode": {
+      "options": {
+        "off": "Uit",
+        "on_automatic": "Aan (Automatisch)",
+        "on_manual": "Aan (Handmatig)"
+      }
+    }
+  },
+  "services": {
+    "set_operation_mode": {
+      "name": "Bedrijfsmodus instellen",
+      "description": "Stel de bedrijfsmodus van de warmtepomp in (Uit, Verwarmen, Koelen).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "operation_mode": {
+          "name": "Bedrijfsmodus",
+          "description": "De in te stellen bedrijfsmodus."
+        }
+      }
+    },
+    "set_dhw_state": {
+      "name": "SWW-status instellen",
+      "description": "Sanitair warm water in- of uitschakelen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "state": {
+          "name": "Status",
+          "description": "True om in te schakelen, False om uit te schakelen."
+        }
+      }
+    },
+    "set_main_zone_state": {
+      "name": "Primaire zonestatus instellen",
+      "description": "Primaire zone in- of uitschakelen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "state": {
+          "name": "Status",
+          "description": "True om in te schakelen, False om uit te schakelen."
+        }
+      }
+    },
+    "set_additional_zone_state": {
+      "name": "Secondaire zonestatus instellen",
+      "description": "Secondaire zone in- of uitschakelen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "state": {
+          "name": "Status",
+          "description": "True om in te schakelen, False om uit te schakelen."
+        }
+      }
+    },
+    "set_smart_grid_mode": {
+      "name": "Smart grid-modus instellen",
+      "description": "Stel de smart grid-bedrijfsmodus in voor energiebeheer.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "smart_grid_mode": {
+          "name": "Smart grid-modus",
+          "description": "De in te stellen smart grid-modus."
+        }
+      }
+    },
+    "set_quiet_mode": {
+      "name": "Stille modus instellen",
+      "description": "Stel de stille/nachtbedrijfsmodus in.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "quiet_mode": {
+          "name": "Stille modus",
+          "description": "De in te stellen stille modus."
+        }
+      }
+    },
+    "set_dhw_booster_mode": {
+      "name": "SWW-boostermodus instellen",
+      "description": "SWW-booster (krachtige) modus in- of uitschakelen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "booster_mode": {
+          "name": "Boostermodus",
+          "description": "True om in te schakelen, False om uit te schakelen."
+        }
+      }
+    },
+    "set_dhw_single_heatup": {
+      "name": "SWW eenmalig verwarmen instellen",
+      "description": "Eenmalig opwarmverzoek voor SWW starten of stoppen, met optioneel instelpunt.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "single_heatup": {
+          "name": "Eenmalig verwarmen",
+          "description": "True om te starten, False om te stoppen."
+        },
+        "setpoint": {
+          "name": "Instelpunt",
+          "description": "SWW-instelpunt in °C (30-85, optioneel)."
+        }
+      }
+    },
+    "start_dhw_single_heatup": {
+      "name": "SWW eenmalig verwarmen starten",
+      "description": "Verwarm sanitair warm water eenmalig tot een doeltemperatuur. Schakelt SWW automatisch in als het uit staat en herstelt dit achteraf. Keert direct terug; een achtergrondtaak stopt het verzoek bij doel of time-out en triggert ha_daikin_altherma4_modbus_dhw_single_heatup_finished.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "target_temperature": {
+          "name": "Doeltemperatuur",
+          "description": "SWW-doeltemperatuur in °C (30-85)."
+        },
+        "timeout": {
+          "name": "Time-out",
+          "description": "Maximale looptijd (1 minuut tot 6 uur, standaard 2 uur)."
+        },
+        "hysteresis": {
+          "name": "Hysterese",
+          "description": "Eindig dit aantal K onder het doel (0-5, standaard 0,5)."
+        }
+      }
+    },
+    "set_power_limit": {
+      "name": "Vermogenslimiet instellen",
+      "description": "Stel de opgelegde vermogenslimiet in kW in (0-20).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "power_limit": {
+          "name": "Vermogenslimiet",
+          "description": "Opgelegde vermogenslimiet in kW (0-20)."
+        }
+      }
+    },
+    "set_heating_offset": {
+      "name": "Verwarmingsoffset instellen",
+      "description": "Stel de weersafhankelijke verwarmingsoffset in K in (-10 tot +10).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "offset": {
+          "name": "Offset",
+          "description": "Verwarmingsoffset in K (-10 tot +10)."
+        }
+      }
+    },
+    "set_cooling_offset": {
+      "name": "Koelingsoffset instellen",
+      "description": "Stel de weersafhankelijke koelingsoffset in K in (-10 tot +10).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "offset": {
+          "name": "Offset",
+          "description": "Koelingsoffset in K (-10 tot +10)."
+        }
+      }
+    },
+    "set_room_heating_setpoint": {
+      "name": "Kamerverwarmingsinstelpunt instellen",
+      "description": "Stel het kamerthermostaat-verwarmingsinstelpunt in °C in (12-30).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "setpoint": {
+          "name": "Instelpunt",
+          "description": "Kamerverwarmingsinstelpunt in °C (12-30)."
+        }
+      }
+    },
+    "set_room_cooling_setpoint": {
+      "name": "Kamerkoelingsinstelpunt instellen",
+      "description": "Stel het kamerthermostaat-koelingsinstelpunt in °C in (12-35).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "setpoint": {
+          "name": "Instelpunt",
+          "description": "Kamerkoelingsinstelpunt in °C (12-35)."
+        }
+      }
+    },
+    "set_additional_zone_setpoint": {
+      "name": "Secondaire zone-instelpunt instellen",
+      "description": "Stel het secondaire zone-instelpunt in °C in (3-85).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        },
+        "setpoint": {
+          "name": "Instelpunt",
+          "description": "Secondaire zone-instelpunt in °C (3-85)."
+        }
+      }
+    },
+    "refresh_connection": {
+      "name": "Verbinding vernieuwen",
+      "description": "Vernieuw de Modbus-verbinding voor het configuratie-item.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Configuratie-item",
+          "description": "De configuratie-item-ID van de Daikin Altherma 4 warmtepomp."
+        }
+      }
+    }
   }
 }
