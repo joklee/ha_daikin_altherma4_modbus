@@ -147,18 +147,6 @@ jobs:
             ghcr.io/home-assistant/home-assistant:${{ matrix.ha-version }} \
             python -m homeassistant --script check_config --config /config
 
-      # 📈 Performance Benchmarking
-      - name: Run performance benchmarks
-        run: |
-          pytest --benchmark-only --benchmark-json=benchmark.json || true
-
-      - name: Upload benchmark results
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: benchmark-results-${{ matrix.ha-version }}
-          path: benchmark.json
-
   # 🔍 Additional Code Quality Checks
   # Runs directly on the Ubuntu runner (no container), so the scan sees
   # the same Python (3.14) and dependency set as the validate job. The
