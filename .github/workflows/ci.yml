@@ -15,7 +15,7 @@ permissions:
 jobs:
   validate:
     name: Validate (ha-${{ matrix.ha-version }})
-    runs-on: ubuntu-26
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
@@ -162,7 +162,7 @@ jobs:
   # 🔍 Additional Code Quality Checks
   code-quality:
     name: Code Quality Analysis
-    runs-on: ubuntu-26
+    runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     container: python:3.12-alpine
 
@@ -197,7 +197,7 @@ jobs:
     name: Test Summary
     needs: [validate, dev-release, release]
     if: always()
-    runs-on: ubuntu-26
+    runs-on: ubuntu-latest
 
     steps:
       - name: Download all artifacts
@@ -237,7 +237,7 @@ jobs:
     name: Create Development Release
     needs: [validate]
     if: (github.ref == 'refs/heads/dev' && !startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-26
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v6
@@ -288,7 +288,7 @@ jobs:
     name: Create Release
     needs: [validate]
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-26
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v6
