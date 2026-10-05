@@ -217,6 +217,9 @@
     },
     "holding_15": {
       "icon": "mdi:power"
+    },
+    "holding_81": {
+      "icon": "mdi:restart"
     }
   },
   "sensor": {
@@ -306,6 +309,12 @@
     },
     "input_87": {
       "icon": "mdi:thermometer-high"
+    },
+    "input_138": {
+      "icon": "mdi:timer"
+    },
+    "input_139": {
+      "icon": "mdi:cog"
     },
     "thermal_heat_output": {
       "icon": "mdi:fire"

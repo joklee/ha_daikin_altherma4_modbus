@@ -151,6 +151,13 @@
           "off": "Off",
           "on": "On"
         }
+      },
+      "holding_81": {
+        "name": "Execute model restart now",
+        "state": {
+          "remain": "Remain",
+          "restart": "Restart"
+        }
       }
     },
     "binary_sensor": {
@@ -595,6 +602,17 @@
       },
       "input_87": {
         "name": "Room Cooling setpoint Upper limit"
+      },
+      "input_138": {
+        "name": "Time until model restart"
+      },
+      "input_139": {
+        "name": "Active operation state",
+        "state": {
+          "normal": "Normal",
+          "maintenance": "Maintenance",
+          "restart_pending": "Restart pending"
+        }
       },
       "thermal_heat_output": {
         "name": "Thermal Heat Output"

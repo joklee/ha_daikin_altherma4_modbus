@@ -85,7 +85,12 @@ _REGISTER_MAP_SOURCES = {
 # Optimized batch layout shared by the polling path and raw snapshots.
 _INPUT_BATCH = (21, 67)
 _HOLDING_BATCH = (1, 80)
+# v4 devices (MMI v4.x, guide revision 1D) add holding 81 (execute model
+# restart), so the batch grows to 1-81 once input 138/139 proved present.
+_HOLDING_BATCH_V4 = (1, 81)
 _HOLDING_FALLBACK_BLOCKS = ((1, 25), (26, 25), (51, 30))
+# v4-only holding register as a single read for the fallback path.
+_HOLDING_V4_FALLBACK_BLOCK = (81, 1)
 _DISCRETE_BATCH = (1, 26)
 # v4 devices (MMI v4.x, guide revision 1D) no longer expose discrete
 # input 26, so the batch shrinks to 1-25 once that is detected.
@@ -153,6 +158,11 @@ class ModbusRegisterRepository:
         # repository (not the client) so they survive reconnects.
         self._supports_discrete_26: bool | None = None
         self._supports_input_138_139: bool | None = None
+        # Holding 81 (v4-only "execute model restart") is learned lazily
+        # from polling: None = not attempted yet, True = present (batch
+        # 1-81), False = refused (batch stays 1-80). Unlike the two probes
+        # above it never feeds register_version, only the batch layout.
+        self._supports_holding_81: bool | None = None
         self._last_logged_version: str | None = None
 
     @property
@@ -180,6 +190,21 @@ class ModbusRegisterRepository:
         if self._supports_discrete_26 is True:
             return _DISCRETE_BATCH
         return _DISCRETE_BATCH_V4
+
+    def _holding_batch(self) -> tuple[int, int]:
+        """Holding-register batch honoring the detected register map.
+
+        Version-specific register 81 (execute model restart) only exists
+        on v4. It is attempted once input 138/139 proved the v4 map (or a
+        previous 1-81 read succeeded); on v2/v3, after a refusal, and
+        while the map is still unknown (fallback) the batch stays at 1-80
+        so no absent register is requested.
+        """
+        if self._supports_holding_81 is False:
+            return _HOLDING_BATCH
+        if self._supports_holding_81 is True or self._supports_input_138_139 is True:
+            return _HOLDING_BATCH_V4
+        return _HOLDING_BATCH
 
     async def _probe_register(self, kind: str, address: int, count: int) -> bool | None:
         """Probe whether version-discriminating register(s) exist.
@@ -313,6 +338,34 @@ class ModbusRegisterRepository:
         except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read optimized Input Register Block: %s", err)
 
+        # v4-only input registers 138/139 (time until model restart +
+        # active operation state): only polled once the probe proved them
+        # present, so v2/v3 devices are never asked for absent registers.
+        if self._supports_input_138_139 is True:
+            v4_start, v4_count = _INPUT_V4_BATCH
+            try:
+                v4_start_time = time.time()
+                v4_result = await client.read_input_registers(v4_start, v4_count)
+                _LOGGER.debug(
+                    "v4 Input Register Block (138-139) read in %.3fs",
+                    time.time() - v4_start_time,
+                )
+                if not _is_error_result(self._session, v4_result):
+                    blocks.append((v4_result, 138, 139, 138))
+                else:
+                    _LOGGER.warning("v4 Input Register Block (138-139) read failed")
+            except ModbusInvalidAddressException as err:
+                _LOGGER.warning(
+                    "v4 Input Register Block (138-139) refused "
+                    "(illegal data address), narrowing map: %s",
+                    err,
+                )
+                self._supports_input_138_139 = False
+            except _READ_EXCEPTIONS as err:
+                _LOGGER.warning(
+                    "Could not read v4 Input Register Block (138-139): %s", err
+                )
+
         return blocks
 
     async def read_discrete_inputs(self) -> Any | None:
@@ -400,31 +453,50 @@ class ModbusRegisterRepository:
 
         data_blocks: list[tuple[Any, int, int, int]] = []
 
+        # v4 devices expose one extra holding register (81); the batch
+        # grows to 1-81 only once input 138/139 proved the v4 map, so
+        # v2/v3 devices are never asked for an absent register.
+        start_address, count = self._holding_batch()
+        end_address = start_address + count - 1
         try:
             block_start = time.time()
-            start_address, count = _HOLDING_BATCH
             result = await client.read_holding_registers(
                 start_address, count
-            )  # 80 Register in einem Aufruf!
+            )  # 80 (v2/v3) bzw. 81 (v4) Register in einem Aufruf!
             _LOGGER.debug(
-                "Optimized Holding Register Block (1-80) read in %.3fs",
+                "Optimized Holding Register Block (1-%d) read in %.3fs",
+                end_address,
                 time.time() - block_start,
             )
 
             if not _is_error_result(self._session, result):
-                data_blocks.append((result, 1, 80, 1))
+                data_blocks.append((result, 1, end_address, 1))
+                if end_address == _HOLDING_BATCH_V4[0] + _HOLDING_BATCH_V4[1] - 1:
+                    self._supports_holding_81 = True
                 _LOGGER.debug(
-                    "✅ Batch optimization successful: 80 registers in 1 read"
+                    "✅ Batch optimization successful: %d registers in 1 read",
+                    count,
                 )
             else:
                 _LOGGER.warning(
-                    "Device does not support full holding register range (1-80)"
+                    "Device does not support full holding register range (1-%d)",
+                    end_address,
                 )
                 # Fallback: Try individual blocks if full range fails
                 await self._fallback_holding_blocks(data_blocks)
         except ModbusInvalidAddressException as err:
+            if count > _HOLDING_BATCH[1] and self._supports_holding_81 is not False:
+                _LOGGER.info(
+                    "Holding register batch 1-%d refused (illegal data address), "
+                    "register 81 is absent, retrying as 1-80: %s",
+                    end_address,
+                    err,
+                )
+                self._supports_holding_81 = False
+                return await self.read_holding_blocks()
             _LOGGER.warning(
-                "Device does not support full holding register range (1-80): %s",
+                "Device does not support full holding register range (1-%d): %s",
+                end_address,
                 err,
             )
             # Fallback: Try individual blocks on illegal address
@@ -455,7 +527,6 @@ class ModbusRegisterRepository:
             )
             for index, (start, count) in enumerate(_HOLDING_FALLBACK_BLOCKS, start=1)
         ]
-
         _LOGGER.debug("Using fallback individual block reading")
         for start_addr, count, min_addr, max_addr, offset, name, optional in blocks:
             result = await self._read_holding_register_block(
@@ -463,6 +534,23 @@ class ModbusRegisterRepository:
             )
             if result is not None:
                 data_blocks.append((result, min_addr, max_addr, offset))
+
+        # v4-only register 81: only attempted once input 138/139 proved
+        # the v4 map (and never after the main batch proved it refused),
+        # so v2/v3 devices are never asked for an absent register. A miss
+        # here only skips 81 for this cycle; the main-batch refusal path
+        # above is what permanently narrows the map.
+        if (
+            self._supports_input_138_139 is True
+            and self._supports_holding_81 is not False
+        ):
+            v4_start, v4_count = _HOLDING_V4_FALLBACK_BLOCK
+            v4_result = await self._read_holding_register_block(
+                v4_start, v4_count, v4_start, v4_start, v4_start, "Block v4", True
+            )
+            if v4_result is not None:
+                data_blocks.append((v4_result, v4_start, v4_start, v4_start))
+                self._supports_holding_81 = True
 
     async def read_raw_snapshot(
         self,
@@ -505,13 +593,16 @@ class ModbusRegisterRepository:
             except Exception as err:
                 _record("input", err)
 
-        start_address, count = _HOLDING_BATCH
+        start_address, count = self._holding_batch()
         try:
             result = await client.read_holding_registers(start_address, count)
             snapshot["holding"] = _raw_registers(result, start_address - 1)
         except Exception as err:
             _record("holding", err)
-            for chunk_start, chunk_count in _HOLDING_FALLBACK_BLOCKS:
+            chunks = list(_HOLDING_FALLBACK_BLOCKS)
+            if self._supports_input_138_139 is True:
+                chunks.append(_HOLDING_V4_FALLBACK_BLOCK)
+            for chunk_start, chunk_count in chunks:
                 try:
                     chunk = await client.read_holding_registers(
                         chunk_start, chunk_count

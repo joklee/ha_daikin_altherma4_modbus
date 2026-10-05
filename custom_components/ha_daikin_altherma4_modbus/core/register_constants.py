@@ -669,6 +669,28 @@ INPUT_REGISTERS = [
         step=1,
         translation_key="input_87",
     ),
+    # v4-only (MMI v4.x, guide 4P773396-1D): maintenance/restart state.
+    # Only polled on confirmed REGISTER_MAP_V4; on v2/v3 (and while the
+    # map is unknown) no data is fetched, so the entities stay unavailable.
+    SensorRegister(
+        name="Time until model restart",
+        address=138,
+        input_type="input",
+        register_name="input_138",
+        data_type=INT16,
+        unit="min",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        translation_key="input_138",
+    ),
+    SensorRegister(
+        name="Active operation state",
+        address=139,
+        input_type="input",
+        register_name="input_139",
+        data_type=INT16,
+        enum_map={0: "normal", 1: "maintenance", 2: "restart_pending"},
+        translation_key="input_139",
+    ),
 ]
 
 # Holding Registers using dataclasses
@@ -999,6 +1021,19 @@ HOLDING_REGISTERS = [
             32766: "off",
         },
         translation_key="holding_80",
+    ),
+    # v4-only (MMI v4.x, guide 4P773396-1D): execute a pending model
+    # restart. Only polled/writable on confirmed REGISTER_MAP_V4; on
+    # v2/v3 (and while the map is unknown) no data is fetched, so the
+    # entity stays unavailable.
+    SwitchRegister(
+        name="Execute model restart now",
+        address=81,
+        input_type="holding",
+        register_name="holding_81",
+        data_type=INT16,
+        enum_map={0: "remain", 1: "restart"},
+        translation_key="holding_81",
     ),
 ]
 
