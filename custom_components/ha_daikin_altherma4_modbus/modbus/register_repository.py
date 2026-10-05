@@ -20,19 +20,25 @@ from .transport_session import ModbusTransportSession
 _LOGGER = logging.getLogger(__name__)
 
 
-def _validate_modbus_address(address: int, context: str = "address") -> int:
+def _validate_modbus_address(
+    address: int, context: str = "address", strict: bool = False
+) -> int:
     """
-    Validate and clamp Modbus address to valid range based on device documentation.
+    Validate Modbus address against the valid range from device documentation.
 
     Args:
         address: The address to validate
         context: Context description for error messages
+        strict: When True, raise instead of clamping out-of-range addresses.
+            Writes must always use strict mode: silently clamping a write
+            could target a different, valid register on the heat pump.
 
     Returns:
-        Validated address clamped to device-specific range (1-87)
+        Validated address (clamped to device-specific range 1-87 unless strict)
 
     Raises:
-        ValueError: If address is not a valid integer
+        TypeError: If address is not a valid integer
+        ModbusInvalidAddressException: If strict and address is out of range
     """
     if not isinstance(address, int):
         raise TypeError(
@@ -40,6 +46,15 @@ def _validate_modbus_address(address: int, context: str = "address") -> int:
         )
 
     if address < MIN_MODBUS_ADDRESS or address > MAX_MODBUS_ADDRESS:
+        if strict:
+            _LOGGER.error(
+                f"Refusing out-of-range Modbus {context} {address} "
+                f"(valid device range {MIN_MODBUS_ADDRESS}-{MAX_MODBUS_ADDRESS})"
+            )
+            raise ModbusInvalidAddressException(
+                f"Modbus {context} {address} is outside valid device range "
+                f"({MIN_MODBUS_ADDRESS}-{MAX_MODBUS_ADDRESS})"
+            )
         _LOGGER.warning(
             f"Modbus {context} {address} is outside valid device range ({MIN_MODBUS_ADDRESS}-{MAX_MODBUS_ADDRESS}), clamping"
         )
@@ -403,9 +418,10 @@ class ModbusRegisterRepository:
             _LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
-        # Validate and clamp address to valid Modbus range
+        # Validate address strictly: never clamp writes, a clamped write
+        # could silently target a different, valid register on the heat pump.
         address = _validate_modbus_address(
-            address, f"holding register address {register_name}"
+            address, f"holding register address {register_name}", strict=True
         )
 
         register_config = get_register_config(register_name)
@@ -472,8 +488,11 @@ class ModbusRegisterRepository:
             _LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
-        # Validate and clamp address to valid Modbus range
-        address = _validate_modbus_address(address, f"coil address {register_name}")
+        # Validate address strictly: never clamp writes, a clamped write
+        # could silently target a different, valid register on the heat pump.
+        address = _validate_modbus_address(
+            address, f"coil address {register_name}", strict=True
+        )
 
         try:
             result = await client.write_coil_register(address, value)

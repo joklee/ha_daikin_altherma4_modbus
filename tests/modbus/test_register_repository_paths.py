@@ -63,10 +63,41 @@ def _repository(client, reconnect_client=None):
 
 def test_validate_modbus_address():
     assert _validate_modbus_address(21) == 21
+    assert _validate_modbus_address(1) == 1
+    assert _validate_modbus_address(87) == 87
+    # Non-strict (reads) keeps the legacy clamp behavior.
     assert _validate_modbus_address(0) == 1
     assert _validate_modbus_address(200) == 87
     with pytest.raises(TypeError):
         _validate_modbus_address("21")
+
+
+def test_validate_modbus_address_strict_raises():
+    with pytest.raises(ModbusInvalidAddressException):
+        _validate_modbus_address(0, "address", strict=True)
+    with pytest.raises(ModbusInvalidAddressException):
+        _validate_modbus_address(88, "address", strict=True)
+    with pytest.raises(ModbusInvalidAddressException):
+        _validate_modbus_address(999, "address", strict=True)
+    assert _validate_modbus_address(1, "address", strict=True) == 1
+    assert _validate_modbus_address(87, "address", strict=True) == 87
+
+
+async def test_write_rejects_out_of_range_addresses_without_touching_client():
+    client = _client()
+    repo, _ = _repository(client)
+    with pytest.raises(ModbusInvalidAddressException):
+        await repo.write_holding_register("holding_0", 1)
+    with pytest.raises(ModbusInvalidAddressException):
+        await repo.write_holding_register("holding_999", 1)
+    with pytest.raises(ModbusInvalidAddressException):
+        await repo.write_coil_register("coil_0", True)
+    with pytest.raises(ModbusInvalidAddressException):
+        await repo.write_coil_register("coil_999", True)
+    with pytest.raises(ModbusInvalidAddressException):
+        await repo.write_coil_register(999, True)
+    client.write_holding_register.assert_not_awaited()
+    client.write_coil_register.assert_not_awaited()
 
 
 def test_signed_conversion_and_scaling_helpers():
