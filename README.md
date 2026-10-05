@@ -566,9 +566,10 @@ automation:
 
 Heat the DHW tank once to a target temperature (see issue #21). The
 `start_dhw_single_heatup` service runs the whole sequence in the
-background — setpoint, start, wait for target or timeout, stop — and
-fires a `ha_daikin_altherma4_modbus_dhw_single_heatup_finished` event
-with the outcome (`reached`, `timeout` or `cancelled`):
+background — enable DHW when it is off, setpoint, start, wait for
+target or timeout, stop, restore DHW when this run switched it on —
+and fires a `ha_daikin_altherma4_modbus_dhw_single_heatup_finished`
+event with the outcome (`reached`, `timeout` or `cancelled`):
 
 ```yaml
 automation:
