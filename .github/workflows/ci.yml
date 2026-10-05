@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # 🔢 Extract version from manifest.json
       - name: Get manifest version
@@ -48,7 +48,7 @@ jobs:
       # Pythons pip silently resolves an outdated PHCC release with an old
       # homeassistant pin that lacks newer APIs (e.g. ServiceValidationError).
       - name: Set up Python
-        uses: actions/setup-python@v6.2.0
+        uses: actions/setup-python@v7
         with:
           python-version: "3.14"
 
@@ -109,7 +109,7 @@ jobs:
           coverage report --show-missing
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage.xml
           flags: unittests
@@ -160,15 +160,23 @@ jobs:
           path: benchmark.json
 
   # 🔍 Additional Code Quality Checks
+  # Runs directly on the Ubuntu runner (no container), so the scan sees
+  # the same Python (3.14) and dependency set as the validate job. The
+  # previous python:3.12-alpine container forced a musl-based interpreter
+  # where pip silently resolved outdated dependencies.
   code-quality:
     name: Code Quality Analysis
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    container: python:3.12-alpine
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
 
       - name: Install dependencies
         run: |
@@ -201,7 +209,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@v8
 
       - name: Create test summary
         run: |
@@ -240,7 +248,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Get version from manifest
       - name: Get manifest version
@@ -291,7 +299,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Get version from manifest
       - name: Get manifest version
