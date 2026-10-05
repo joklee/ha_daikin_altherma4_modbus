@@ -328,14 +328,15 @@ if HAS_HA:
             )
         return entry
 
-    async def async_set_operation_mode(hass, call) -> None:
+    async def async_set_operation_mode(call) -> None:
         """Set the heat pump operation mode."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         operation_mode = call.data[ATTR_OPERATION_MODE]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         mode_value = OPERATION_MODE_MAP.get(operation_mode)
         if mode_value is None:
@@ -347,7 +348,7 @@ if HAS_HA:
 
         await _guarded_write(
             REGISTER_OPERATION_MODE,
-            lambda: manager.write_holding_register(REGISTER_OPERATION_MODE, mode_value),
+            lambda: writer.write_holding_register(REGISTER_OPERATION_MODE, mode_value),
         )
         _LOGGER.debug(
             "Set operation mode to %s (value: %s) for entry %s",
@@ -356,19 +357,20 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_dhw_state(hass, call) -> None:
+    async def async_set_dhw_state(call) -> None:
         """Enable or disable Domestic Hot Water."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         state = call.data[ATTR_STATE]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         coil_address = _get_coil_address(REGISTER_DHW_HVAC_MODE)
         await _guarded_write(
             REGISTER_DHW_HVAC_MODE,
-            lambda: manager.write_coil_register(coil_address, state),
+            lambda: writer.write_coil_register(coil_address, state),
         )
         _LOGGER.debug(
             "Set DHW state to %s for entry %s",
@@ -376,19 +378,20 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_main_zone_state(hass, call) -> None:
+    async def async_set_main_zone_state(call) -> None:
         """Enable or disable the main zone."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         state = call.data[ATTR_STATE]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         # Main zone is coil_2
         coil_address = _get_coil_address("coil_2")
         await _guarded_write(
-            "coil_2", lambda: manager.write_coil_register(coil_address, state)
+            "coil_2", lambda: writer.write_coil_register(coil_address, state)
         )
         _LOGGER.debug(
             "Set main zone state to %s for entry %s",
@@ -396,19 +399,20 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_additional_zone_state(hass, call) -> None:
+    async def async_set_additional_zone_state(call) -> None:
         """Enable or disable the additional zone."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         state = call.data[ATTR_STATE]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         # Additional zone is coil_3
         coil_address = _get_coil_address("coil_3")
         await _guarded_write(
-            "coil_3", lambda: manager.write_coil_register(coil_address, state)
+            "coil_3", lambda: writer.write_coil_register(coil_address, state)
         )
         _LOGGER.debug(
             "Set additional zone state to %s for entry %s",
@@ -416,8 +420,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_smart_grid_mode(hass, call) -> None:
+    async def async_set_smart_grid_mode(call) -> None:
         """Set the Smart Grid operation mode."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         smart_grid_mode = call.data.get(ATTR_SMART_GRID_MODE)
 
@@ -430,7 +435,7 @@ if HAS_HA:
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         smart_grid_mode_map = get_smart_grid_mode_map()
         mode_value = smart_grid_mode_map.get(smart_grid_mode)
@@ -443,7 +448,7 @@ if HAS_HA:
 
         await _guarded_write(
             "holding_56",
-            lambda: manager.write_holding_register("holding_56", mode_value),
+            lambda: writer.write_holding_register("holding_56", mode_value),
         )
         _LOGGER.debug(
             "Set Smart Grid mode to %s (value: %s) for entry %s",
@@ -452,14 +457,15 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_quiet_mode(hass, call) -> None:
+    async def async_set_quiet_mode(call) -> None:
         """Set the Quiet mode operation."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         quiet_mode = call.data[ATTR_QUIET_MODE]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         quiet_mode_map = get_quiet_mode_map()
         mode_value = quiet_mode_map.get(quiet_mode)
@@ -472,7 +478,7 @@ if HAS_HA:
 
         await _guarded_write(
             "holding_9",
-            lambda: manager.write_holding_register("holding_9", mode_value),
+            lambda: writer.write_holding_register("holding_9", mode_value),
         )
         _LOGGER.debug(
             "Set Quiet mode to %s (value: %s) for entry %s",
@@ -481,18 +487,19 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_dhw_booster_mode(hass, call) -> None:
+    async def async_set_dhw_booster_mode(call) -> None:
         """Set the DHW booster mode."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         booster_mode = call.data[ATTR_BOOSTER_MODE]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         await _guarded_write(
             "holding_13",
-            lambda: manager.write_holding_register(
+            lambda: writer.write_holding_register(
                 "holding_13", 1 if booster_mode else 0
             ),
         )
@@ -502,19 +509,20 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_dhw_single_heatup(hass, call) -> None:
+    async def async_set_dhw_single_heatup(call) -> None:
         """Set the DHW single heat-up mode and optional setpoint."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         single_heatup = call.data[ATTR_SINGLE_HEATUP]
         setpoint = call.data.get(ATTR_SETPOINT)
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         await _guarded_write(
             "holding_15",
-            lambda: manager.write_holding_register(
+            lambda: writer.write_holding_register(
                 "holding_15", 1 if single_heatup else 0
             ),
         )
@@ -524,7 +532,7 @@ if HAS_HA:
             register_value = int(setpoint / 0.01)
             await _guarded_write(
                 "holding_16",
-                lambda: manager.write_holding_register("holding_16", register_value),
+                lambda: writer.write_holding_register("holding_16", register_value),
             )
             _LOGGER.debug(
                 "Set DHW single heat-up to %s with setpoint %s°C for entry %s",
@@ -539,20 +547,21 @@ if HAS_HA:
                 config_entry_id,
             )
 
-    async def async_set_power_limit(hass, call) -> None:
+    async def async_set_power_limit(call) -> None:
         """Set the imposed power limit."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         power_limit = call.data[ATTR_POWER_LIMIT]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         # Convert power limit to register value (scale by 0.001)
         register_value = int(power_limit / 0.001)
         await _guarded_write(
             "holding_58",
-            lambda: manager.write_holding_register("holding_58", register_value),
+            lambda: writer.write_holding_register("holding_58", register_value),
         )
         _LOGGER.debug(
             "Set power limit to %s kW (value: %s) for entry %s",
@@ -561,20 +570,21 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_heating_offset(hass, call) -> None:
+    async def async_set_heating_offset(call) -> None:
         """Set the weather-dependent heating offset."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         offset = call.data[ATTR_OFFSET]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         # Convert offset to register value (scale by 0.01)
         register_value = int(offset / 0.01)
         await _guarded_write(
             "holding_54",
-            lambda: manager.write_holding_register("holding_54", register_value),
+            lambda: writer.write_holding_register("holding_54", register_value),
         )
         _LOGGER.debug(
             "Set heating offset to %s K (value: %s) for entry %s",
@@ -583,20 +593,21 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_cooling_offset(hass, call) -> None:
+    async def async_set_cooling_offset(call) -> None:
         """Set the weather-dependent cooling offset."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         offset = call.data[ATTR_OFFSET]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         # Convert offset to register value (scale by 0.01)
         register_value = int(offset / 0.01)
         await _guarded_write(
             "holding_55",
-            lambda: manager.write_holding_register("holding_55", register_value),
+            lambda: writer.write_holding_register("holding_55", register_value),
         )
         _LOGGER.debug(
             "Set cooling offset to %s K (value: %s) for entry %s",
@@ -605,20 +616,21 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_room_heating_setpoint(hass, call) -> None:
+    async def async_set_room_heating_setpoint(call) -> None:
         """Set the room thermostat heating setpoint."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         setpoint = call.data[ATTR_SETPOINT]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         # Convert setpoint to register value (scale by 0.01)
         register_value = int(setpoint / 0.01)
         await _guarded_write(
             "holding_6",
-            lambda: manager.write_holding_register("holding_6", register_value),
+            lambda: writer.write_holding_register("holding_6", register_value),
         )
         _LOGGER.debug(
             "Set room heating setpoint to %s°C (value: %s) for entry %s",
@@ -627,20 +639,21 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_room_cooling_setpoint(hass, call) -> None:
+    async def async_set_room_cooling_setpoint(call) -> None:
         """Set the room thermostat cooling setpoint."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         setpoint = call.data[ATTR_SETPOINT]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         # Convert setpoint to register value (scale by 0.01)
         register_value = int(setpoint / 0.01)
         await _guarded_write(
             "holding_7",
-            lambda: manager.write_holding_register("holding_7", register_value),
+            lambda: writer.write_holding_register("holding_7", register_value),
         )
         _LOGGER.debug(
             "Set room cooling setpoint to %s°C (value: %s) for entry %s",
@@ -649,20 +662,21 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_set_additional_zone_setpoint(hass, call) -> None:
+    async def async_set_additional_zone_setpoint(call) -> None:
         """Set the additional zone setpoint."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         setpoint = call.data[ATTR_SETPOINT]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
-        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
 
         # Convert setpoint to register value (scale by 0.01)
         register_value = int(setpoint / 0.01)
         await _guarded_write(
             "holding_63",
-            lambda: manager.write_holding_register("holding_63", register_value),
+            lambda: writer.write_holding_register("holding_63", register_value),
         )
         _LOGGER.debug(
             "Set additional zone setpoint to %s°C (value: %s) for entry %s",
@@ -671,8 +685,9 @@ if HAS_HA:
             config_entry_id,
         )
 
-    async def async_refresh_connection(hass, call) -> None:
+    async def async_refresh_connection(call) -> None:
         """Refresh the Modbus connection for the specified entry."""
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
 
         entry = _get_entry_and_validate(hass, config_entry_id)
@@ -698,13 +713,37 @@ if HAS_HA:
         except (TypeError, ValueError):
             return None
 
+    def _dhw_enabled(manager) -> bool | None:
+        """Return True/False for DHW (coil_1), or None when unknown."""
+        try:
+            data = manager.get_all_data()
+        except Exception:  # pragma: no cover - defensive
+            return None
+        raw = get_register_value(data.get("coil_1"))
+        if raw is None:
+            return None
+        if raw == 1:
+            return True
+        if raw == 0:
+            return False
+        return None
+
     async def _run_dhw_single_heatup(
-        hass, config_entry_id, manager, writer, target, timeout_s, hysteresis
+        hass,
+        config_entry_id,
+        manager,
+        writer,
+        target,
+        timeout_s,
+        hysteresis,
+        restore_dhw_off,
+        dhw_coil_address,
     ) -> None:
         """Background run: heat DHW once until target, timeout or cancel.
 
         Fires ``EVENT_DHW_SINGLE_HEATUP_FINISHED`` with the outcome and
-        always leaves the request register cleared. Uses coordinator data
+        always leaves the request register cleared. Restores DHW to off
+        when this run switched it on. Uses coordinator data
         (no extra Modbus traffic) for the temperature check.
         """
         outcome = "timeout"
@@ -734,6 +773,15 @@ if HAS_HA:
                     config_entry_id,
                     err,
                 )
+            if restore_dhw_off:
+                try:
+                    await writer.write_coil_register(dhw_coil_address, False)
+                except Exception as err:
+                    _LOGGER.debug(
+                        "Could not restore DHW state for entry %s: %s",
+                        config_entry_id,
+                        err,
+                    )
             _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
             hass.bus.async_fire(
                 EVENT_DHW_SINGLE_HEATUP_FINISHED,
@@ -752,13 +800,16 @@ if HAS_HA:
                 current,
             )
 
-    async def async_start_dhw_single_heatup(hass, call) -> None:
+    async def async_start_dhw_single_heatup(call) -> None:
         """Heat DHW once to a target temperature with timeout (issue #21).
 
-        Writes the setpoint, starts the request and returns immediately;
-        a background task watches the DHW temperature, stops the request
-        on target/timeout and fires ``EVENT_DHW_SINGLE_HEATUP_FINISHED``.
+        Enables DHW when it is off, writes the setpoint, starts the
+        request and returns immediately; a background task watches the
+        DHW temperature, stops the request on target/timeout, restores
+        DHW to off when this run switched it on, and fires
+        ``EVENT_DHW_SINGLE_HEATUP_FINISHED``.
         """
+        hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
         target = float(call.data[ATTR_TARGET_TEMPERATURE])
         # Schema defaults only apply through HA's service layer; fall back
@@ -784,6 +835,24 @@ if HAS_HA:
                 translation_placeholders={"config_entry_id": config_entry_id},
             )
 
+        dhw_coil_address = _get_coil_address(REGISTER_DHW_HVAC_MODE)
+        dhw_state = _dhw_enabled(manager)
+        restore_dhw_off = dhw_state is False
+        if restore_dhw_off:
+            await _guarded_write(
+                REGISTER_DHW_HVAC_MODE,
+                lambda: writer.write_coil_register(dhw_coil_address, True),
+            )
+            _LOGGER.debug(
+                "Enabled DHW for single heat-up for entry %s",
+                config_entry_id,
+            )
+        elif dhw_state is None:
+            _LOGGER.debug(
+                "DHW state unknown for entry %s, leaving it untouched",
+                config_entry_id,
+            )
+
         register_value = int(target / 0.01)
         await _guarded_write(
             "holding_16",
@@ -796,7 +865,15 @@ if HAS_HA:
 
         task = hass.async_create_task(
             _run_dhw_single_heatup(
-                hass, config_entry_id, manager, writer, target, timeout_s, hysteresis
+                hass,
+                config_entry_id,
+                manager,
+                writer,
+                target,
+                timeout_s,
+                hysteresis,
+                restore_dhw_off,
+                dhw_coil_address,
             ),
             name=f"{DOMAIN}_dhw_single_heatup_{config_entry_id}",
         )
@@ -831,55 +908,55 @@ if HAS_HA:
 
 else:  # pragma: no cover - dummies only without Home Assistant
     # Dummy functions for testing imports
-    async def async_set_operation_mode(hass, call):
+    async def async_set_operation_mode(call):
         pass
 
-    async def async_set_dhw_state(hass, call):
+    async def async_set_dhw_state(call):
         pass
 
-    async def async_set_main_zone_state(hass, call):
+    async def async_set_main_zone_state(call):
         pass
 
-    async def async_set_additional_zone_state(hass, call):
+    async def async_set_additional_zone_state(call):
         pass
 
-    async def async_set_smart_grid_mode(hass, call):
+    async def async_set_smart_grid_mode(call):
         pass
 
-    async def async_set_quiet_mode(hass, call):
+    async def async_set_quiet_mode(call):
         pass
 
-    async def async_set_dhw_booster_mode(hass, call):
+    async def async_set_dhw_booster_mode(call):
         pass
 
-    async def async_set_dhw_single_heatup(hass, call):
+    async def async_set_dhw_single_heatup(call):
         pass
 
-    async def async_start_dhw_single_heatup(hass, call):
+    async def async_start_dhw_single_heatup(call):
         pass
 
     async def async_cancel_single_heatup(config_entry_id: str):
         pass
 
-    async def async_set_power_limit(hass, call):
+    async def async_set_power_limit(call):
         pass
 
-    async def async_set_heating_offset(hass, call):
+    async def async_set_heating_offset(call):
         pass
 
-    async def async_set_cooling_offset(hass, call):
+    async def async_set_cooling_offset(call):
         pass
 
-    async def async_set_room_heating_setpoint(hass, call):
+    async def async_set_room_heating_setpoint(call):
         pass
 
-    async def async_set_room_cooling_setpoint(hass, call):
+    async def async_set_room_cooling_setpoint(call):
         pass
 
-    async def async_set_additional_zone_setpoint(hass, call):
+    async def async_set_additional_zone_setpoint(call):
         pass
 
-    async def async_refresh_connection(hass, call):
+    async def async_refresh_connection(call):
         pass
 
 
