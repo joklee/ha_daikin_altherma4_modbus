@@ -267,6 +267,23 @@ jobs:
             ### Changes
             See the "Changes" section below for automatic commit summary.
 
+      # Every release ends with the Support Me footer. action-gh-release
+      # pre-pends `body` to the generated notes, so the footer needs a
+      # second pass with `append_body` to land after "What's Changed".
+      - name: Append Support Me footer
+        uses: softprops/action-gh-release@v2.6.1
+        with:
+          tag_name: "dev-${{ steps.manifest.outputs.manifest_version }}"
+          append_body: true
+          body: |
+            ---
+
+            ## Support Me
+
+            If you find this integration useful, you can support my work:
+
+            [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/joklee)
+
   release:
     name: Create Release
     needs: [validate]
@@ -305,3 +322,20 @@ jobs:
             ${{ steps.prerelease.outputs.is_prerelease == 'true' && '## Development Release' || '## Stable Release' }} ${{ steps.manifest.outputs.manifest_version }}
 
             ${{ steps.prerelease.outputs.is_prerelease == 'true' && '**Warning:** This is a development release and may contain unstable features.' || 'This is a stable release ready for production use.' }}
+
+      # Every release ends with the Support Me footer. action-gh-release
+      # pre-pends `body` to the generated notes, so the footer needs a
+      # second pass with `append_body` to land after "What's Changed".
+      - name: Append Support Me footer
+        uses: softprops/action-gh-release@v2.6.1
+        with:
+          tag_name: ${{ github.ref_name }}
+          append_body: true
+          body: |
+            ---
+
+            ## Support Me
+
+            If you find this integration useful, you can support my work:
+
+            [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/joklee)
