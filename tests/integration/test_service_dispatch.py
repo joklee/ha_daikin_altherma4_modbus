@@ -63,11 +63,14 @@ async def _setup_demo(hass):
 
 def _stub_sync_io(entry):
     """Stub Modbus writes so dispatch tests stay offline."""
+    writer = SimpleNamespace(
+        write_holding_register=AsyncMock(return_value=True),
+        write_coil_register=AsyncMock(return_value=True),
+    )
+    entry.runtime_data.coordinator.data_manager = writer
     manager = entry.runtime_data.manager
-    manager.write_holding_register = AsyncMock(return_value=True)
-    manager.write_coil_register = AsyncMock(return_value=True)
     manager.refresh_connection = AsyncMock(return_value=None)
-    return manager
+    return manager, writer
 
 
 def _sync_cases():
@@ -184,7 +187,7 @@ async def test_dispatch_sync_services_via_hass(
 ):
     """Every sync service must be callable via hass.services.async_call."""
     entry = await _setup_demo(hass)
-    manager = _stub_sync_io(entry)
+    manager, writer = _stub_sync_io(entry)
 
     await hass.services.async_call(
         DOMAIN,
@@ -194,7 +197,7 @@ async def test_dispatch_sync_services_via_hass(
     )
     await hass.async_block_till_done()
 
-    _assert(manager)
+    _assert(writer if service != "refresh_connection" else manager)
 
 
 async def test_dispatch_start_dhw_single_heatup_via_hass(
@@ -202,8 +205,11 @@ async def test_dispatch_start_dhw_single_heatup_via_hass(
 ):
     """start_dhw_single_heatup via dispatch: writes setpoint+request, tracks task."""
     entry = await _setup_demo(hass)
-    manager = _stub_sync_io(entry)
-    writer = SimpleNamespace(write_holding_register=AsyncMock(return_value=True))
+    manager, _ = _stub_sync_io(entry)
+    writer = SimpleNamespace(
+        write_holding_register=AsyncMock(return_value=True),
+        write_coil_register=AsyncMock(return_value=True),
+    )
     entry.runtime_data.coordinator.data_manager = writer
     manager.get_all_data = MagicMock(return_value={"input_43": {"value": 30.0}})
 

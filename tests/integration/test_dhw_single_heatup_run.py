@@ -64,7 +64,10 @@ async def _setup_demo(hass):
 
 def _stub_io(entry, temp):
     """Replace writer + temperature source with controllable fakes."""
-    writer = SimpleNamespace(write_holding_register=AsyncMock(return_value=True))
+    writer = SimpleNamespace(
+        write_holding_register=AsyncMock(return_value=True),
+        write_coil_register=AsyncMock(return_value=True),
+    )
     entry.runtime_data.coordinator.data_manager = writer
     manager = entry.runtime_data.manager
     manager.get_all_data = MagicMock(return_value={"input_43": {"value": temp}})
@@ -268,3 +271,77 @@ async def test_run_without_temperature_reading_waits_for_timeout(
     assert events[0].data["outcome"] == "timeout"
     assert events[0].data["current_temperature"] is None
     writer.write_holding_register.assert_any_call("holding_15", 0)
+
+
+async def test_start_enables_dhw_when_off_and_restores_after_reached(
+    hass, enable_custom_integrations
+):
+    """DHW off: service enables coil_1 and restores off after target reached."""
+    entry = await _setup_demo(hass)
+    writer, manager = _stub_io(entry, temp=47.8)
+    manager.get_all_data = MagicMock(
+        return_value={"input_43": {"value": 47.8}, "coil_1": {"value": 0}}
+    )
+    events = []
+    hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
+
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0, hysteresis=0.5)
+    )
+    task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
+    if task is not None:
+        await asyncio.wait_for(task, timeout=10)
+    await hass.async_block_till_done()
+
+    writer.write_coil_register.assert_any_call(1, True)
+    writer.write_coil_register.assert_any_call(1, False)
+    writer.write_holding_register.assert_any_call("holding_15", 0)
+    assert len(events) == 1
+    assert events[0].data["outcome"] == "reached"
+
+
+async def test_start_leaves_dhw_on_when_already_on(hass, enable_custom_integrations):
+    """DHW on: service touches neither the coil nor the restore path."""
+    entry = await _setup_demo(hass)
+    writer, manager = _stub_io(entry, temp=47.8)
+    manager.get_all_data = MagicMock(
+        return_value={"input_43": {"value": 47.8}, "coil_1": {"value": 1}}
+    )
+    events = []
+    hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
+
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0, hysteresis=0.5)
+    )
+    task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
+    if task is not None:
+        await asyncio.wait_for(task, timeout=10)
+    await hass.async_block_till_done()
+
+    writer.write_coil_register.assert_not_called()
+    writer.write_holding_register.assert_any_call("holding_15", 0)
+    assert len(events) == 1
+    assert events[0].data["outcome"] == "reached"
+
+
+async def test_start_leaves_dhw_untouched_when_state_unknown(
+    hass, enable_custom_integrations
+):
+    """Unknown DHW state: service proceeds without flipping user config."""
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=47.8)
+    events = []
+    hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
+
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0, hysteresis=0.5)
+    )
+    task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
+    if task is not None:
+        await asyncio.wait_for(task, timeout=10)
+    await hass.async_block_till_done()
+
+    writer.write_coil_register.assert_not_called()
+    writer.write_holding_register.assert_any_call("holding_15", 0)
+    assert len(events) == 1
+    assert events[0].data["outcome"] == "reached"

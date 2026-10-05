@@ -112,14 +112,94 @@ set_smart_grid_mode:
       selector:
         select:
           options:
-            - "free running"
-            - "forced off"
-            - "recommended on"
-            - "forced on"
+            - "free_running"
+            - "forced_off"
+            - "recommended_on"
+            - "forced_on"
+
+set_quiet_mode:
+  name: Set quiet mode
+  description: Set the quiet/night operation mode.
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: select
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    quiet_mode:
+      name: Quiet mode
+      description: The quiet mode to set.
+      required: true
+      selector:
+        select:
+          options:
+            - "off"
+            - "on_automatic"
+            - "on_manual"
+
+set_dhw_booster_mode:
+  name: Set DHW booster mode
+  description: Enable or disable the DHW booster (Powerful) mode.
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: switch
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    booster_mode:
+      name: Booster mode
+      description: True to enable, False to disable.
+      required: true
+      selector:
+        boolean:
+
+set_dhw_single_heatup:
+  name: Set DHW single heat-up
+  description: Start or stop the DHW one-time heat-up request, with an optional setpoint.
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: switch
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    single_heatup:
+      name: Single heat-up
+      description: True to start, False to stop.
+      required: true
+      selector:
+        boolean:
+    setpoint:
+      name: Setpoint
+      description: DHW setpoint in °C (30-85, optional).
+      required: false
+      selector:
+        number:
+          min: 30
+          max: 85
+          step: 0.5
+          unit_of_measurement: "°C"
 
 start_dhw_single_heatup:
   name: Start DHW single heat-up
-  description: Heat domestic hot water once to a target temperature. Returns immediately; a background task stops the request on target or timeout and fires ha_daikin_altherma4_modbus_dhw_single_heatup_finished.
+  description: Heat domestic hot water once to a target temperature. Enables DHW automatically when it is off and restores it afterwards. Returns immediately; a background task stops the request on target or timeout and fires ha_daikin_altherma4_modbus_dhw_single_heatup_finished.
   fields:
     config_entry_id:
       name: Config entry
@@ -154,3 +234,171 @@ start_dhw_single_heatup:
           max: 5
           step: 0.1
           unit_of_measurement: "K"
+
+set_power_limit:
+  name: Set power limit
+  description: Set the imposed power limit in kW (0-20).
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: number
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    power_limit:
+      name: Power limit
+      description: Imposed power limit in kW (0-20).
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 20
+          step: 0.1
+          unit_of_measurement: "kW"
+
+set_heating_offset:
+  name: Set heating offset
+  description: Set the weather-dependent heating offset in K (-10 to +10).
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: number
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    offset:
+      name: Offset
+      description: Heating offset in K (-10 to +10).
+      required: true
+      selector:
+        number:
+          min: -10
+          max: 10
+          step: 0.1
+          unit_of_measurement: "K"
+
+set_cooling_offset:
+  name: Set cooling offset
+  description: Set the weather-dependent cooling offset in K (-10 to +10).
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: number
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    offset:
+      name: Offset
+      description: Cooling offset in K (-10 to +10).
+      required: true
+      selector:
+        number:
+          min: -10
+          max: 10
+          step: 0.1
+          unit_of_measurement: "K"
+
+set_room_heating_setpoint:
+  name: Set room heating setpoint
+  description: Set the room thermostat heating setpoint in °C (12-30).
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: number
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    setpoint:
+      name: Setpoint
+      description: Room heating setpoint in °C (12-30).
+      required: true
+      selector:
+        number:
+          min: 12
+          max: 30
+          step: 0.5
+          unit_of_measurement: "°C"
+
+set_room_cooling_setpoint:
+  name: Set room cooling setpoint
+  description: Set the room thermostat cooling setpoint in °C (12-35).
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: number
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    setpoint:
+      name: Setpoint
+      description: Room cooling setpoint in °C (12-35).
+      required: true
+      selector:
+        number:
+          min: 12
+          max: 35
+          step: 0.5
+          unit_of_measurement: "°C"
+
+set_additional_zone_setpoint:
+  name: Set additional zone setpoint
+  description: Set the additional zone setpoint in °C (3-85).
+  target:
+    entity:
+      integration: ha_daikin_altherma4_modbus
+      domain: number
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:
+    setpoint:
+      name: Setpoint
+      description: Additional zone setpoint in °C (3-85).
+      required: true
+      selector:
+        number:
+          min: 3
+          max: 85
+          step: 0.5
+          unit_of_measurement: "°C"
+
+refresh_connection:
+  name: Refresh connection
+  description: Refresh the Modbus connection for the config entry.
+  fields:
+    config_entry_id:
+      name: Config entry
+      description: The config entry ID of the Daikin Altherma 4 heat pump.
+      example: "abc123def456"
+      required: true
+      selector:
+        text:

@@ -92,10 +92,16 @@ def mock_runtime_data():
     """Create mock runtime data."""
     runtime_data = MagicMock()
     runtime_data.manager = AsyncMock()
-    runtime_data.manager.write_holding_register = AsyncMock(return_value=True)
-    runtime_data.manager.write_coil_register = AsyncMock(return_value=True)
     runtime_data.manager.host = "192.168.1.100"
     runtime_data.manager.port = 502
+    runtime_data.coordinator = MagicMock()
+    runtime_data.coordinator.data_manager = MagicMock()
+    runtime_data.coordinator.data_manager.write_holding_register = AsyncMock(
+        return_value=True
+    )
+    runtime_data.coordinator.data_manager.write_coil_register = AsyncMock(
+        return_value=True
+    )
     return runtime_data
 
 
@@ -197,7 +203,7 @@ class TestSetOperationModeService:
 
         # Verify the write was called
         operation_mode_map = get_operation_mode_map()
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_3", operation_mode_map["heat"]
         )
 
@@ -302,7 +308,9 @@ class TestSetDHWStateService:
         await async_set_dhw_state(call)
 
         # Verify the write was called with coil_1 and True
-        mock_runtime_data.manager.write_coil_register.assert_called_once_with(1, True)
+        mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
+            1, True
+        )
 
     async def test_set_dhw_state_off_success(
         self, hass, mock_config_entry, mock_runtime_data
@@ -328,7 +336,9 @@ class TestSetDHWStateService:
         await async_set_dhw_state(call)
 
         # Verify the write was called with coil_1 and False
-        mock_runtime_data.manager.write_coil_register.assert_called_once_with(1, False)
+        mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
+            1, False
+        )
 
     async def test_set_dhw_state_invalid_entry(self, hass):
         """Test service with invalid config entry."""
@@ -381,7 +391,9 @@ class TestSetMainZoneStateService:
         await async_set_main_zone_state(call)
 
         # Verify the write was called with coil_2 and True
-        mock_runtime_data.manager.write_coil_register.assert_called_once_with(2, True)
+        mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
+            2, True
+        )
 
     async def test_set_main_zone_state_off_success(
         self, hass, mock_config_entry, mock_runtime_data
@@ -407,7 +419,9 @@ class TestSetMainZoneStateService:
         await async_set_main_zone_state(call)
 
         # Verify the write was called with coil_2 and False
-        mock_runtime_data.manager.write_coil_register.assert_called_once_with(2, False)
+        mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
+            2, False
+        )
 
 
 class TestSetAdditionalZoneStateService:
@@ -437,7 +451,9 @@ class TestSetAdditionalZoneStateService:
         await async_set_additional_zone_state(call)
 
         # Verify the write was called with coil_3 and True
-        mock_runtime_data.manager.write_coil_register.assert_called_once_with(3, True)
+        mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
+            3, True
+        )
 
     async def test_set_additional_zone_state_off_success(
         self, hass, mock_config_entry, mock_runtime_data
@@ -463,7 +479,9 @@ class TestSetAdditionalZoneStateService:
         await async_set_additional_zone_state(call)
 
         # Verify the write was called with coil_3 and False
-        mock_runtime_data.manager.write_coil_register.assert_called_once_with(3, False)
+        mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
+            3, False
+        )
 
 
 class TestServiceSchemas:
@@ -596,7 +614,7 @@ class TestSetSmartGridModeService:
 
         # Verify the write was called
         smart_grid_mode_map = get_smart_grid_mode_map()
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_56", smart_grid_mode_map["recommended_on"]
         )
 
@@ -748,7 +766,7 @@ class TestRemainingServiceHandlers:
             {"quiet_mode": mode},
         )
         await async_set_quiet_mode(call)
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_9", get_quiet_mode_map()[mode]
         )
 
@@ -763,7 +781,7 @@ class TestRemainingServiceHandlers:
             {"booster_mode": True},
         )
         await async_set_dhw_booster_mode(call)
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_13", 1
         )
 
@@ -778,7 +796,7 @@ class TestRemainingServiceHandlers:
             {"single_heatup": True},
         )
         await async_set_dhw_single_heatup(call)
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_15", 1
         )
 
@@ -793,11 +811,14 @@ class TestRemainingServiceHandlers:
             {"single_heatup": True, "setpoint": 45.0},
         )
         await async_set_dhw_single_heatup(call)
-        assert mock_runtime_data.manager.write_holding_register.call_count == 2
-        mock_runtime_data.manager.write_holding_register.assert_any_call(
+        assert (
+            mock_runtime_data.coordinator.data_manager.write_holding_register.call_count
+            == 2
+        )
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_any_call(
             "holding_15", 1
         )
-        mock_runtime_data.manager.write_holding_register.assert_any_call(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_any_call(
             "holding_16", 4500
         )
 
@@ -812,7 +833,7 @@ class TestRemainingServiceHandlers:
             {"power_limit": 3.5},
         )
         await async_set_power_limit(call)
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_58", 3500
         )
 
@@ -827,7 +848,7 @@ class TestRemainingServiceHandlers:
             {"offset": 2.5},
         )
         await async_set_heating_offset(call)
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_54", 250
         )
 
@@ -842,7 +863,7 @@ class TestRemainingServiceHandlers:
             {"offset": -1.5},
         )
         await async_set_cooling_offset(call)
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_55", -150
         )
 
@@ -857,7 +878,7 @@ class TestRemainingServiceHandlers:
             {"setpoint": 21.0},
         )
         await async_set_room_heating_setpoint(call)
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_6", 2100
         )
 
@@ -872,7 +893,7 @@ class TestRemainingServiceHandlers:
             {"setpoint": 25.0},
         )
         await async_set_room_cooling_setpoint(call)
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_7", 2500
         )
 
@@ -887,7 +908,7 @@ class TestRemainingServiceHandlers:
             {"setpoint": 40.0},
         )
         await async_set_additional_zone_setpoint(call)
-        mock_runtime_data.manager.write_holding_register.assert_called_once_with(
+        mock_runtime_data.coordinator.data_manager.write_holding_register.assert_called_once_with(
             "holding_63", 4000
         )
 
@@ -913,7 +934,7 @@ class TestServiceWriteFailures:
 
         mock_config_entry.runtime_data = mock_runtime_data
         hass.config_entries.async_get_entry.return_value = mock_config_entry
-        mock_runtime_data.manager.write_holding_register = AsyncMock(
+        mock_runtime_data.coordinator.data_manager.write_holding_register = AsyncMock(
             side_effect=OSError("dead gateway")
         )
 
@@ -939,7 +960,7 @@ class TestServiceWriteFailures:
 
         mock_config_entry.runtime_data = mock_runtime_data
         hass.config_entries.async_get_entry.return_value = mock_config_entry
-        mock_runtime_data.manager.write_coil_register = AsyncMock(
+        mock_runtime_data.coordinator.data_manager.write_coil_register = AsyncMock(
             side_effect=OSError("dead gateway")
         )
 
