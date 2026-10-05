@@ -201,11 +201,20 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 |----------|-------|-------------|
 | Sensor | ~50+ | Temperatures, power, status values |
 | Binary Sensor | 26 | Binary status indicators (diagnostic) |
-| Switch | 6 | On/Off control (coils + holding) |
+| Switch | 7 | On/Off control (coils + holding, incl. v4 model restart) |
 | Number | 20+ | Setpoint settings |
 | Select | 10+ | Operation mode selection |
 | Climate | 2 | Thermostat control |
 | Connection diagnostics (Enhanced device) | 2 binary + 6 sensors | Reachability, link status, timestamps, error counters (all diagnostic) |
+
+#### Register map versions (MMI v2/v3 vs. v4.x)
+
+The integration auto-detects the Modbus register map once per connection by probing the version-discriminating registers (discrete input 26 vs. input 138/139) and shows it as `sw_version` in the device info (`Register v2/v3`, `Register v4`, or `Register unbekannt` while still unknown). Version-specific registers are only polled on a matching map:
+
+| Register | Map | Behaviour on the other map |
+|----------|-----|----------------------------|
+| Discrete input 26 (Imposed limit acceptance) | v2/v3 only | No data on v4 (entity `unavailable`) |
+| Input 138 (Time until model restart), input 139 (Active operation state), holding 81 (Execute model restart) | v4 only | No data on v2/v3 (entities `unavailable`) |
 
 ### Sensors (Input Registers)
 
@@ -246,6 +255,7 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 | Defrost/Restart | 35 | On/Off |
 | Hot start | 36 | On/Off |
 | Unit operation mode | 83 | Stop/Tank Heat Up/Heating/Cooling/Actuator |
+| Active operation state | 139 | Normal/Maintenance/Restart pending (MMI v4.x only) |
 
 #### Status and Control Values
 | Sensor | Address | Unit | Device Class | State Class | Description |
@@ -256,6 +266,7 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 | Mixed pump PWM | 69 | % | – | measurement | – |
 | Direct pump PWM | 70 | % | – | measurement | – |
 | Mixing valve position | 71 | % | – | measurement | – |
+| Time until model restart | 138 | min | – | measurement | MMI v4.x only (diagnostic) |
 
 #### Error Monitoring
 | Sensor | Address | State Class | Description |
@@ -309,7 +320,7 @@ All binary sensors have the **Diagnostic** category.
 | Manual tank heat up request | 23 | – |
 | Emergency active | 24 | problem |
 | Circulation pump running | 25 | running |
-| Imposed limit acceptance | 26 | – |
+| Imposed limit acceptance (MMI v2/v3 only) | 26 | – |
 
 ### Switches
 
@@ -326,6 +337,7 @@ All binary sensors have the **Diagnostic** category.
 | Space heating/cooling On/Off | 4 | Heating/cooling operation |
 | DHW booster mode (Powerful) | 13 | DHW rapid heating |
 | DHW Single heat-up (Manual) | 15 | Manual DHW one-time heat-up |
+| Execute model restart now | 81 | Triggers a pending model restart (MMI v4.x only) |
 
 ### Number Entities
 
