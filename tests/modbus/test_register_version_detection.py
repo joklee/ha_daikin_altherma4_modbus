@@ -13,7 +13,10 @@ only replace the Modbus client boundary underneath it (scripted outcomes per
   failures are retried on the next call);
 * version-specific registers are only polled once the map is known: unknown
   (fallback) polls discrete 1-25 and never requests 26/138/139 in batches;
-  a refused 1-26 batch still falls back to 1-25 without a reconnect.
+  a refused 1-26 batch still falls back to 1-25 without a reconnect;
+* on v4, polling activates the new registers: input 138/139 ride along as
+  an extra block and the holding batch grows from 1-80 to 1-81 (with retry
+  as 1-80 when 81 is refused); v2/v3 never requests them.
 """
 
 from __future__ import annotations
@@ -234,12 +237,14 @@ async def test_raw_snapshot_uses_detected_map_and_v4_inputs() -> None:
     v4_inputs = [0] * 140
     v4_inputs[138] = 30
     v4_inputs[139] = 2
+    v4_holding = [0] * 100
+    v4_holding[81] = 1
     repo, client, _ = _repository(
         {
             ("discrete", 26, 1): ModbusInvalidAddressException("no 26"),
             ("input", 138, 2): _OkRegisters(v4_inputs),
             ("input", 21, 67): _OkRegisters([0] * 100),
-            ("holding", 1, 80): _OkRegisters([0] * 100),
+            ("holding", 1, 81): _OkRegisters(v4_holding),
             ("discrete", 1, 25): _OkBits([True] * 30),
             ("coil", 1, 3): _OkBits([True] * 5),
         }
@@ -251,6 +256,8 @@ async def test_raw_snapshot_uses_detected_map_and_v4_inputs() -> None:
     # Raw addresses are 0-based: Daikin 138 -> raw 137.
     assert snapshot["input"][137] == 30
     assert snapshot["input"][138] == 2
+    # Holding batch grows to 1-81 on v4: Daikin 81 -> raw 80.
+    assert snapshot["holding"][80] == 1
 
 
 async def test_raw_snapshot_without_detection_skips_version_specific() -> None:
@@ -270,6 +277,78 @@ async def test_raw_snapshot_without_detection_skips_version_specific() -> None:
     input_calls = [(a, c) for m, a, c in client.calls if m == "input"]
     assert input_calls == [(21, 67)]
     assert 137 not in snapshot["input"]
+
+
+async def test_v4_polling_activates_new_registers() -> None:
+    """On REGISTER_MAP_V4, input 138/139 and holding 81 are polled."""
+    repo, _client, _ = _repository(
+        {
+            ("input", 21, 67): _OkRegisters([0] * 100),
+            ("input", 138, 2): _OkRegisters([45, 2]),
+            ("holding", 1, 81): _OkRegisters([0] * 100),
+        }
+    )
+    repo._supports_discrete_26 = False
+    repo._supports_input_138_139 = True
+    assert repo.register_version == REGISTER_MAP_V4
+    assert repo._holding_batch() == (1, 81)
+
+    input_blocks = await repo.read_input_blocks()
+    assert [(block[1], block[2]) for block in input_blocks] == [(21, 87), (138, 139)]
+
+    holding_blocks = await repo.read_holding_blocks()
+    assert [(block[1], block[2]) for block in holding_blocks] == [(1, 81)]
+    assert repo._supports_holding_81 is True
+
+
+async def test_v2_v3_polling_never_requests_v4_registers() -> None:
+    """On REGISTER_MAP_V2_V3, batches stay at input 21-87 / holding 1-80."""
+    repo, client, _ = _repository(
+        {
+            ("input", 21, 67): _OkRegisters([0] * 100),
+            ("holding", 1, 80): _OkRegisters([0] * 100),
+        }
+    )
+    repo._supports_discrete_26 = True
+    repo._supports_input_138_139 = False
+    assert repo.register_version == REGISTER_MAP_V2_V3
+    assert repo._holding_batch() == (1, 80)
+
+    input_blocks = await repo.read_input_blocks()
+    assert [(block[1], block[2]) for block in input_blocks] == [(21, 87)]
+    holding_blocks = await repo.read_holding_blocks()
+    assert [(block[1], block[2]) for block in holding_blocks] == [(1, 80)]
+
+    input_calls = [(a, c) for m, a, c in client.calls if m == "input"]
+    assert (138, 2) not in input_calls
+
+
+async def test_refused_holding_81_batch_falls_back_to_1_80() -> None:
+    """A refused 1-81 batch narrows holding 81 and retries as 1-80.
+
+    The input 138/139 finding is left untouched: only the holding-81
+    support is narrowed, so the v4 inputs keep polling.
+    """
+    repo, client, _ = _repository(
+        {
+            ("holding", 1, 81): ModbusInvalidAddressException("illegal address"),
+            ("holding", 1, 80): _OkRegisters([0] * 100),
+        }
+    )
+    repo._supports_input_138_139 = True
+    assert repo._holding_batch() == (1, 81)
+
+    holding_blocks = await repo.read_holding_blocks()
+    assert [(block[1], block[2]) for block in holding_blocks] == [(1, 80)]
+    holding_calls = [(a, c) for m, a, c in client.calls if m == "holding"]
+    assert holding_calls == [(1, 81), (1, 80)]
+    assert repo._supports_holding_81 is False
+    assert repo._supports_input_138_139 is True
+
+    # Subsequent polls go straight to the narrowed 1-80 batch.
+    client.calls.clear()
+    await repo.read_holding_blocks()
+    assert [(a, c) for m, a, c in client.calls if m == "holding"] == [(1, 80)]
 
 
 async def test_concluded_version_is_logged_once_at_info(caplog) -> None:
