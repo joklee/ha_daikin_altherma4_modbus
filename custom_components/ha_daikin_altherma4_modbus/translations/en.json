@@ -785,5 +785,263 @@
       "title": "Daikin Altherma 4 reports abnormality",
       "description": "Your Daikin Altherma 4 heat pump ({entry_name}) is reporting an abnormality.\n\nAbnormality code: {abnormality_code}\nSub code: {abnormality_sub_code}\n\nPlease check the device documentation or contact Daikin support for details on this error code."
     }
+  },
+  "selector": {
+    "service_operation_mode": {
+      "options": {
+        "off": "Off",
+        "heat": "Heat",
+        "cool": "Cool"
+      }
+    },
+    "service_smart_grid_mode": {
+      "options": {
+        "free_running": "Free running",
+        "forced_off": "Forced off",
+        "recommended_on": "Recommended on",
+        "forced_on": "Forced on"
+      }
+    },
+    "service_quiet_mode": {
+      "options": {
+        "off": "Off",
+        "on_automatic": "On (Automatic)",
+        "on_manual": "On (Manual)"
+      }
+    }
+  },
+  "services": {
+    "set_operation_mode": {
+      "name": "Set operation mode",
+      "description": "Set the heat pump operation mode (Off, Heating, Cooling).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "operation_mode": {
+          "name": "Operation mode",
+          "description": "The operation mode to set."
+        }
+      }
+    },
+    "set_dhw_state": {
+      "name": "Set DHW state",
+      "description": "Enable or disable Domestic Hot Water.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "state": {
+          "name": "State",
+          "description": "True to enable, False to disable."
+        }
+      }
+    },
+    "set_main_zone_state": {
+      "name": "Set main zone state",
+      "description": "Enable or disable the main zone.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "state": {
+          "name": "State",
+          "description": "True to enable, False to disable."
+        }
+      }
+    },
+    "set_additional_zone_state": {
+      "name": "Set additional zone state",
+      "description": "Enable or disable the additional zone.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "state": {
+          "name": "State",
+          "description": "True to enable, False to disable."
+        }
+      }
+    },
+    "set_smart_grid_mode": {
+      "name": "Set Smart Grid mode",
+      "description": "Set the Smart Grid operation mode for energy management.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "smart_grid_mode": {
+          "name": "Smart Grid mode",
+          "description": "The Smart Grid mode to set."
+        }
+      }
+    },
+    "set_quiet_mode": {
+      "name": "Set quiet mode",
+      "description": "Set the quiet/night operation mode.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "quiet_mode": {
+          "name": "Quiet mode",
+          "description": "The quiet mode to set."
+        }
+      }
+    },
+    "set_dhw_booster_mode": {
+      "name": "Set DHW booster mode",
+      "description": "Enable or disable the DHW booster (Powerful) mode.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "booster_mode": {
+          "name": "Booster mode",
+          "description": "True to enable, False to disable."
+        }
+      }
+    },
+    "set_dhw_single_heatup": {
+      "name": "Set DHW single heat-up",
+      "description": "Start or stop the DHW one-time heat-up request, with an optional setpoint.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "single_heatup": {
+          "name": "Single heat-up",
+          "description": "True to start, False to stop."
+        },
+        "setpoint": {
+          "name": "Setpoint",
+          "description": "DHW setpoint in °C (30-85, optional)."
+        }
+      }
+    },
+    "start_dhw_single_heatup": {
+      "name": "Start DHW single heat-up",
+      "description": "Heat domestic hot water once to a target temperature. Enables DHW automatically when it is off and restores it afterwards. Returns immediately; a background task stops the request on target or timeout and fires ha_daikin_altherma4_modbus_dhw_single_heatup_finished.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "target_temperature": {
+          "name": "Target temperature",
+          "description": "DHW target temperature in °C (30-85)."
+        },
+        "timeout": {
+          "name": "Timeout",
+          "description": "Maximum run time (1 minute to 6 hours, default 2 hours)."
+        },
+        "hysteresis": {
+          "name": "Hysteresis",
+          "description": "Finish below target by this amount in K (0-5, default 0.5)."
+        }
+      }
+    },
+    "set_power_limit": {
+      "name": "Set power limit",
+      "description": "Set the imposed power limit in kW (0-20).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "power_limit": {
+          "name": "Power limit",
+          "description": "Imposed power limit in kW (0-20)."
+        }
+      }
+    },
+    "set_heating_offset": {
+      "name": "Set heating offset",
+      "description": "Set the weather-dependent heating offset in K (-10 to +10).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "offset": {
+          "name": "Offset",
+          "description": "Heating offset in K (-10 to +10)."
+        }
+      }
+    },
+    "set_cooling_offset": {
+      "name": "Set cooling offset",
+      "description": "Set the weather-dependent cooling offset in K (-10 to +10).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "offset": {
+          "name": "Offset",
+          "description": "Cooling offset in K (-10 to +10)."
+        }
+      }
+    },
+    "set_room_heating_setpoint": {
+      "name": "Set room heating setpoint",
+      "description": "Set the room thermostat heating setpoint in °C (12-30).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "setpoint": {
+          "name": "Setpoint",
+          "description": "Room heating setpoint in °C (12-30)."
+        }
+      }
+    },
+    "set_room_cooling_setpoint": {
+      "name": "Set room cooling setpoint",
+      "description": "Set the room thermostat cooling setpoint in °C (12-35).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "setpoint": {
+          "name": "Setpoint",
+          "description": "Room cooling setpoint in °C (12-35)."
+        }
+      }
+    },
+    "set_additional_zone_setpoint": {
+      "name": "Set additional zone setpoint",
+      "description": "Set the additional zone setpoint in °C (3-85).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        },
+        "setpoint": {
+          "name": "Setpoint",
+          "description": "Additional zone setpoint in °C (3-85)."
+        }
+      }
+    },
+    "refresh_connection": {
+      "name": "Refresh connection",
+      "description": "Refresh the Modbus connection for the config entry.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Config entry",
+          "description": "The config entry ID of the Daikin Altherma 4 heat pump."
+        }
+      }
+    }
   }
 }

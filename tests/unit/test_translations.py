@@ -539,3 +539,191 @@ class TestTranslations:
             assert not missing, f"icons.json [{platform}] missing: {sorted(missing)}"
 
         assert "daikin_thermostat_climate" in icon_keys("climate")
+
+
+def _load_services_yaml(component_dir):
+    """Load services.yaml field structure: {service: {fields}}."""
+    import yaml
+
+    path = component_dir / "services.yaml"
+    with open(path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return data
+
+
+def _load_translation_section(component_dir, lang, section):
+    """Load a top-level section (services/selector) from a translation file."""
+    with open(component_dir / "translations" / f"{lang}.json", encoding="utf-8") as f:
+        data = json.load(f)
+    return data.get(section, {})
+
+
+class TestServiceTranslations:
+    """Test that services.yaml and service translations stay in sync."""
+
+    @pytest.fixture
+    def component_dir(self):
+        """Return the path to the custom component directory."""
+        return (
+            Path(__file__).parent.parent.parent
+            / "custom_components"
+            / "ha_daikin_altherma4_modbus"
+        )
+
+    def test_services_yaml_has_no_translatable_strings(self, component_dir):
+        """services.yaml must follow the new translation pattern (HA 2023.7+).
+
+        name/description live in translations/*.json under 'services',
+        not in services.yaml.
+        """
+        services = _load_services_yaml(component_dir)
+        offenders = []
+        for service_name, definition in services.items():
+            if "name" in definition or "description" in definition:
+                offenders.append(service_name)
+            for field_name, field in definition.get("fields", {}).items():
+                if "name" in field or "description" in field:
+                    offenders.append(f"{service_name}.{field_name}")
+        assert not offenders, (
+            "services.yaml must not contain name/description "
+            f"(use translations): {sorted(offenders)}"
+        )
+
+    def test_select_selectors_use_translation_key(self, component_dir):
+        """Every select selector in services.yaml needs a translation_key."""
+        services = _load_services_yaml(component_dir)
+        missing = []
+        for service_name, definition in services.items():
+            for field_name, field in definition.get("fields", {}).items():
+                selector = field.get("selector", {})
+                select = selector.get("select") if isinstance(selector, dict) else None
+                if (
+                    isinstance(select, dict)
+                    and "options" in select
+                    and not select.get("translation_key")
+                ):
+                    missing.append(f"{service_name}.{field_name}")
+        assert not missing, (
+            f"select selectors without translation_key: {sorted(missing)}"
+        )
+
+    def test_all_yaml_services_have_translations(self, component_dir):
+        """Every service/field in services.yaml needs en/de/nl translations."""
+        services = _load_services_yaml(component_dir)
+        for lang in ["en", "de", "nl"]:
+            translated = _load_translation_section(component_dir, lang, "services")
+            missing_services = set(services) - set(translated)
+            assert not missing_services, (
+                f"{lang}.json missing services: {sorted(missing_services)}"
+            )
+            missing_fields = []
+            for service_name, definition in services.items():
+                yaml_fields = set(definition.get("fields", {}))
+                tr_fields = set(translated.get(service_name, {}).get("fields", {}))
+                for field in sorted(yaml_fields - tr_fields):
+                    missing_fields.append(f"{service_name}.{field}")
+            assert not missing_fields, (
+                f"{lang}.json missing service fields: {missing_fields}"
+            )
+
+    def test_no_orphaned_service_translations(self, component_dir):
+        """Translations must not define services/fields absent from services.yaml."""
+        services = _load_services_yaml(component_dir)
+        for lang in ["en", "de", "nl"]:
+            translated = _load_translation_section(component_dir, lang, "services")
+            extra_services = set(translated) - set(services)
+            assert not extra_services, (
+                f"{lang}.json orphaned services: {sorted(extra_services)}"
+            )
+            extra_fields = []
+            for service_name, tr_definition in translated.items():
+                if service_name not in services:
+                    continue
+                yaml_fields = set(services[service_name].get("fields", {}))
+                tr_fields = set(tr_definition.get("fields", {}))
+                for field in sorted(tr_fields - yaml_fields):
+                    extra_fields.append(f"{service_name}.{field}")
+            assert not extra_fields, (
+                f"{lang}.json orphaned service fields: {extra_fields}"
+            )
+
+    def test_service_translations_have_name_and_description(self, component_dir):
+        """Every service and field translation needs name + description."""
+        for lang in ["en", "de", "nl"]:
+            translated = _load_translation_section(component_dir, lang, "services")
+            assert translated, f"Missing 'services' section in {lang}.json"
+            missing = []
+            for service_name, definition in translated.items():
+                if not definition.get("name") or not definition.get("description"):
+                    missing.append(service_name)
+                for field_name, field in definition.get("fields", {}).items():
+                    if not field.get("name") or not field.get("description"):
+                        missing.append(f"{service_name}.{field_name}")
+            assert not missing, (
+                f"Missing name/description in {lang}.json: {sorted(missing)}"
+            )
+
+    def test_service_keys_consistent_between_languages(self, component_dir):
+        """en/de/nl must expose the same services and fields."""
+        en = _load_translation_section(component_dir, "en", "services")
+        de = _load_translation_section(component_dir, "de", "services")
+        nl = _load_translation_section(component_dir, "nl", "services")
+
+        assert set(de) == set(en), (
+            "de.json services mismatch: "
+            f"only-en={sorted(set(en) - set(de))} "
+            f"only-de={sorted(set(de) - set(en))}"
+        )
+        assert set(nl) == set(en), (
+            "nl.json services mismatch: "
+            f"only-en={sorted(set(en) - set(nl))} "
+            f"only-nl={sorted(set(nl) - set(en))}"
+        )
+        for service_name in en:
+            assert set(de[service_name].get("fields", {})) == set(
+                en[service_name].get("fields", {})
+            ), f"de.json fields mismatch for {service_name}"
+            assert set(nl[service_name].get("fields", {})) == set(
+                en[service_name].get("fields", {})
+            ), f"nl.json fields mismatch for {service_name}"
+
+    def test_selector_keys_match_yaml_translation_keys(self, component_dir):
+        """selector sections must cover every translation_key used in services.yaml."""
+        services = _load_services_yaml(component_dir)
+        expected_keys = set()
+        expected_options = {}
+        for definition in services.values():
+            for field in definition.get("fields", {}).values():
+                selector = field.get("selector", {})
+                select = selector.get("select") if isinstance(selector, dict) else None
+                if isinstance(select, dict) and select.get("translation_key"):
+                    key = select["translation_key"]
+                    expected_keys.add(key)
+                    expected_options[key] = list(select.get("options", []))
+
+        for lang in ["en", "de", "nl"]:
+            selector = _load_translation_section(component_dir, lang, "selector")
+            missing = expected_keys - set(selector)
+            assert not missing, f"{lang}.json selector missing keys: {sorted(missing)}"
+            extra = set(selector) - expected_keys
+            assert not extra, f"{lang}.json orphaned selector keys: {sorted(extra)}"
+            for key, options in expected_options.items():
+                tr_options = set(selector.get(key, {}).get("options", {}))
+                assert set(options) == tr_options, (
+                    f"{lang}.json selector.{key} options mismatch: "
+                    f"yaml={sorted(options)} translated={sorted(tr_options)}"
+                )
+
+    def test_selector_options_consistent_between_languages(self, component_dir):
+        """Selector option keys must be identical in en/de/nl."""
+        en = _load_translation_section(component_dir, "en", "selector")
+        de = _load_translation_section(component_dir, "de", "selector")
+        nl = _load_translation_section(component_dir, "nl", "selector")
+        assert set(de) == set(en) == set(nl), "selector keys differ between languages"
+        for key in en:
+            assert set(de[key].get("options", {})) == set(en[key].get("options", {})), (
+                f"de selector.{key} options differ from en"
+            )
+            assert set(nl[key].get("options", {})) == set(en[key].get("options", {})), (
+                f"nl selector.{key} options differ from en"
+            )

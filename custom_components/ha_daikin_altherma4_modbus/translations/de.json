@@ -773,5 +773,263 @@
       "title": "Daikin Altherma 4 meldet einen Fehler",
       "description": "Ihre Daikin Altherma 4 Wärmepumpe ({entry_name}) meldet einen Fehler.\n\nFehlercode: {abnormality_code}\nUntercode: {abnormality_sub_code}\n\nBitte überprüfen Sie die Gerätedokumentation oder kontaktieren Sie den Daikin-Support für Details zu diesem Fehlercode."
     }
+  },
+  "selector": {
+    "service_operation_mode": {
+      "options": {
+        "off": "Aus",
+        "heat": "Heizen",
+        "cool": "Kühlen"
+      }
+    },
+    "service_smart_grid_mode": {
+      "options": {
+        "free_running": "Freier Betrieb",
+        "forced_off": "Erzwungen Aus",
+        "recommended_on": "Empfehlung ein",
+        "forced_on": "Erzwungen Ein"
+      }
+    },
+    "service_quiet_mode": {
+      "options": {
+        "off": "Aus",
+        "on_automatic": "Ein (Automatisch)",
+        "on_manual": "Ein (Manuell)"
+      }
+    }
+  },
+  "services": {
+    "set_operation_mode": {
+      "name": "Betriebsart setzen",
+      "description": "Betriebsart der Wärmepumpe setzen (Aus, Heizen, Kühlen).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "operation_mode": {
+          "name": "Betriebsart",
+          "description": "Die zu setzende Betriebsart."
+        }
+      }
+    },
+    "set_dhw_state": {
+      "name": "Brauchwasserstatus setzen",
+      "description": "Brauchwasser aktivieren oder deaktivieren.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "state": {
+          "name": "Status",
+          "description": "True zum Aktivieren, False zum Deaktivieren."
+        }
+      }
+    },
+    "set_main_zone_state": {
+      "name": "Hauptzonenstatus setzen",
+      "description": "Hauptzone aktivieren oder deaktivieren.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "state": {
+          "name": "Status",
+          "description": "True zum Aktivieren, False zum Deaktivieren."
+        }
+      }
+    },
+    "set_additional_zone_state": {
+      "name": "Zusatzzonenstatus setzen",
+      "description": "Zusatzzone aktivieren oder deaktivieren.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "state": {
+          "name": "Status",
+          "description": "True zum Aktivieren, False zum Deaktivieren."
+        }
+      }
+    },
+    "set_smart_grid_mode": {
+      "name": "Smart-Grid-Modus setzen",
+      "description": "Smart-Grid-Betriebsart für das Energiemanagement setzen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "smart_grid_mode": {
+          "name": "Smart-Grid-Modus",
+          "description": "Der zu setzende Smart-Grid-Modus."
+        }
+      }
+    },
+    "set_quiet_mode": {
+      "name": "Leisemodus setzen",
+      "description": "Leise-/Nachtbetriebsart setzen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "quiet_mode": {
+          "name": "Leisemodus",
+          "description": "Der zu setzende Leisemodus."
+        }
+      }
+    },
+    "set_dhw_booster_mode": {
+      "name": "Brauchwasser-Booster-Modus setzen",
+      "description": "Brauchwasser-Booster-Modus (leistungsstark) aktivieren oder deaktivieren.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "booster_mode": {
+          "name": "Booster-Modus",
+          "description": "True zum Aktivieren, False zum Deaktivieren."
+        }
+      }
+    },
+    "set_dhw_single_heatup": {
+      "name": "Brauchwasser-Einzelaufheizung setzen",
+      "description": "Einmalige Aufheizungsanforderung für Brauchwasser starten oder stoppen, mit optionalem Sollwert.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "single_heatup": {
+          "name": "Einzelaufheizung",
+          "description": "True zum Starten, False zum Stoppen."
+        },
+        "setpoint": {
+          "name": "Sollwert",
+          "description": "Brauchwasser-Sollwert in °C (30–85, optional)."
+        }
+      }
+    },
+    "start_dhw_single_heatup": {
+      "name": "Brauchwasser-Einzelaufheizung starten",
+      "description": "Brauchwasser einmalig auf eine Zieltemperatur aufheizen. Aktiviert Brauchwasser automatisch, wenn es ausgeschaltet ist, und stellt es anschließend wieder her. Kehrt sofort zurück; eine Hintergrundaufgabe beendet die Anforderung bei Ziel oder Zeitüberschreitung und löst ha_daikin_altherma4_modbus_dhw_single_heatup_finished aus.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "target_temperature": {
+          "name": "Zieltemperatur",
+          "description": "Brauchwasser-Zieltemperatur in °C (30–85)."
+        },
+        "timeout": {
+          "name": "Zeitüberschreitung",
+          "description": "Maximale Laufzeit (1 Minute bis 6 Stunden, Standard 2 Stunden)."
+        },
+        "hysteresis": {
+          "name": "Hysterese",
+          "description": "Um diesen Betrag in K unter dem Ziel beenden (0–5, Standard 0,5)."
+        }
+      }
+    },
+    "set_power_limit": {
+      "name": "Leistungsgrenze setzen",
+      "description": "Auferlegte Leistungsgrenze in kW setzen (0–20).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "power_limit": {
+          "name": "Leistungsgrenze",
+          "description": "Auferlegte Leistungsgrenze in kW (0–20)."
+        }
+      }
+    },
+    "set_heating_offset": {
+      "name": "Heizungsverschiebung setzen",
+      "description": "Witterungsgeführte Heizungsverschiebung in K setzen (-10 bis +10).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "offset": {
+          "name": "Verschiebung",
+          "description": "Heizungsverschiebung in K (-10 bis +10)."
+        }
+      }
+    },
+    "set_cooling_offset": {
+      "name": "Kühlungsverschiebung setzen",
+      "description": "Witterungsgeführte Kühlungsverschiebung in K setzen (-10 bis +10).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "offset": {
+          "name": "Verschiebung",
+          "description": "Kühlungsverschiebung in K (-10 bis +10)."
+        }
+      }
+    },
+    "set_room_heating_setpoint": {
+      "name": "Raum-Heizsollwert setzen",
+      "description": "Raumthermostat-Heizsollwert in °C setzen (12–30).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "setpoint": {
+          "name": "Sollwert",
+          "description": "Raum-Heizsollwert in °C (12–30)."
+        }
+      }
+    },
+    "set_room_cooling_setpoint": {
+      "name": "Raum-Kühlsollwert setzen",
+      "description": "Raumthermostat-Kühlsollwert in °C setzen (12–35).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "setpoint": {
+          "name": "Sollwert",
+          "description": "Raum-Kühlsollwert in °C (12–35)."
+        }
+      }
+    },
+    "set_additional_zone_setpoint": {
+      "name": "Zusatzzonen-Sollwert setzen",
+      "description": "Zusatzzonen-Sollwert in °C setzen (3–85).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        },
+        "setpoint": {
+          "name": "Sollwert",
+          "description": "Zusatzzonen-Sollwert in °C (3–85)."
+        }
+      }
+    },
+    "refresh_connection": {
+      "name": "Verbindung aktualisieren",
+      "description": "Modbus-Verbindung für den Konfigurationseintrag aktualisieren.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Die Konfigurationseintrags-ID der Daikin Altherma 4 Wärmepumpe."
+        }
+      }
+    }
   }
 }
