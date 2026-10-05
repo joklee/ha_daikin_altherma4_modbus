@@ -137,19 +137,18 @@ async def test_connection_recovery_cycle(fail_cls, hass):
     """A communication failure at the transport can be recovered from.
 
     Phase 1 - connected
-    Phase 2 - timeout
-    Phase 3 - (error / unavailable)
-    Phase 4 - reconnect
-    Phase 5 - available
+    Phase 2 - timeout (poll fails loudly, consecutive failures counted)
+    Phase 3 - reconnect
+    Phase 4 - available
 
-    NOTE on the failure phase: the production RegisterRepository swallows
-    ``ModbusReadException``/``ModbusTimeoutException`` during input-register
-    reads and returns an *empty* block list instead of propagating. As a
-    result ``coordinator.last_update_success`` stays ``True`` and the
-    coordinator itself does not raise ``UpdateFailed``. The *entity* still
-    becomes unavailable only because ``input_40`` is absent from the
-    (now empty) coordinator data. This test documents that real behaviour
-    instead of artificially forcing ``last_update_success=False``.
+    NOTE on the failure phase: a totally dead input space raises
+    ``ModbusReadException`` from the data manager, which the coordinator
+    translates into a failed poll (``last_update_success`` False,
+    ``_consecutive_failures`` incremented, ``UpdateFailed`` internally).
+    Coordinator data is *retained* (stale) across the failed poll — HA does
+    not clear it — so the entity still shows the last known value while
+    the coordinator reports the outage. After 3 consecutive failures a
+    repair issue is raised (see REPAIR_ISSUE_CONSECUTIVE_FAILURES).
 
     Only the input-register read is failed on purpose. Failing the
     discrete-input read instead would trigger ``_retry_read_discrete_inputs``,
@@ -167,24 +166,25 @@ async def test_connection_recovery_cycle(fail_cls, hass):
     assert sensor.available is True
     assert sensor.native_value == pytest.approx(TEMP16_EXPECTED)
 
-    # Phase 2 - simulate timeout at the transport boundary
+    # Phase 2 - simulate timeout at the transport boundary.
+    # Full batch and both fallback splits raise, so the input space is
+    # completely dead: the poll must fail loudly instead of succeeding
+    # with an empty dict.
     client.fail = True
 
-    # The failure is swallowed by the repository: no UpdateFailed is raised
-    # and the coordinator reports a successful (if empty) update.
     await coordinator.async_refresh()
-    assert "input_40" not in coordinator.data
+    assert coordinator.last_update_success is False
+    assert coordinator._consecutive_failures == 1
+    # Stale data is retained (not cleared, not replaced by emptiness).
+    assert coordinator.data.get("input_40") is not None
 
-    # Phase 3 - visible (entity-level) unavailability.
-    assert sensor.available is False
-    assert sensor.native_value is None
-
-    # Phase 4 - reconnect: the transport is healthy again.
+    # Phase 3 - reconnect: the transport is healthy again.
     client.fail = False
     await coordinator.async_refresh()
 
-    # Phase 5 - recovered.
+    # Phase 4 - recovered: failures reset, fresh data flows again.
     assert coordinator.last_update_success is True
+    assert coordinator._consecutive_failures == 0
     assert coordinator.data.get("input_40") is not None
     assert sensor.available is True
     assert sensor.native_value == pytest.approx(TEMP16_EXPECTED)

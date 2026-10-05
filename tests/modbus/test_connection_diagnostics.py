@@ -575,9 +575,10 @@ async def test_total_outage_degrades_and_recovers() -> None:
 
     assert await repository.read_input_blocks() == []
     assert await repository.read_discrete_inputs() is None
-    # One facade call per read (input has no retry; the discrete retry never
-    # reaches the facade because reconnect raises first).
-    assert client.error_counts["read_connection"] == 2
+    # One facade call per attempted read: input full batch + 2 fallback
+    # splits, then discrete (whose retry never reaches the facade because
+    # reconnect raises first).
+    assert client.error_counts["read_connection"] == 4
     assert client.last_read_at is None
 
     connection.for_unit(1).fail_requests(None)

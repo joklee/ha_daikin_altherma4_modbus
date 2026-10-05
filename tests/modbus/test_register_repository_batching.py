@@ -22,8 +22,8 @@ Protected contracts:
   after a reconnection attempt;
 * a total communication failure degrades in a controlled way
   (empty result instead of fabricated data);
-* input registers are read as ONE batch (21, 67) and deliberately have no
-  fallback.
+* input registers are read as ONE batch (21, 67) with a chunked fallback
+  ((21, 33), (54, 34)) mirroring the pre-optimization split.
 """
 
 from __future__ import annotations
@@ -312,7 +312,7 @@ async def test_total_communication_failure_degrades_controlled() -> None:
 
 
 # --------------------------------------------------------------------------
-# Input registers: single batch without any fallback
+# Input registers: single batch with chunked fallback
 # --------------------------------------------------------------------------
 
 
@@ -329,6 +329,10 @@ async def test_input_registers_single_batch_success() -> None:
     assert session.reconnect_count == 0
 
 
+_INPUT_FALLBACK_CALLS = [(21, 33), (54, 34)]
+_INPUT_FALLBACK_METADATA = ((21, 53, 21), (54, 87, 54))
+
+
 @pytest.mark.parametrize(
     ("outcome", "desc"),
     [
@@ -336,13 +340,42 @@ async def test_input_registers_single_batch_success() -> None:
         (ModbusReadException("timeout"), "exception"),
     ],
 )
-async def test_input_registers_have_no_fallback_on_failure(
+async def test_input_registers_fall_back_to_splits_on_failure(
     outcome: object, desc: str
 ) -> None:
-    """The optimized input read deliberately has no chunked fallback."""
-    repository, client, _session = _repository([outcome])
+    """A failed 67-register batch falls back to the 21-53/54-87 splits."""
+    chunks = (_chunk(100, 33), _chunk(300, 34))
+    repository, client, session = _repository([outcome, *chunks])
 
     blocks = await repository.read_input_blocks()
 
-    assert client.calls == [(21, 67)], f"fallback attempted for {desc}"
-    assert blocks == [], f"fabricated data returned for {desc}"
+    assert client.calls == [(21, 67), *_INPUT_FALLBACK_CALLS], desc
+    assert _flat_registers(blocks) == [
+        *chunks[0].registers,
+        *chunks[1].registers,
+    ], desc
+    assert _block_metadata(blocks) == _INPUT_FALLBACK_METADATA, desc
+    assert session.reconnect_count == 0, desc
+
+
+async def test_input_registers_partial_fallback_keeps_reachable_data() -> None:
+    """A failed first split must not discard the second split's data."""
+    repository, client, _session = _repository(
+        [ModbusReadException("timeout"), ModbusReadException("split down"), _chunk(300, 34)]
+    )
+
+    blocks = await repository.read_input_blocks()
+
+    assert client.calls == [(21, 67), *_INPUT_FALLBACK_CALLS]
+    assert _block_metadata(blocks) == ((54, 87, 54),)
+
+
+async def test_input_registers_total_failure_returns_no_blocks() -> None:
+    """When batch and both splits fail, no fabricated data is returned."""
+    boom = ModbusReadException("device offline")
+    repository, client, _session = _repository([boom, boom, boom])
+
+    blocks = await repository.read_input_blocks()
+
+    assert client.calls == [(21, 67), *_INPUT_FALLBACK_CALLS]
+    assert blocks == []

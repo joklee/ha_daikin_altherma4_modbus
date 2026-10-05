@@ -86,6 +86,7 @@ _WRITE_EXCEPTIONS = (
 
 # Optimized batch layout shared by the polling path and raw snapshots.
 _INPUT_BATCH = (21, 67)
+_INPUT_FALLBACK_BLOCKS = ((21, 33), (54, 34))
 _HOLDING_BATCH = (1, 80)
 _HOLDING_FALLBACK_BLOCKS = ((1, 25), (26, 25), (51, 30))
 _DISCRETE_BATCH = (1, 26)
@@ -199,15 +200,48 @@ class ModbusRegisterRepository:
                     "✅ Batch optimization successful: 67 registers in 1 read"
                 )
             else:
-                _LOGGER.error("Optimized Input Register Block read failed")
+                _LOGGER.warning("Optimized Input Register Block read failed")
+                await self._fallback_input_blocks(client, blocks)
         except ModbusInvalidAddressException as err:
             _LOGGER.warning(
                 "Optimized Input Register Block not supported by device: %s", err
             )
+            await self._fallback_input_blocks(client, blocks)
         except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read optimized Input Register Block: %s", err)
+            await self._fallback_input_blocks(client, blocks)
 
         return blocks
+
+    async def _fallback_input_blocks(
+        self, client, blocks: list[tuple[Any, int, int, int]]
+    ) -> None:
+        """Fall back to smaller input ranges if the full batch is rejected.
+
+        Mirrors the pre-optimization split (21-53, 54-87) for devices that
+        reject the 67-register batch. Single attempt per split without
+        reconnect: the fallback targets deterministic range rejection, while
+        transient link loss recovers on the next poll cycle.
+        """
+        for start, count in _INPUT_FALLBACK_BLOCKS:
+            try:
+                result = await client.read_input_registers(start, count)
+            except _READ_EXCEPTIONS as err:
+                _LOGGER.warning(
+                    "Input fallback block %s-%s failed: %s",
+                    start,
+                    start + count - 1,
+                    err,
+                )
+                continue
+            if _is_error_result(self._session, result):
+                _LOGGER.warning(
+                    "Input fallback block %s-%s rejected by device",
+                    start,
+                    start + count - 1,
+                )
+                continue
+            blocks.append((result, start, start + count - 1, start))
 
     async def read_discrete_inputs(self) -> Any | None:
         """Read discrete inputs with one reconnect retry."""

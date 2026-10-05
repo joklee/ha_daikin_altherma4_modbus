@@ -8,6 +8,7 @@ from typing import Any
 from ..modbus.register_repository import ModbusRegisterRepository
 from ..modbus.transport_session import ModbusTransportSession
 from .data_types import StateData
+from .exceptions import ModbusReadException
 from .mapping_transform import ModbusMappingTransform
 from .register_constants import (
     COIL_REGISTERS,
@@ -218,16 +219,28 @@ class ModbusDataManager:
         return data
 
     async def _fetch_input_registers(self) -> StateData:
-        """Fetch all input registers in configured blocks."""
+        """Fetch all input registers in configured blocks.
+
+        Raises:
+            ModbusReadException: If no input block could be read at all
+                (full batch plus fallback splits failed). A completely dead
+                input space must fail the poll instead of silently yielding
+                an empty dict that the coordinator would count as success.
+        """
         start_time = time.time()
         data = {}
 
+        blocks = await self._repository.read_input_blocks()
+        if not blocks:
+            raise ModbusReadException(
+                "Input registers unreadable (batch 21-87 and fallback splits failed)"
+            )
         for (
             result,
             min_addr,
             max_addr,
             offset,
-        ) in await self._repository.read_input_blocks():
+        ) in blocks:
             data.update(
                 self._mapping.process_input_register_block(
                     result, INPUT_REGISTERS, min_addr, max_addr, offset
@@ -238,7 +251,14 @@ class ModbusDataManager:
         return data
 
     async def _fetch_discrete_inputs(self) -> StateData:
-        """Fetch all discrete inputs."""
+        """Fetch all discrete inputs.
+
+        Discrete inputs are an explicitly best-effort, optional space: pure
+        status bits whose absence degrades (stale/empty statuses) but must
+        not fail the whole poll. Devices may legitimately not support this
+        register type, and the setup/recovery paths rely on tolerating an
+        empty discrete space while other spaces deliver data.
+        """
         start_time = time.time()
         data = {}
 
@@ -254,31 +274,47 @@ class ModbusDataManager:
         return data
 
     async def _fetch_coils(self) -> StateData:
-        """Fetch all coils."""
+        """Fetch all coils.
+
+        Raises:
+            ModbusReadException: If the coil space could not be read at all.
+                Like inputs, a completely dead coil space must fail the poll
+                instead of silently freezing the switch entities.
+        """
         start_time = time.time()
         data = {}
 
         result = await self._repository.read_coils()
-        if result is not None:
-            data.update(
-                self._mapping.process_bit_sensors(result, COIL_REGISTERS, "coil")
-            )
+        if result is None:
+            raise ModbusReadException("Coils unreadable (read plus retry failed)")
+        data.update(self._mapping.process_bit_sensors(result, COIL_REGISTERS, "coil"))
 
         _LOGGER.debug("Coils fully read in %.3fs", time.time() - start_time)
         return data
 
     async def _fetch_holding_data(self) -> StateData:
-        """Fetch all holding/select/switch registers in configured blocks."""
+        """Fetch all holding/select/switch registers in configured blocks.
+
+        Raises:
+            ModbusReadException: If no holding block could be read at all
+                (full batch plus fallback splits failed). See
+                :meth:`_fetch_input_registers` for why silence is worse.
+        """
         start_time = time.time()
         data = {}
         all_holding_registers = HOLDING_REGISTERS
 
+        blocks = await self._repository.read_holding_blocks()
+        if not blocks:
+            raise ModbusReadException(
+                "Holding registers unreadable (batch 1-80 and fallback splits failed)"
+            )
         for (
             result,
             min_addr,
             max_addr,
             offset,
-        ) in await self._repository.read_holding_blocks():
+        ) in blocks:
             data.update(
                 self._mapping.process_holding_register_block(
                     result, all_holding_registers, min_addr, max_addr, offset
