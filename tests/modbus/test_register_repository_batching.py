@@ -361,7 +361,11 @@ async def test_input_registers_fall_back_to_splits_on_failure(
 async def test_input_registers_partial_fallback_keeps_reachable_data() -> None:
     """A failed first split must not discard the second split's data."""
     repository, client, _session = _repository(
-        [ModbusReadException("timeout"), ModbusReadException("split down"), _chunk(300, 34)]
+        [
+            ModbusReadException("timeout"),
+            ModbusReadException("split down"),
+            _chunk(300, 34),
+        ]
     )
 
     blocks = await repository.read_input_blocks()
