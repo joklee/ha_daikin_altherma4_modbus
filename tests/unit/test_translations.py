@@ -191,8 +191,6 @@ class TestTranslations:
             "daikin_dhw_manual_thermostat",
             "daikin_thermostat_climate",
             "external_electric_power",
-            "input_29",  # orphaned translation
-            "input_34",  # orphaned translation
             "input_53",
             "input_54",
             "input_55",
@@ -212,8 +210,6 @@ class TestTranslations:
             "daikin_dhw_manual_thermostat",
             "daikin_thermostat_climate",
             "external_electric_power",
-            "input_29",  # orphaned translation
-            "input_34",  # orphaned translation
             "input_53",
             "input_54",
             "input_55",
@@ -233,8 +229,6 @@ class TestTranslations:
             "daikin_dhw_manual_thermostat",
             "daikin_thermostat_climate",
             "external_electric_power",
-            "input_29",  # orphaned translation
-            "input_34",  # orphaned translation
             "input_53",
             "input_54",
             "input_55",
@@ -260,7 +254,7 @@ class TestTranslations:
 
     def test_translation_consistency_between_languages(self, en_keys, de_keys, nl_keys):
         """Verify that en.json, de.json and nl.json have the same translation keys."""
-        allowed_diff = {"input_29", "input_34"}
+        allowed_diff = set()
 
         en_only = en_keys - de_keys - allowed_diff
         de_only = de_keys - en_keys - allowed_diff
