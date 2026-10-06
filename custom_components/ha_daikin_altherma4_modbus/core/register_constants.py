@@ -194,7 +194,7 @@ INPUT_REGISTERS = [
     ),
     # Temperaturen (40-45)
     SensorRegister(
-        name="Leaving water temperature PHE",
+        name="Leaving water temperature PHE (plate heat exchanger)",
         address=40,
         input_type="input",
         register_name="input_40",
@@ -205,7 +205,7 @@ INPUT_REGISTERS = [
         translation_key="input_40",
     ),
     SensorRegister(
-        name="Leaving water temperature BUH",
+        name="Leaving water temperature BUH (backup heater)",
         address=41,
         input_type="input",
         register_name="input_41",
@@ -271,7 +271,7 @@ INPUT_REGISTERS = [
         translation_key="input_49",
     ),
     SensorRegister(
-        name="Remote control room temperature (Main)",
+        name="Remote controller room temperature (Main)",
         address=50,
         input_type="input",
         register_name="input_50",
@@ -311,7 +311,7 @@ INPUT_REGISTERS = [
     ),
     # Setpoints Main (54-57)
     SensorRegister(
-        name="Leaving water Main Heating setpoint lower",
+        name="Leaving water Main Heating setpoint Lower limit",
         address=54,
         input_type="input",
         register_name="input_54",
@@ -322,7 +322,7 @@ INPUT_REGISTERS = [
         translation_key="input_54",
     ),
     SensorRegister(
-        name="Leaving water Main Heating setpoint upper",
+        name="Leaving water Main Heating setpoint Upper limit",
         address=55,
         input_type="input",
         register_name="input_55",
@@ -333,7 +333,7 @@ INPUT_REGISTERS = [
         translation_key="input_55",
     ),
     SensorRegister(
-        name="Leaving water Main Cooling setpoint lower",
+        name="Leaving water Main Cooling setpoint Lower limit",
         address=56,
         input_type="input",
         register_name="input_56",
@@ -344,7 +344,7 @@ INPUT_REGISTERS = [
         translation_key="input_56",
     ),
     SensorRegister(
-        name="Main Cooling setpoint upper",
+        name="Leaving water Main Cooling setpoint Upper limit",
         address=57,
         input_type="input",
         register_name="input_57",
@@ -356,7 +356,7 @@ INPUT_REGISTERS = [
     ),
     # Setpoints Add (58-61)
     SensorRegister(
-        name="Leaving water Add Heating setpoint lower",
+        name="Leaving water Add Heating setpoint Lower limit",
         address=58,
         input_type="input",
         register_name="input_58",
@@ -367,7 +367,7 @@ INPUT_REGISTERS = [
         translation_key="input_58",
     ),
     SensorRegister(
-        name="Leaving water Add Heating setpoint upper",
+        name="Leaving water Add Heating setpoint Upper limit",
         address=59,
         input_type="input",
         register_name="input_59",
@@ -378,7 +378,7 @@ INPUT_REGISTERS = [
         translation_key="input_59",
     ),
     SensorRegister(
-        name="Leaving water Add Cooling setpoint lower",
+        name="Leaving water Add Cooling setpoint Lower limit",
         address=60,
         input_type="input",
         register_name="input_60",
@@ -389,7 +389,7 @@ INPUT_REGISTERS = [
         translation_key="input_60",
     ),
     SensorRegister(
-        name="Leaving water Add Cooling setpoint upper",
+        name="Leaving water Add Cooling setpoint Upper limit",
         address=61,
         input_type="input",
         register_name="input_61",
@@ -462,7 +462,7 @@ INPUT_REGISTERS = [
         translation_key="input_68",
     ),
     SensorRegister(
-        name="Mixed pump PWM",
+        name="Mixed pump PWM in mixing kit",
         address=69,
         input_type="input",
         register_name="input_69",
@@ -471,7 +471,7 @@ INPUT_REGISTERS = [
         translation_key="input_69",
     ),
     SensorRegister(
-        name="Direct pump PWM",
+        name="Direct pump PWM in mixing kit",
         address=70,
         input_type="input",
         register_name="input_70",
@@ -512,7 +512,7 @@ INPUT_REGISTERS = [
         translation_key="input_73",
     ),
     SensorRegister(
-        name="Leaving water temperature prePHE outdoor",
+        name="Leaving water temperature pre-PHE outdoor",
         address=74,
         input_type="input",
         register_name="input_74",
@@ -698,7 +698,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_2",
     ),
     SelectRegister(
-        name="Operation mode select",
+        name="Operation mode",
         address=3,
         input_type="holding",
         register_name="holding_3",
@@ -718,7 +718,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_4",
     ),
     NumberRegister(
-        name="Room Thermostat Heating Setpoint Main",
+        name="Room thermostat control Heating setpoint Main",
         address=6,
         input_type="holding",
         register_name="holding_6",
@@ -730,7 +730,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_6",
     ),
     NumberRegister(
-        name="Room Thermostat Cooling Setpoint Main",
+        name="Room thermostat control Cooling setpoint Main",
         address=7,
         input_type="holding",
         register_name="holding_7",
@@ -793,7 +793,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_15",
     ),
     NumberRegister(
-        name="DHW Single Heat-up Setpoint (Manual)",
+        name="DHW Single heat-up setpoint (Manual)",
         address=16,
         input_type="holding",
         register_name="holding_16",
@@ -829,7 +829,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_55",
     ),
     SelectRegister(
-        name="Smart Grid Operation Mode",
+        name="Smart Grid operation mode",
         address=56,
         input_type="holding",
         register_name="holding_56",
@@ -921,7 +921,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_69",
     ),
     SelectRegister(
-        name="Thermostat Request Main",
+        name="Thermostat request Main",
         address=74,
         input_type="holding",
         register_name="holding_74",
@@ -930,7 +930,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_74",
     ),
     SelectRegister(
-        name="Thermostat Request Add",
+        name="Thermostat request Add",
         address=75,
         input_type="holding",
         register_name="holding_75",
@@ -939,7 +939,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_75",
     ),
     NumberRegister(
-        name="Room Thermostat control Heating Setpoint Main",
+        name="Room thermostat control Heating setpoint Main",
         address=76,
         input_type="holding",
         register_name="holding_76",
@@ -951,7 +951,7 @@ HOLDING_REGISTERS = [
         translation_key="holding_76",
     ),
     NumberRegister(
-        name="Room Thermostat control Cooling Setpoint Main",
+        name="Room thermostat control Cooling setpoint Main",
         address=77,
         input_type="holding",
         register_name="holding_77",

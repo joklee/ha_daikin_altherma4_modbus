@@ -161,18 +161,21 @@
         "name": "Apparaat bereikbaar"
       },
       "input_30": {
-        "name": "Compressor actief"
+        "name": "Circulatie pomp actief"
       },
       "input_31": {
-        "name": "Booster heater actief"
+        "name": "Compressor actief"
       },
       "input_32": {
+        "name": "Booster heater actief"
+      },
+      "input_33": {
         "name": "Desinfectie cyclus actief"
       },
-      "input_34": {
+      "input_35": {
         "name": "Ontdooi/Herstart"
       },
-      "input_35": {
+      "input_36": {
         "name": "Warme start"
       },
       "input_63": {
@@ -404,22 +407,19 @@
         }
       },
       "input_30": {
-        "name": "Compressor run"
+        "name": "Circulatie pomp actief"
       },
       "input_31": {
-        "name": "Booster heater run"
+        "name": "Compressor actief"
       },
       "input_32": {
-        "name": "Desinfectie actief"
+        "name": "Booster heater actief"
       },
       "input_33": {
         "name": "Desinfectie actief"
       },
-      "input_34": {
-        "name": "Ontdooi/Herstart"
-      },
       "input_35": {
-        "name": "Warme start"
+        "name": "Ontdooi/Herstart"
       },
       "input_36": {
         "name": "Warme start"
