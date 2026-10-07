@@ -202,8 +202,8 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 | Sensor | ~50+ | Temperatures, power, status values |
 | Binary Sensor | 26 | Binary status indicators (diagnostic) |
 | Switch | 7 | On/Off control (coils + holding, incl. v4 model restart) |
-| Number | 20+ | Setpoint settings |
-| Select | 10+ | Operation mode selection |
+| Number | 18 | Setpoint settings |
+| Select | 8 | Operation mode selection |
 | Climate | 2 | Thermostat control |
 | Connection diagnostics (Enhanced device) | 2 binary + 6 sensors | Reachability, link status, timestamps, error counters (all diagnostic) |
 
@@ -368,8 +368,6 @@ All binary sensors have the **Diagnostic** category.
 |--------|---------|---------|
 | Operation mode | 3 | Auto, Heating, Cooling |
 | Quiet mode | 9 | Off, Automatic, Manual |
-| DHW booster | 13 | Off, Powerful |
-| DHW Single Heat-up | 15 | Off, On |
 | Weather-dependent Heating Main | 68 | Fixed, Weather-dependent |
 | Weather-dependent Cooling Main | 69 | Fixed, Weather-dependent |
 | Thermostat Request Main | 74 | None, Heating, Cooling |
@@ -799,7 +797,7 @@ Removing this integration does not modify any settings on your Daikin Altherma 4
 
 ### Test Suite
 
-- **510+ automated tests** covering core functionality
+- **Automated tests** covering core functionality
 - **Mock client** for development without hardware
 - **Coverage reports** for quality assurance
 - **Integration tests** for full workflow validation
