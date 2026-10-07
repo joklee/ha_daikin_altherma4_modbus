@@ -406,8 +406,48 @@ class DaikinInputSensor(
         return val
 
 
+def _external_electric_power_watts(coordinator, entry) -> float | None:
+    """Read the configured external power sensor, normalized to watts.
+
+    Single source of truth for both the display sensor and the CoP
+    calculation so the same data point can never be interpreted twice:
+    ``W`` (or unitless, treated as W for backwards compatibility) is used
+    as-is, ``kW`` is converted. Any other unit yields None — a misconfigured
+    unit must never fabricate a power reading.
+    """
+    electric_power_sensor = entry_value(entry, "electric_power_sensor")
+    if not electric_power_sensor:
+        return None
+    state = coordinator.hass.states.get(electric_power_sensor)
+    if not state or state.state in [None, "unknown", "unavailable"]:
+        return None
+    unit = getattr(state, "attributes", {}).get("unit_of_measurement")
+    try:
+        value = float(state.state)
+    except (TypeError, ValueError):
+        _LOGGER.warning(
+            "ExternalElectricPowerSensor: Cannot convert %s to float",
+            state.state,
+        )
+        return None
+    if unit == "kW":
+        return value * 1000
+    if unit is None or unit == "W":
+        return value
+    _LOGGER.warning(
+        "ExternalElectricPowerSensor: Unsupported unit %s, expected W or kW",
+        unit,
+    )
+    return None
+
+
 def calculate_thermal_heat_output(coordinator):
-    """Berechnet die thermische Leistung in W."""
+    """Berechnet die thermische Leistung in W, oder None wenn Daten fehlen.
+
+    Fehlende Register (unavailable) dürfen nie als 0 in die Berechnung
+    einfließen: Eine echte 0 L/min bzw. 0 K ist eine gültige Messung,
+    fehlende Daten müssen dagegen unknown liefern.
+    """
     from ..core.const import (
         REGISTER_FLOW_RATE,
         REGISTER_LEAVING_WATER_TEMP,
@@ -416,20 +456,20 @@ def calculate_thermal_heat_output(coordinator):
 
     # Flow, Vorlauf- und Rücklauftemperatur aus den Input-Sensoren (bereits skaliert)
     flow_data = coordinator.data.get(REGISTER_FLOW_RATE, {})
-    flow_raw = get_register_value(flow_data) or 0  # Flow rate in L/min
+    flow = get_register_value(flow_data)  # Flow rate in L/min
     temp_vl_data = coordinator.data.get(REGISTER_LEAVING_WATER_TEMP, {})
-    temp_vl_raw = (
-        get_register_value(temp_vl_data) or 0
-    )  # Leaving water temperature PHE in °C
+    temp_vl = get_register_value(temp_vl_data)  # Leaving water temperature PHE in °C
     temp_rl_data = coordinator.data.get(REGISTER_RETURN_WATER_TEMP, {})
-    temp_rl_raw = (
-        get_register_value(temp_rl_data) or 0
-    )  # Return water temperature in °C
+    temp_rl = get_register_value(temp_rl_data)  # Return water temperature in °C
 
-    # Values from coordinator are already scaled by data_manager
-    flow = flow_raw  # L/min
-    temp_vl = temp_vl_raw  # °C
-    temp_rl = temp_rl_raw  # °C
+    if flow is None or temp_vl is None or temp_rl is None:
+        _LOGGER.debug(
+            "thermal_heat_output unavailable: flow=%s vl=%s rl=%s",
+            flow,
+            temp_vl,
+            temp_rl,
+        )
+        return None
 
     delta_t = temp_vl - temp_rl
     # Use absolute value to correctly calculate thermal power in both heating
@@ -522,39 +562,27 @@ class CalculatedCoPSensor(
         # Heizleistung aus der gleichen Berechnung wie ThermalHeatOutput
         heat_power = self._calculate_thermal_heat_output()  # in W
 
-        # Elektrische Leistung
-        electric_power_sensor = entry_value(self._entry, "electric_power_sensor")
-        if electric_power_sensor:
-            # Externer Sensor
-            state = self.coordinator.hass.states.get(electric_power_sensor)
-            unit = (
-                getattr(state, "attributes", {}).get("unit_of_measurement")
-                if state
-                else None
-            )
-            if state and state.state not in [None, "unknown", "unavailable"]:
-                try:
-                    if unit == "kW":
-                        electric_power = float(state.state) * 1000
-                    else:
-                        electric_power = float(state.state)
-                except ValueError:
-                    electric_power = None
-            else:
-                electric_power = None
-        else:
-            electric_power = None
+        # Elektrische Leistung (externer Sensor in W, sonst Modbus-Fallback)
+        electric_power = _external_electric_power_watts(self.coordinator, self._entry)
 
         if electric_power is None:
             # Modbus - value is already scaled by data_manager
             from ..core.const import REGISTER_HEAT_PUMP_POWER
 
             power_data = self.coordinator.data.get(REGISTER_HEAT_PUMP_POWER, {})
-            electric_power = get_register_value(power_data) or 0  # in kW
-            # Convert kW to W for consistent calculation
-            electric_power = electric_power * 1000
+            power_raw = get_register_value(power_data)  # in kW
+            if power_raw is None:
+                electric_power = None
+            else:
+                # Convert kW to W for consistent calculation
+                electric_power = power_raw * 1000
 
-        if electric_power is not None and electric_power >= 150 and heat_power > 0:
+        if (
+            electric_power is not None
+            and heat_power is not None
+            and electric_power >= 150
+            and heat_power > 0
+        ):
             # Beide Leistungen in W, direkte Berechnung
             # Minimum power threshold of 150 W ensures pump is actively running
             cop = heat_power / electric_power
@@ -704,19 +732,8 @@ class ExternalElectricPowerSensor(
 
     @property
     def native_value(self):
-        """Gibt den Wert des externen elektrischen Leistungssensors zurück."""
-        electric_power_sensor = entry_value(self._entry, "electric_power_sensor")
-        if electric_power_sensor:
-            state = self.coordinator.hass.states.get(electric_power_sensor)
-            if state and state.state not in [None, "unknown", "unavailable"]:
-                try:
-                    return float(state.state)
-                except ValueError:
-                    _LOGGER.error(
-                        f"ExternalElectricPowerSensor: Cannot convert {state.state} to float"
-                    )
-                    return None
-        return None
+        """Gibt den Wert des externen elektrischen Leistungssensors in W zurück."""
+        return _external_electric_power_watts(self.coordinator, self._entry)
 
 
 class DeltaTSensor(RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEntity):
@@ -754,11 +771,20 @@ class DeltaTSensor(RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEnti
 
         # Vorlauftemperatur (Leaving water temperature PHE) - already scaled
         flow_temp_data = self.coordinator.data.get(REGISTER_LEAVING_WATER_TEMP, {})
-        flow_temp = get_register_value(flow_temp_data) or 0  # °C
+        flow_temp = get_register_value(flow_temp_data)  # °C
 
         # Rücklauftemperatur (Return water temperature) - already scaled
         return_temp_data = self.coordinator.data.get(REGISTER_RETURN_WATER_TEMP, {})
-        return_temp = get_register_value(return_temp_data) or 0  # °C
+        return_temp = get_register_value(return_temp_data)  # °C
+
+        if flow_temp is None or return_temp is None:
+            # Fehlende Messwerte dürfen kein Delta-T von 0 K vortäuschen.
+            _LOGGER.debug(
+                "Delta-T unavailable: flow_temp=%s return_temp=%s",
+                flow_temp,
+                return_temp,
+            )
+            return None
 
         # Delta-T berechnen und auf 2 Nachkommastellen runden
         _LOGGER.debug(f"Delta-T: {flow_temp} - {return_temp}")

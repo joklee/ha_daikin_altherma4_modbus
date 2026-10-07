@@ -13,6 +13,9 @@ import pytest
 from custom_components.ha_daikin_altherma4_modbus.core.data_manager import (
     ModbusDataManager,
 )
+from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
+    ModbusReadException,
+)
 from custom_components.ha_daikin_altherma4_modbus.modbus.transport_session import (
     ModbusTransportSession,
 )
@@ -82,14 +85,49 @@ async def test_fetch_without_client_returns_empty():
 
 
 async def test_none_results_are_skipped():
-    """None bit-reads produce empty data without failing."""
+    """None discrete reads produce empty data without failing (optional space)."""
     manager = _manager()
     manager._repository = _repository(
         read_discrete_inputs=AsyncMock(return_value=None),
-        read_coils=AsyncMock(return_value=None),
     )
     assert await manager.fetch_discrete_inputs_data() == {}
-    assert await manager.fetch_coils_data() == {}
+
+
+async def test_dead_spaces_raise_instead_of_silence():
+    """Total failure of input/coil/holding spaces must fail loudly.
+
+    An empty dict would let the coordinator count the poll as success;
+    raising lets it count a consecutive failure and eventually repair.
+    """
+    manager = _manager()
+    manager._repository = _repository(
+        read_input_blocks=AsyncMock(return_value=[]),
+    )
+    with pytest.raises(ModbusReadException):
+        await manager.fetch_input_registers_data()
+
+    manager = _manager()
+    manager._repository = _repository(
+        read_coils=AsyncMock(return_value=None),
+    )
+    with pytest.raises(ModbusReadException):
+        await manager.fetch_coils_data()
+
+    manager = _manager()
+    manager._repository = _repository(
+        read_holding_blocks=AsyncMock(return_value=[]),
+    )
+    with pytest.raises(ModbusReadException):
+        await manager.fetch_holding_registers_data()
+
+
+async def test_fetch_input_registers_data_success():
+    """Delivered input blocks are processed normally."""
+    manager = _manager()
+    manager._repository = _repository()
+    data = await manager.fetch_input_registers_data()
+    assert isinstance(data, dict)
+    manager._repository.read_input_blocks.assert_awaited_once()
 
 
 async def test_writes_update_coordinator_data():

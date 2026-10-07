@@ -20,19 +20,25 @@ from .transport_session import ModbusTransportSession
 _LOGGER = logging.getLogger(__name__)
 
 
-def _validate_modbus_address(address: int, context: str = "address") -> int:
+def _validate_modbus_address(
+    address: int, context: str = "address", strict: bool = False
+) -> int:
     """
-    Validate and clamp Modbus address to valid range based on device documentation.
+    Validate Modbus address against the valid range from device documentation.
 
     Args:
         address: The address to validate
         context: Context description for error messages
+        strict: When True, raise instead of clamping out-of-range addresses.
+            Writes must always use strict mode: silently clamping a write
+            could target a different, valid register on the heat pump.
 
     Returns:
-        Validated address clamped to device-specific range (1-87)
+        Validated address (clamped to device-specific range 1-87 unless strict)
 
     Raises:
-        ValueError: If address is not a valid integer
+        TypeError: If address is not a valid integer
+        ModbusInvalidAddressException: If strict and address is out of range
     """
     if not isinstance(address, int):
         raise TypeError(
@@ -40,6 +46,15 @@ def _validate_modbus_address(address: int, context: str = "address") -> int:
         )
 
     if address < MIN_MODBUS_ADDRESS or address > MAX_MODBUS_ADDRESS:
+        if strict:
+            _LOGGER.error(
+                f"Refusing out-of-range Modbus {context} {address} "
+                f"(valid device range {MIN_MODBUS_ADDRESS}-{MAX_MODBUS_ADDRESS})"
+            )
+            raise ModbusInvalidAddressException(
+                f"Modbus {context} {address} is outside valid device range "
+                f"({MIN_MODBUS_ADDRESS}-{MAX_MODBUS_ADDRESS})"
+            )
         _LOGGER.warning(
             f"Modbus {context} {address} is outside valid device range ({MIN_MODBUS_ADDRESS}-{MAX_MODBUS_ADDRESS}), clamping"
         )
@@ -84,6 +99,7 @@ _REGISTER_MAP_SOURCES = {
 
 # Optimized batch layout shared by the polling path and raw snapshots.
 _INPUT_BATCH = (21, 67)
+_INPUT_FALLBACK_BLOCKS = ((21, 33), (54, 34))
 _HOLDING_BATCH = (1, 80)
 # v4 devices (MMI v4.x, guide revision 1D) add holding 81 (execute model
 # restart), so the batch grows to 1-81 once input 138/139 proved present.
@@ -330,13 +346,16 @@ class ModbusRegisterRepository:
                     "✅ Batch optimization successful: 67 registers in 1 read"
                 )
             else:
-                _LOGGER.error("Optimized Input Register Block read failed")
+                _LOGGER.warning("Optimized Input Register Block read failed")
+                await self._fallback_input_blocks(client, blocks)
         except ModbusInvalidAddressException as err:
             _LOGGER.warning(
                 "Optimized Input Register Block not supported by device: %s", err
             )
+            await self._fallback_input_blocks(client, blocks)
         except _READ_EXCEPTIONS as err:
             _LOGGER.warning("Could not read optimized Input Register Block: %s", err)
+            await self._fallback_input_blocks(client, blocks)
 
         # v4-only input registers 138/139 (time until model restart +
         # active operation state): only polled once the probe proved them
@@ -367,6 +386,36 @@ class ModbusRegisterRepository:
                 )
 
         return blocks
+
+    async def _fallback_input_blocks(
+        self, client, blocks: list[tuple[Any, int, int, int]]
+    ) -> None:
+        """Fall back to smaller input ranges if the full batch is rejected.
+
+        Mirrors the pre-optimization split (21-53, 54-87) for devices that
+        reject the 67-register batch. Single attempt per split without
+        reconnect: the fallback targets deterministic range rejection, while
+        transient link loss recovers on the next poll cycle.
+        """
+        for start, count in _INPUT_FALLBACK_BLOCKS:
+            try:
+                result = await client.read_input_registers(start, count)
+            except _READ_EXCEPTIONS as err:
+                _LOGGER.warning(
+                    "Input fallback block %s-%s failed: %s",
+                    start,
+                    start + count - 1,
+                    err,
+                )
+                continue
+            if _is_error_result(self._session, result):
+                _LOGGER.warning(
+                    "Input fallback block %s-%s rejected by device",
+                    start,
+                    start + count - 1,
+                )
+                continue
+            blocks.append((result, start, start + count - 1, start))
 
     async def read_discrete_inputs(self) -> Any | None:
         """Read discrete inputs with one reconnect retry.
@@ -642,9 +691,10 @@ class ModbusRegisterRepository:
             _LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
-        # Validate and clamp address to valid Modbus range
+        # Validate address strictly: never clamp writes, a clamped write
+        # could silently target a different, valid register on the heat pump.
         address = _validate_modbus_address(
-            address, f"holding register address {register_name}"
+            address, f"holding register address {register_name}", strict=True
         )
 
         register_config = get_register_config(register_name)
@@ -711,8 +761,11 @@ class ModbusRegisterRepository:
             _LOGGER.error(error_msg)
             raise ValueError(error_msg)
 
-        # Validate and clamp address to valid Modbus range
-        address = _validate_modbus_address(address, f"coil address {register_name}")
+        # Validate address strictly: never clamp writes, a clamped write
+        # could silently target a different, valid register on the heat pump.
+        address = _validate_modbus_address(
+            address, f"coil address {register_name}", strict=True
+        )
 
         try:
             result = await client.write_coil_register(address, value)

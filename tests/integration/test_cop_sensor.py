@@ -772,3 +772,262 @@ def test_cop_sensor_cooling_mode_with_modbus_power(monkeypatch):
     # electric_power = 720W
     # CoP = 3360 / 720 = 4.666... -> rounded to 4.67
     assert sensor.native_value == 4.67
+
+
+def _thermal_sensor(sensor_module, data):
+    coordinator = SimpleNamespace(data=data)
+    return sensor_module.ThermalHeatOutput(
+        coordinator=coordinator,
+        entry=SimpleNamespace(data={}, options={}),
+        unique_id="thermal_heat_output",
+        unit="W",
+        device_class=None,
+    )
+
+
+def _delta_t_sensor(sensor_module, data):
+    coordinator = SimpleNamespace(data=data)
+    return sensor_module.DeltaTSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(data={}, options={}),
+        unique_id="delta_t",
+        unit="K",
+        device_class=None,
+    )
+
+
+def test_thermal_heat_output_none_when_flow_missing(monkeypatch):
+    """Missing flow must yield unknown, not 0 W."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _thermal_sensor(
+        sensor_module,
+        {
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+        },
+    )
+    assert sensor.native_value is None
+
+
+def test_thermal_heat_output_none_when_return_temp_missing(monkeypatch):
+    """Missing return temperature must yield unknown, not a fake delta-T."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _thermal_sensor(
+        sensor_module,
+        {
+            "input_49": {"value": 10.0},
+            "input_40": {"value": 45.0},
+        },
+    )
+    assert sensor.native_value is None
+
+
+def test_thermal_heat_output_none_when_all_missing(monkeypatch):
+    """No data at all must yield unknown, not 0 W."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _thermal_sensor(sensor_module, {})
+    assert sensor.native_value is None
+
+
+def test_thermal_heat_output_zero_flow_is_real_zero(monkeypatch):
+    """Explicit 0 L/min is a valid measurement and still computes 0 W."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _thermal_sensor(
+        sensor_module,
+        {
+            "input_49": {"value": 0.0},
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+        },
+    )
+    assert sensor.native_value == 0.0
+
+
+def test_delta_t_none_when_flow_temp_missing(monkeypatch):
+    """Missing Vorlauf must yield unknown, not -35 K."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _delta_t_sensor(
+        sensor_module,
+        {
+            "input_42": {"value": 35.0},
+        },
+    )
+    assert sensor.native_value is None
+
+
+def test_delta_t_none_when_return_temp_missing(monkeypatch):
+    """Missing Rücklauf must yield unknown."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _delta_t_sensor(
+        sensor_module,
+        {
+            "input_40": {"value": 45.0},
+        },
+    )
+    assert sensor.native_value is None
+
+
+def test_delta_t_none_when_all_missing(monkeypatch):
+    """No data at all must yield unknown, not 0 K."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _delta_t_sensor(sensor_module, {})
+    assert sensor.native_value is None
+
+
+def test_delta_t_value_when_data_present(monkeypatch):
+    """Complete data still computes the difference."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _delta_t_sensor(
+        sensor_module,
+        {
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+        },
+    )
+    assert sensor.native_value == 5.0
+
+
+def test_cop_sensor_none_when_thermal_inputs_missing(monkeypatch):
+    """CoP must be unknown (not crash) when thermal inputs are missing."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    hass = SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: None))
+    coordinator = SimpleNamespace(
+        hass=hass,
+        data={
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+            "input_51": {"value": 1.0},
+        },
+    )
+    sensor = sensor_module.CalculatedCoPSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(data={}, options={}),
+        unique_id="cop",
+        unit="CoP",
+        device_class=None,
+    )
+    assert sensor.native_value is None
+
+
+def test_cop_sensor_with_kw_external_power_sensor(monkeypatch):
+    """CoP must interpret a kW external sensor as watts (consistency)."""
+    sensor_module = _load_sensor_module(monkeypatch)
+
+    states = {
+        "sensor.external_power": SimpleNamespace(
+            state="2.5", attributes={"unit_of_measurement": "kW"}
+        ),
+    }
+    hass = SimpleNamespace(
+        states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
+    )
+    coordinator = SimpleNamespace(
+        hass=hass,
+        data={
+            "input_49": {"value": 10.0},
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+        },
+    )
+    sensor = sensor_module.CalculatedCoPSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(
+            data={}, options={"electric_power_sensor": "sensor.external_power"}
+        ),
+        unique_id="cop",
+        unit="CoP",
+        device_class=None,
+    )
+
+    # heat_power = 10 * 5 * 70 = 3500W, electric_power = 2.5kW = 2500W
+    # CoP = 3500 / 2500 = 1.4
+    assert sensor.native_value == 1.4
+
+
+def test_cop_sensor_unsupported_unit_falls_back_to_modbus(monkeypatch):
+    """An unsupported external unit must not fabricate watts (Modbus fallback)."""
+    sensor_module = _load_sensor_module(monkeypatch)
+
+    states = {
+        "sensor.external_power": SimpleNamespace(
+            state="2.5", attributes={"unit_of_measurement": "MW"}
+        ),
+    }
+    hass = SimpleNamespace(
+        states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
+    )
+    coordinator = SimpleNamespace(
+        hass=hass,
+        data={
+            "input_49": {"value": 10.0},
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+            "input_51": {"value": 1.0},
+        },
+    )
+    sensor = sensor_module.CalculatedCoPSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(
+            data={}, options={"electric_power_sensor": "sensor.external_power"}
+        ),
+        unique_id="cop",
+        unit="CoP",
+        device_class=None,
+    )
+
+    # external MW ignored -> Modbus 1.0kW = 1000W -> CoP = 3500 / 1000 = 3.5
+    assert sensor.native_value == 3.5
+
+
+def test_cop_sensor_unsupported_unit_without_modbus_is_none(monkeypatch):
+    """Unsupported external unit without Modbus data must yield unknown."""
+    sensor_module = _load_sensor_module(monkeypatch)
+
+    states = {
+        "sensor.external_power": SimpleNamespace(
+            state="2.5", attributes={"unit_of_measurement": "MW"}
+        ),
+    }
+    hass = SimpleNamespace(
+        states=SimpleNamespace(get=lambda entity_id: states.get(entity_id))
+    )
+    coordinator = SimpleNamespace(
+        hass=hass,
+        data={
+            "input_49": {"value": 10.0},
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+        },
+    )
+    sensor = sensor_module.CalculatedCoPSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(
+            data={}, options={"electric_power_sensor": "sensor.external_power"}
+        ),
+        unique_id="cop",
+        unit="CoP",
+        device_class=None,
+    )
+    assert sensor.native_value is None
+
+
+def test_cop_sensor_none_when_modbus_power_missing(monkeypatch):
+    """CoP must be unknown when no external sensor and no input_51."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    hass = SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: None))
+    coordinator = SimpleNamespace(
+        hass=hass,
+        data={
+            "input_49": {"value": 10.0},
+            "input_40": {"value": 45.0},
+            "input_42": {"value": 40.0},
+        },
+    )
+    sensor = sensor_module.CalculatedCoPSensor(
+        coordinator=coordinator,
+        entry=SimpleNamespace(data={}, options={}),
+        unique_id="cop",
+        unit="CoP",
+        device_class=None,
+    )
+    assert sensor.native_value is None
