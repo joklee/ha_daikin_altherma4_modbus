@@ -126,15 +126,20 @@ class DaikinNumber(RegisterVersionDeviceInfoMixin, CoordinatorEntity, NumberEnti
         if is_unavailable_value(val):
             return None
 
-        # Convert to integer if it's a string
+        # If enum_map exists, return the enum value
+        if self._enum_map:
+            try:
+                int_val = int(val)
+                if int_val in self._enum_map:
+                    return int_val
+            except (ValueError, TypeError):
+                return None
+
+        # Convert to float to preserve decimal precision for non-enum registers
         try:
-            val = int(val)
+            val = float(val)
         except (ValueError, TypeError):
             return None
-
-        # Wenn enum_map vorhanden, den enum-Wert zurückgeben
-        if self._enum_map and val in self._enum_map:
-            return val  # Rohwert für enum
 
         # Check if value is already scaled by checking if scale is stored in data
         data_scale = get_register_scale(data)
