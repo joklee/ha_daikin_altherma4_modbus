@@ -139,6 +139,9 @@
       },
       "holding_15": {
         "name": "Brauchwasser Einzelaufheizung (manuell)"
+      },
+      "holding_81": {
+        "name": "Modell-Neustart jetzt ausführen"
       }
     },
     "binary_sensor": {
@@ -583,6 +586,17 @@
       },
       "input_87": {
         "name": "Kühlen-Sollwert Raum oberer Grenzwert"
+      },
+      "input_138": {
+        "name": "Zeit bis zum Modell-Neustart"
+      },
+      "input_139": {
+        "name": "Aktiver Betriebszustand",
+        "state": {
+          "normal": "Normal",
+          "maintenance": "Wartung",
+          "restart_pending": "Neustart ausstehend"
+        }
       },
       "thermal_heat_output": {
         "name": "Thermische Leistung"

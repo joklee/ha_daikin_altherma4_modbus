@@ -165,8 +165,16 @@ async def test_ha_renders_active_fault_as_code(hass, enable_custom_integrations)
     assert hass.states.get(entity_id).state == "unknown"
 
     coordinator = entry.runtime_data.normal_coordinator
+
+    async def _read_inputs(address, count):
+        # v4 polling also requests input 138/139; only the 21-87 block
+        # carries the injected fault, the v4 block reports "not available".
+        if address == 138:
+            return FakeModbusResponse([32766] * 140, address, count)
+        return _fault_response()
+
     coordinator.data_manager.client.read_input_registers = AsyncMock(
-        return_value=_fault_response()
+        side_effect=_read_inputs
     )
     await coordinator.async_refresh()
     await hass.async_block_till_done()

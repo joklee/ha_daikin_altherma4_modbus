@@ -65,6 +65,14 @@ class ModbusDataManager:
     async def _ensure_connection_and_prepare_data(self) -> StateData:
         """Ensure active connection and keep legacy return contract."""
         await self._session.ensure_connection()
+        # Detect the register map (v2/v3 vs v4) once the connection is up so
+        # polling and device info know which version-specific registers may
+        # be requested. Best effort only: detection is cached, transient
+        # failures are retried on the next fetch, and polling never breaks.
+        try:
+            await self._repository.detect_register_version()
+        except Exception as err:  # pragma: no cover - defensive
+            _LOGGER.debug("Register version detection deferred: %s", err)
         return {}
 
     def _update_coordinator_data(self, register_name: str, value: Any) -> None:
@@ -320,6 +328,15 @@ class ModbusDataManager:
     ) -> tuple[dict[str, dict[int, int | bool]], dict[str, str]]:
         """Read all four spaces raw (snapshot for the diagnostics download)."""
         return await self._repository.read_raw_snapshot()
+
+    @property
+    def register_version(self) -> str | None:
+        """Detected register-map version ("v3"/"v4") or None if unknown."""
+        return self._repository.register_version
+
+    async def detect_register_version(self) -> str | None:
+        """Probe version-discriminating registers once (cached thereafter)."""
+        return await self._repository.detect_register_version()
 
     def _update_last_triggered(self, data: StateData):
         """Update last-triggered calculated sensors."""

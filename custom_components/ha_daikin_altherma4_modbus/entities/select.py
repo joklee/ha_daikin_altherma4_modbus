@@ -8,6 +8,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..common import (
+    RegisterVersionDeviceInfoMixin,
     get_coordinator_from_entry,
     get_register_value,
     is_unavailable_value,
@@ -56,7 +57,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(entities)
 
 
-class DaikinSelect(CoordinatorEntity, SelectEntity):
+class DaikinSelect(RegisterVersionDeviceInfoMixin, CoordinatorEntity, SelectEntity):
     """Select entity for Daikin Altherma 4."""
 
     _attr_has_entity_name = True

@@ -151,6 +151,13 @@
           "off": "Uit",
           "on": "Aan"
         }
+      },
+      "holding_81": {
+        "name": "Modelherstart nu uitvoeren",
+        "state": {
+          "remain": "Blijven",
+          "restart": "Herstarten"
+        }
       }
     },
     "binary_sensor": {
@@ -595,6 +602,17 @@
       },
       "input_87": {
         "name": "Ruimte Koelen instelpunt limiet hoog"
+      },
+      "input_138": {
+        "name": "Tijd tot modelherstart"
+      },
+      "input_139": {
+        "name": "Actieve bedrijfsstatus",
+        "state": {
+          "normal": "Normaal",
+          "maintenance": "Onderhoud",
+          "restart_pending": "Herstart in behandeling"
+        }
       },
       "thermal_heat_output": {
         "name": "Thermisch uitgaand vermogen"
