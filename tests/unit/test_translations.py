@@ -189,6 +189,7 @@ class TestTranslations:
         expected_extras = {
             "daikin_dhw_booster_thermostat",
             "daikin_dhw_manual_thermostat",
+            "daikin_room_thermostat_main_climate",
             "daikin_thermostat_climate",
             "external_electric_power",
             "input_53",
@@ -208,6 +209,7 @@ class TestTranslations:
         expected_extras = {
             "daikin_dhw_booster_thermostat",
             "daikin_dhw_manual_thermostat",
+            "daikin_room_thermostat_main_climate",
             "daikin_thermostat_climate",
             "external_electric_power",
             "input_53",
@@ -227,6 +229,7 @@ class TestTranslations:
         expected_extras = {
             "daikin_dhw_booster_thermostat",
             "daikin_dhw_manual_thermostat",
+            "daikin_room_thermostat_main_climate",
             "daikin_thermostat_climate",
             "external_electric_power",
             "input_53",
@@ -533,6 +536,7 @@ class TestTranslations:
             assert not missing, f"icons.json [{platform}] missing: {sorted(missing)}"
 
         assert "daikin_thermostat_climate" in icon_keys("climate")
+        assert "daikin_room_thermostat_main_climate" in icon_keys("climate")
 
 
 def _load_services_yaml(component_dir):

@@ -51,6 +51,26 @@ REGISTER_OFFSET_COOLING = (
 REGISTER_QUIET_MODE = "holding_9"  # Quiet mode operation
 REGISTER_COMPRESSOR = "input_31"  # Compressor status
 
+# Room thermostat Main (issue #94): HA only displays/adjusts the room
+# setpoint, the Daikin remains the controller. OFF physically disables
+# the main zone via coil_2.
+REGISTER_ROOM_TEMP_MAIN = "input_50"  # Remote controller room temperature (Main)
+REGISTER_ROOM_HEATING_SETPOINT_FINE = (
+    "holding_76"  # Room Heating setpoint Main (Fine, Temp16)
+)
+REGISTER_ROOM_COOLING_SETPOINT_FINE = (
+    "holding_77"  # Room Cooling setpoint Main (Fine, Temp16)
+)
+REGISTER_ROOM_HEATING_MIN = "input_84"  # Room Heating setpoint Lower limit
+REGISTER_ROOM_HEATING_MAX = "input_85"  # Room Heating setpoint Upper limit
+REGISTER_ROOM_COOLING_MIN = "input_86"  # Room Cooling setpoint Lower limit
+REGISTER_ROOM_COOLING_MAX = "input_87"  # Room Cooling setpoint Upper limit
+REGISTER_MAIN_ZONE_SWITCH = "coil_2"  # Main zone ON/OFF
+REGISTER_MAIN_ZONE_RUNNING = "discrete_20"  # Main zone running
+REGISTER_ROOM_OPERATION_MODE_ACTUAL = (
+    "input_38"  # Operation mode (actual: none/heating/cooling)
+)
+
 # DHW Control constants
 REGISTER_DHW_HVAC_MODE = "coil_1"  # Domestic Hot Water
 REGISTER_DHW_SETPOINT = "holding_10"  # DHW Single heat-up setpoint (Manual)

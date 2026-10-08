@@ -114,6 +114,9 @@
       "daikin_thermostat_climate": {
         "name": "Verwarming Thermostaat Controle"
       },
+      "daikin_room_thermostat_main_climate": {
+        "name": "Kamerthermostaat Hoofdzone"
+      },
       "daikin_dhw_manual_thermostat": {
         "name": "SWW eenmalig verwarmen Thermostaat Controle"
       },

@@ -185,6 +185,16 @@ def _load_climate_module(monkeypatch):
     const_module.REGISTER_DHW_BOOSTER_RUNNING = "discrete_19"
     const_module.REGISTER_DHW_BOOSTER_HVAC_MODE = "holding_13"
     const_module.REGISTER_QUIET_MODE = "holding_9"
+    const_module.REGISTER_ROOM_TEMP_MAIN = "input_50"
+    const_module.REGISTER_ROOM_HEATING_SETPOINT_FINE = "holding_76"
+    const_module.REGISTER_ROOM_COOLING_SETPOINT_FINE = "holding_77"
+    const_module.REGISTER_ROOM_HEATING_MIN = "input_84"
+    const_module.REGISTER_ROOM_HEATING_MAX = "input_85"
+    const_module.REGISTER_ROOM_COOLING_MIN = "input_86"
+    const_module.REGISTER_ROOM_COOLING_MAX = "input_87"
+    const_module.REGISTER_MAIN_ZONE_SWITCH = "coil_2"
+    const_module.REGISTER_MAIN_ZONE_RUNNING = "discrete_20"
+    const_module.REGISTER_ROOM_OPERATION_MODE_ACTUAL = "input_38"
     const_module.FAN_MANUAL = "Manual"
     const_module.HVAC_HEAT = 1
     const_module.HVAC_OFF = 0
@@ -237,6 +247,206 @@ def _make_dhw_thermostat(module, dhw_type="manual", **overrides):
     return module.DaikinDHWThermostat(
         coordinator, entry=SimpleNamespace(), dhw_type=dhw_type
     )
+
+
+def _make_room_thermostat(module, **overrides):
+    data = {
+        "input_50": {"value": 21.3, "scale": 0.01},
+        "holding_76": {"value": 21.5, "scale": 0.01},
+        "holding_77": {"value": 23.0, "scale": 0.01},
+        "input_84": {"value": 12.0, "scale": 0.01},
+        "input_85": {"value": 30.0, "scale": 0.01},
+        "input_86": {"value": 12.0, "scale": 0.01},
+        "input_87": {"value": 35.0, "scale": 0.01},
+        "coil_2": {"value": 1},
+        "discrete_20": {"value": 0},
+        "discrete_11": {"value": 0},
+        "input_38": {"value": 1},
+        "holding_3": {"value": 1},
+    }
+    data.update(overrides)
+    coordinator = SimpleNamespace(
+        data=data,
+        data_manager=SimpleNamespace(
+            write_holding_register=AsyncMock(),
+            write_coil_register=AsyncMock(),
+        ),
+    )
+    return module.DaikinRoomThermostatMainClimate(coordinator, entry=SimpleNamespace())
+
+
+def test_room_thermostat_current_and_target_temperature(monkeypatch):
+    """Room thermostat reads input_50 and the mode-selected setpoint."""
+    module = _load_climate_module(monkeypatch)
+    room = _make_room_thermostat(module)
+    assert room.current_temperature == pytest.approx(21.3)
+    assert room.target_temperature == pytest.approx(21.5)
+
+    room.coordinator.data["input_50"] = {"value": 32766}
+    assert room.current_temperature is None
+
+    cool = _make_room_thermostat(module, input_38={"value": 2})
+    assert cool.target_temperature == pytest.approx(23.0)
+
+
+def test_room_thermostat_limits_from_device_and_fallback(monkeypatch):
+    """Limits come from input 84/85 (heat) and 86/87 (cool)."""
+    module = _load_climate_module(monkeypatch)
+    room = _make_room_thermostat(module)
+    assert room.min_temp == pytest.approx(12.0)
+    assert room.max_temp == pytest.approx(30.0)
+    assert room.target_temperature_step == pytest.approx(0.5)
+
+    cool = _make_room_thermostat(module, input_38={"value": 2})
+    assert cool.min_temp == pytest.approx(12.0)
+    assert cool.max_temp == pytest.approx(35.0)
+
+    # Missing limit registers fall back to the catalog (stub: empty -> 12/30).
+    del room.coordinator.data["input_84"]
+    del room.coordinator.data["input_85"]
+    assert room.min_temp == pytest.approx(12)
+    assert room.max_temp == pytest.approx(30)
+
+    # Catalog step is honored when present.
+    monkeypatch.setattr(
+        module,
+        "HOLDING_REGISTERS",
+        [
+            SimpleNamespace(
+                register_name="holding_76",
+                min_value=12,
+                max_value=30,
+                step=0.1,
+            )
+        ],
+    )
+    assert room.target_temperature_step == pytest.approx(0.1)
+
+
+def test_room_thermostat_hvac_mode(monkeypatch):
+    """Mode is OFF when coil_2 is off, else HEAT/COOL by operation mode."""
+    module = _load_climate_module(monkeypatch)
+    room = _make_room_thermostat(module)
+    assert room.hvac_mode == "heat"
+    assert set(room._attr_hvac_modes) == {"off", "heat", "cool"}
+
+    room.coordinator.data["input_38"] = {"value": 2}
+    assert room.hvac_mode == "cool"
+
+    room.coordinator.data["coil_2"] = {"value": 0}
+    assert room.hvac_mode == "off"
+
+    del room.coordinator.data["coil_2"]
+    assert room.hvac_mode == "off"
+
+
+def test_room_thermostat_hvac_action(monkeypatch):
+    """Action follows discrete_20 (zone running) within the active mode."""
+    module = _load_climate_module(monkeypatch)
+    room = _make_room_thermostat(module)
+    assert room.hvac_action == "idle"
+
+    room.coordinator.data["discrete_20"] = {"value": 1}
+    assert room.hvac_action == "heating"
+
+    room.coordinator.data["input_38"] = {"value": 2}
+    assert room.hvac_action == "cooling"
+
+    room.coordinator.data["coil_2"] = {"value": 0}
+    assert room.hvac_action == "off"
+
+
+@pytest.mark.asyncio
+async def test_room_thermostat_set_temperature_scales_temp16(monkeypatch):
+    """Setpoint writes scale Temp16 (21.5 C -> raw 2150) and clamp."""
+    module = _load_climate_module(monkeypatch)
+    room = _make_room_thermostat(module)
+    await room.async_set_temperature(temperature=21.5)
+    room.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_76", 2150
+    )
+
+    cool = _make_room_thermostat(module, input_38={"value": 2})
+    await cool.async_set_temperature(temperature=24.0)
+    cool.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_77", 2400
+    )
+
+    room.coordinator.data_manager.write_holding_register.reset_mock()
+    await room.async_set_temperature(temperature=5.0)
+    room.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_76", 1200
+    )
+
+    room.coordinator.data_manager.write_holding_register.reset_mock()
+    await room.async_set_temperature()
+    room.coordinator.data_manager.write_holding_register.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_room_thermostat_set_hvac_mode_writes_coil_and_mode(monkeypatch):
+    """HEAT/COOL enable the zone and set holding_3; OFF only kills coil_2."""
+    module = _load_climate_module(monkeypatch)
+    room = _make_room_thermostat(module)
+    await room.async_set_hvac_mode("heat")
+    room.coordinator.data_manager.write_coil_register.assert_awaited_with(
+        "coil_2", True
+    )
+    room.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_3", 1
+    )
+
+    await room.async_set_hvac_mode("cool")
+    room.coordinator.data_manager.write_coil_register.assert_awaited_with(
+        "coil_2", True
+    )
+    room.coordinator.data_manager.write_holding_register.assert_awaited_with(
+        "holding_3", 2
+    )
+
+    room.coordinator.data_manager.write_coil_register.reset_mock()
+    room.coordinator.data_manager.write_holding_register.reset_mock()
+    await room.async_set_hvac_mode("off")
+    room.coordinator.data_manager.write_coil_register.assert_awaited_with(
+        "coil_2", False
+    )
+    room.coordinator.data_manager.write_holding_register.assert_not_awaited()
+
+    # Heat-only devices (holding_3 unavailable) skip the mode write.
+    heat_only = _make_room_thermostat(module)
+    del heat_only.coordinator.data["holding_3"]
+    heat_only.coordinator.data["input_38"] = {"value": 32766}
+    await heat_only.async_set_hvac_mode("heat")
+    heat_only.coordinator.data_manager.write_coil_register.assert_awaited_with(
+        "coil_2", True
+    )
+    heat_only.coordinator.data_manager.write_holding_register.assert_not_awaited()
+
+    await room.async_turn_on()
+    await room.async_turn_off()
+
+
+def test_room_thermostat_available_and_attributes(monkeypatch):
+    """Availability tracks room temp + setpoint; coil loss degrades only."""
+    module = _load_climate_module(monkeypatch)
+    room = _make_room_thermostat(module)
+    assert room.available is True
+
+    del room.coordinator.data["coil_2"]
+    assert room.available is True
+
+    del room.coordinator.data["input_50"]
+    assert room.available is False
+
+    room.coordinator.data["input_50"] = {"value": 21.3, "scale": 0.01}
+    del room.coordinator.data["holding_76"]
+    del room.coordinator.data["holding_77"]
+    assert room.available is False
+
+    attrs = _make_room_thermostat(module).extra_state_attributes
+    assert attrs["room_temperature"] == pytest.approx(21.3)
+    assert attrs["setpoint_register"] == "holding_76"
+    assert attrs["main_zone_enabled"] is True
 
 
 def test_thermostat_current_temperature_scaled_and_unscaled(monkeypatch):
