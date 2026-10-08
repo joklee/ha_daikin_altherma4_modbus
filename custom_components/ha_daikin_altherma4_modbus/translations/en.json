@@ -114,6 +114,9 @@
       "daikin_thermostat_climate": {
         "name": "Heating Thermostat Control"
       },
+      "daikin_room_thermostat_main_climate": {
+        "name": "Room Thermostat Main"
+      },
       "daikin_dhw_manual_thermostat": {
         "name": "DHW Single Heat-up Thermostat Control"
       },
