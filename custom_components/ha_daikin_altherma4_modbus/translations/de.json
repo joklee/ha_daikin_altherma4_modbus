@@ -114,6 +114,9 @@
       "daikin_thermostat_climate": {
         "name": "Heizungs-Thermostatsteuerung"
       },
+      "daikin_room_thermostat_main_climate": {
+        "name": "Raumthermostat Hauptzone"
+      },
       "daikin_dhw_manual_thermostat": {
         "name": "Warmwasser-Einzelaufheizungs-Thermostatsteuerung"
       },
