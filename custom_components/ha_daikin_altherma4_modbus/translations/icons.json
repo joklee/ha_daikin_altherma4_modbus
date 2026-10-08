@@ -3,6 +3,9 @@
     "daikin_thermostat_climate": {
       "icon": "mdi:thermostat"
     },
+    "daikin_room_thermostat_main_climate": {
+      "icon": "mdi:thermostat"
+    },
     "daikin_dhw_manual_thermostat": {
       "icon": "mdi:water-boiler"
     },
