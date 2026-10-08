@@ -178,7 +178,7 @@ class DaikinThermostatClimate(
         self.coordinator: Any = coordinator  # Coordinator with data_manager attribute
         self._entry = entry
         self._attr_unique_id = f"{DOMAIN}_thermostat_climate"
-        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_native_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
         )
@@ -216,7 +216,7 @@ class DaikinThermostatClimate(
             return self._get_register_data(f"{DOMAIN}_{REGISTER_OFFSET_HEATING}")
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return the current temperature (None if unavailable)."""
         temp_data = self._get_register_data(f"{DOMAIN}_{REGISTER_CURRENT_TEMP}")
         temp_raw = get_register_value(temp_data)
@@ -228,7 +228,7 @@ class DaikinThermostatClimate(
         return round(float(temp_raw), 2)
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         """Return the current offset value as temperature."""
         offset_data = self._get_offset_data()
         if offset_data is None or offset_data["offset"] is None:
@@ -410,14 +410,14 @@ class DaikinThermostatClimate(
                 "quiet_mode": quiet_mode,
                 "offset": None,
                 "calculated_setpoint": None,
-                "current_temperature": self.current_temperature,
+                "current_temperature": self.native_current_temperature,
             }
         offset = offset_data_info["offset"]
         op_mode_raw = offset_data_info["op_mode_raw"]
         config = offset_data_info["config"]
 
         # Berechnete Solltemperatur für Anzeige
-        current_temp = self.current_temperature
+        current_temp = self.native_current_temperature
         calculated_setpoint = (
             round(current_temp + offset, 2)
             if current_temp is not None and offset is not None
@@ -484,7 +484,7 @@ class DaikinRoomThermostatMainClimate(
         self.coordinator: Any = coordinator
         self._entry = entry
         self._attr_unique_id = f"{DOMAIN}_room_thermostat_main_climate"
-        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_native_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
         self._attr_hvac_modes = [
             HVACMode.OFF,
@@ -573,7 +573,7 @@ class DaikinRoomThermostatMainClimate(
         )
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return the measured room temperature (input_50)."""
         temp = self._get_register_value(REGISTER_ROOM_TEMP_MAIN)
         if temp is None:
@@ -581,7 +581,7 @@ class DaikinRoomThermostatMainClimate(
         return round(float(temp), 2)
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         """Return the room setpoint for the current mode."""
         setpoint = self._get_register_value(self._active_setpoint_register())
         if setpoint is None:
@@ -647,7 +647,7 @@ class DaikinRoomThermostatMainClimate(
     def extra_state_attributes(self):
         """Return diagnostic attributes for the room thermostat."""
         return {
-            "room_temperature": self.current_temperature,
+            "room_temperature": self.native_current_temperature,
             "setpoint_register": self._active_setpoint_register(),
             "min_limit": self.min_temp,
             "max_limit": self.max_temp,
@@ -723,7 +723,7 @@ class DaikinDHWThermostat(
             )
 
         self._attr_unique_id = f"{DOMAIN}_{self._unique_id_suffix}"
-        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_native_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
         self._attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
         self._attr_min_temp = 30
@@ -787,13 +787,13 @@ class DaikinDHWThermostat(
         return HVACAction.HEATING if val == DHW_ON else HVACAction.IDLE
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return current temperature."""
         # Use DHW temperature as current temperature
         return self._get_register_value(self._temp_register, INPUT_REGISTERS)
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         """Return target temperature."""
         return self._get_register_value(self._setpoint_register, HOLDING_REGISTERS)
 
