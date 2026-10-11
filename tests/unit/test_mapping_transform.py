@@ -416,7 +416,7 @@ def test_update_last_triggered(monkeypatch):
     ``monkeypatch.setitem`` too) makes this test immune to that and guarantees
     teardown even when an assertion fails.
     """
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
     from types import ModuleType
 
     from custom_components.ha_daikin_altherma4_modbus.core.register_types import (
@@ -437,7 +437,7 @@ def test_update_last_triggered(monkeypatch):
     monkeypatch.setitem(method_globals, "CALCULATED_SENSORS", [calc_item])
 
     # Provide a deterministic homeassistant.util.dt.now() -> fixed_time.
-    fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     util_mod = ModuleType("homeassistant.util")
     dt_mod = ModuleType("homeassistant.util.dt")
     dt_mod.now = lambda: fixed_time

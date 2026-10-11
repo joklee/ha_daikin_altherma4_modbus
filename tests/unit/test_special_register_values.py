@@ -241,9 +241,9 @@ class TestIsUnavailableValue:
         assert is_unavailable_value(False) is False
         assert validate_register_value(True) is True
         # datetime / arbitrary objects must not raise, count as unavailable.
-        from datetime import datetime, timezone
+        from datetime import UTC, datetime
 
-        assert is_unavailable_value(datetime(2026, 1, 1, tzinfo=timezone.utc)) is True
+        assert is_unavailable_value(datetime(2026, 1, 1, tzinfo=UTC)) is True
         assert is_unavailable_value(object()) is True
 
 
