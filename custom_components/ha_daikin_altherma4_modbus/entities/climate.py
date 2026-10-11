@@ -42,10 +42,20 @@ from ..core.const import (
     REGISTER_DHW_RUNNING,
     REGISTER_DHW_SETPOINT,
     REGISTER_DHW_TEMP,
+    REGISTER_MAIN_ZONE_RUNNING,
+    REGISTER_MAIN_ZONE_SWITCH,
     REGISTER_OFFSET_COOLING,
     REGISTER_OFFSET_HEATING,
     REGISTER_OPERATION_MODE,
     REGISTER_QUIET_MODE,
+    REGISTER_ROOM_COOLING_MAX,
+    REGISTER_ROOM_COOLING_MIN,
+    REGISTER_ROOM_COOLING_SETPOINT_FINE,
+    REGISTER_ROOM_HEATING_MAX,
+    REGISTER_ROOM_HEATING_MIN,
+    REGISTER_ROOM_HEATING_SETPOINT_FINE,
+    REGISTER_ROOM_OPERATION_MODE_ACTUAL,
+    REGISTER_ROOM_TEMP_MAIN,
 )
 from ..core.register_constants import (
     CALCULATED_DEVICE_INFO,
@@ -390,6 +400,274 @@ class DaikinThermostatClimate(
         await self.async_set_hvac_mode(HVACMode.AUTO)
 
 
+class DaikinRoomThermostatMainClimate(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, ClimateEntity
+):
+    """Climate Entity for the Main-zone room thermostat (issue #94).
+
+    Display and adjust the room thermostat setpoint. The Daikin Altherma
+    remains responsible for the actual heating control; Home Assistant
+    only changes the room setpoint the Daikin uses.
+
+    - Current temperature: ``input_50`` (remote controller room temp, Main)
+    - Target temperature: ``holding_76`` (heat) / ``holding_77`` (cool),
+      Temp16 fine setpoints written as ``round(temp / scale)`` (x100)
+    - Limits: ``input_84/85`` (heat) / ``input_86/87`` (cool), catalog fallback
+    - On/Off: ``coil_2`` — OFF physically disables the main zone
+    - Action: ``discrete_20`` (main zone running)
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        self.coordinator: Any = coordinator
+        self._entry = entry
+        self._attr_unique_id = f"{DOMAIN}_room_thermostat_main_climate"
+        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
+        self._attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL]
+        self._attr_device_info = CALCULATED_DEVICE_INFO
+        self._attr_translation_key = "daikin_room_thermostat_main_climate"
+
+    def _get_register_data(self, register_name):
+        """Get register data without DOMAIN prefix."""
+        return get_coordinator_register_data(self.coordinator, register_name)
+
+    def _get_register_value(self, register_name):
+        """Get scaled register value (None if missing/unavailable)."""
+        data = self._get_register_data(f"{DOMAIN}_{register_name}")
+        val = get_register_value(data)
+        if val is None or is_unavailable_value(val):
+            return None
+        return val
+
+    def _is_cool_mode(self) -> bool:
+        """Return True when the unit operates in cooling mode.
+
+        Prefers the read-only actual state (``input_38``), falls back to
+        the configured mode (``holding_3``). Unknown/Auto defaults to heat.
+        """
+        actual = self._get_register_value(REGISTER_ROOM_OPERATION_MODE_ACTUAL)
+        if actual == HVAC_COOL:
+            return True
+        if actual == HVAC_HEAT:
+            return False
+        configured = self._get_register_value(REGISTER_OPERATION_MODE)
+        return configured == HVAC_COOL
+
+    def _active_setpoint_register(self) -> str:
+        """Return the setpoint register for the current mode."""
+        if self._is_cool_mode():
+            return REGISTER_ROOM_COOLING_SETPOINT_FINE
+        return REGISTER_ROOM_HEATING_SETPOINT_FINE
+
+    def _static_holding_config(self, register_name):
+        """Return the static HOLDING_REGISTERS config for a register."""
+        for register in HOLDING_REGISTERS:
+            if register.register_name == register_name:
+                return register
+        return None
+
+    def _get_limits(self) -> tuple[float, float, float]:
+        """Return (min, max, step) for the active mode.
+
+        Limits come from the device limit inputs (84/85 heat, 86/87 cool);
+        min/max/step fall back to the static holding_76/77 catalog config.
+        """
+        if self._is_cool_mode():
+            min_reg, max_reg = REGISTER_ROOM_COOLING_MIN, REGISTER_ROOM_COOLING_MAX
+            setpoint_reg = REGISTER_ROOM_COOLING_SETPOINT_FINE
+        else:
+            min_reg, max_reg = REGISTER_ROOM_HEATING_MIN, REGISTER_ROOM_HEATING_MAX
+            setpoint_reg = REGISTER_ROOM_HEATING_SETPOINT_FINE
+
+        config = self._static_holding_config(setpoint_reg)
+        fallback_min = float(config.min_value if config else 12)
+        fallback_max = float(config.max_value if config else 30)
+
+        min_val = self._get_register_value(min_reg)
+        max_val = self._get_register_value(max_reg)
+        try:
+            min_temp = float(min_val) if min_val is not None else fallback_min
+            max_temp = float(max_val) if max_val is not None else fallback_max
+        except (ValueError, TypeError):
+            min_temp, max_temp = fallback_min, fallback_max
+        if min_temp >= max_temp:
+            min_temp, max_temp = fallback_min, fallback_max
+        step = float(config.step if config else 0.5)
+        return min_temp, max_temp, step
+
+    @property
+    def available(self) -> bool:
+        """Return True if room temp and the active setpoint are valid."""
+        data = self.coordinator.data
+        return is_entity_available(data, REGISTER_ROOM_TEMP_MAIN) and (
+            is_entity_available(data, REGISTER_ROOM_HEATING_SETPOINT_FINE)
+            or is_entity_available(data, REGISTER_ROOM_COOLING_SETPOINT_FINE)
+        )
+
+    @property
+    def current_temperature(self):
+        """Return the measured room temperature (input_50)."""
+        temp = self._get_register_value(REGISTER_ROOM_TEMP_MAIN)
+        if temp is None:
+            return None
+        return round(float(temp), 2)
+
+    @property
+    def target_temperature(self):
+        """Return the room setpoint for the current mode."""
+        setpoint = self._get_register_value(self._active_setpoint_register())
+        if setpoint is None:
+            return None
+        return round(float(setpoint), 2)
+
+    @property
+    def target_temperature_step(self):
+        """Return the step from the register catalog."""
+        return self._get_limits()[2]
+
+    @property
+    def min_temp(self):
+        """Return the device lower limit (or catalog fallback)."""
+        return self._get_limits()[0]
+
+    @property
+    def max_temp(self):
+        """Return the device upper limit (or catalog fallback)."""
+        return self._get_limits()[1]
+
+    def _is_main_zone_on(self) -> bool:
+        """Return True if the main zone is enabled (coil_2)."""
+        val = self._get_register_value(REGISTER_MAIN_ZONE_SWITCH)
+        if val is None:
+            return False
+        return bool(val)
+
+    @property
+    def hvac_mode(self):
+        """Return OFF when the zone is disabled, else HEAT/COOL by mode."""
+        if not self._is_main_zone_on():
+            return HVACMode.OFF
+        if self._is_cool_mode():
+            return HVACMode.COOL
+        return HVACMode.HEAT
+
+    @property
+    def hvac_action(self):
+        """Return HEATING/COOLING while the zone runs, else IDLE/OFF."""
+        mode = self.hvac_mode
+        if mode == HVACMode.OFF:
+            return HVACAction.OFF
+        running = self._get_register_value(REGISTER_MAIN_ZONE_RUNNING)
+        if running:
+            return HVACAction.COOLING if mode == HVACMode.COOL else HVACAction.HEATING
+        return HVACAction.IDLE
+
+    async def async_set_temperature(self, **kwargs):
+        """Write the room setpoint (Temp16, scaled x100)."""
+        temperature = kwargs.get("temperature")
+        if temperature is None:
+            _LOGGER.warning(
+                "async_set_temperature called without temperature parameter"
+            )
+            return
+
+        setpoint_register = self._active_setpoint_register()
+        min_temp, max_temp, step = self._get_limits()
+        clamped = max(min_temp, min(max_temp, float(temperature)))
+        if step and step > 0:
+            clamped = round(round(clamped / step) * step, 2)
+
+        data = self._get_register_data(f"{DOMAIN}_{setpoint_register}")
+        scale = get_register_scale(data) or 1
+        raw_value = round(clamped / scale) if scale else int(clamped)
+
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            setpoint_register,
+            raw_value,
+            operation_name="set",
+            register_type="room thermostat setpoint",
+            coordinator=self.coordinator,
+        )
+        _LOGGER.debug(f"Set room thermostat setpoint to {clamped}°C (raw: {raw_value})")
+
+    async def async_set_hvac_mode(self, hvac_mode):
+        """Enable/disable the main zone and select heat/cool.
+
+        OFF only switches coil_2 off (and physically disables the zone);
+        HEAT/COOL enable the zone and set the operation mode (holding_3).
+        The holding_3 write is skipped on heat-only devices where the
+        register reports unavailable.
+        """
+        if hvac_mode == HVACMode.OFF:
+            await safe_write_register(
+                self.coordinator.data_manager.write_coil_register,
+                REGISTER_MAIN_ZONE_SWITCH,
+                False,
+                operation_name="turn off",
+                register_type="main zone",
+                coordinator=self.coordinator,
+            )
+            _LOGGER.debug("Turned main zone off (coil_2)")
+            return
+
+        if hvac_mode not in (HVACMode.HEAT, HVACMode.COOL):
+            _LOGGER.warning(f"Unsupported HVAC mode for room thermostat: {hvac_mode}")
+            return
+
+        await safe_write_register(
+            self.coordinator.data_manager.write_coil_register,
+            REGISTER_MAIN_ZONE_SWITCH,
+            True,
+            operation_name="turn on",
+            register_type="main zone",
+            coordinator=self.coordinator,
+        )
+        if self._get_register_value(REGISTER_OPERATION_MODE) is None:
+            _LOGGER.debug(
+                "Skipping operation mode write: holding_3 unavailable "
+                "(e.g. heat-only device)"
+            )
+            return
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            REGISTER_OPERATION_MODE,
+            HVAC_COOL if hvac_mode == HVACMode.COOL else HVAC_HEAT,
+            operation_name="set",
+            register_type="operation mode",
+            coordinator=self.coordinator,
+        )
+        _LOGGER.debug(f"Set room thermostat HVAC mode to {hvac_mode}")
+
+    @property
+    def extra_state_attributes(self):
+        """Return diagnostic attributes for the room thermostat."""
+        return {
+            "room_temperature": self.current_temperature,
+            "setpoint_register": self._active_setpoint_register(),
+            "min_limit": self.min_temp,
+            "max_limit": self.max_temp,
+            "main_zone_enabled": self._is_main_zone_on(),
+            "main_zone_running": self._get_register_value(REGISTER_MAIN_ZONE_RUNNING),
+            "compressor_running": self._get_register_value(REGISTER_COMPRESSOR),
+            "operation_mode_actual": self._get_register_value(
+                REGISTER_ROOM_OPERATION_MODE_ACTUAL
+            ),
+        }
+
+    async def async_turn_on(self):
+        """Turn the main zone on (mapped to HEAT)."""
+        await self.async_set_hvac_mode(HVACMode.HEAT)
+
+    async def async_turn_off(self):
+        """Turn the main zone off (coil_2 OFF)."""
+        await self.async_set_hvac_mode(HVACMode.OFF)
+
+
 async def async_setup_entry(hass, entry, async_add_entities):
     """Setup climate entities."""
     runtime_data = entry.runtime_data
@@ -397,6 +675,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     entities = [
         DaikinThermostatClimate(coordinator, entry),
+        DaikinRoomThermostatMainClimate(coordinator, entry),
         DaikinDHWThermostat(coordinator, entry, dhw_type="manual"),
         DaikinDHWThermostat(coordinator, entry, dhw_type="booster"),
     ]
