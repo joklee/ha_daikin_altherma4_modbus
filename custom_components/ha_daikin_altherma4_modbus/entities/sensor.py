@@ -336,7 +336,6 @@ class DaikinInputSensor(
 
         # Enum sensors: special configuration
         if enum_map:
-            self._attr_force_update = True
             # Clear unit of measurement for enum sensors (they are not numeric)
             self._attr_native_unit_of_measurement = None
             # Store possible values in extra_state_attributes
