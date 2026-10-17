@@ -11,6 +11,7 @@ from ..common import (
     get_register_value,
     is_entity_available,
     is_unavailable_value,
+    resolve_register_version,
 )
 from ..core.const import DOMAIN, SPECIAL_REGISTER_NOT_SUPPORTED
 from ..core.register_constants import (
@@ -440,6 +441,28 @@ def _external_electric_power_watts(coordinator, entry) -> float | None:
     return None
 
 
+def _return_temperature_is_duplicated(coordinator, return_temp) -> bool:
+    """Recognize the suspect v4 return/outdoor pair reported in issue #97.
+
+    This is a per-sample guard, not a firmware-version diagnosis. Keep raw
+    readings intact and never substitute an unrelated refrigerant sensor.
+    """
+    from ..core.const import REGISTER_LEAVING_WATER_TEMP_OUTDOOR
+
+    if resolve_register_version(coordinator) != "v4":
+        return False
+    outdoor_temp = get_register_value(
+        coordinator.data.get(REGISTER_LEAVING_WATER_TEMP_OUTDOOR)
+    )
+    if is_unavailable_value(outdoor_temp) or return_temp != outdoor_temp:
+        return False
+    _LOGGER.debug(
+        "Derived temperature readings unknown: v4 input_42 duplicates input_74 (%s)",
+        return_temp,
+    )
+    return True
+
+
 def calculate_thermal_heat_output(coordinator):
     """Berechnet die thermische Leistung in W, oder None wenn Daten fehlen.
 
@@ -468,6 +491,9 @@ def calculate_thermal_heat_output(coordinator):
             temp_vl,
             temp_rl,
         )
+        return None
+
+    if _return_temperature_is_duplicated(coordinator, temp_rl):
         return None
 
     delta_t = temp_vl - temp_rl
@@ -783,6 +809,9 @@ class DeltaTSensor(RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEnti
                 flow_temp,
                 return_temp,
             )
+            return None
+
+        if _return_temperature_is_duplicated(self.coordinator, return_temp):
             return None
 
         # Delta-T berechnen und auf 2 Nachkommastellen runden

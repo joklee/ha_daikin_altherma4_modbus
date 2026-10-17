@@ -6,6 +6,8 @@ import types
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 
 def _reset_modules(*names: str) -> None:
     for name in names:
@@ -228,6 +230,7 @@ def _load_sensor_module(monkeypatch):
     const_module.REGISTER_FLOW_RATE = "input_49"
     const_module.REGISTER_LEAVING_WATER_TEMP = "input_40"
     const_module.REGISTER_RETURN_WATER_TEMP = "input_42"
+    const_module.REGISTER_LEAVING_WATER_TEMP_OUTDOOR = "input_74"
     const_module.REGISTER_HEAT_PUMP_POWER = "input_51"
     const_module.SPECIAL_REGISTER_NOT_SUPPORTED = 32767
     const_module.SPECIAL_REGISTER_NOT_AVAILABLE = 32766
@@ -314,6 +317,9 @@ def _load_sensor_module(monkeypatch):
     )
     common_module.RegisterVersionDeviceInfoMixin = type(
         "RegisterVersionDeviceInfoMixin", (), {}
+    )
+    common_module.resolve_register_version = lambda coordinator: getattr(
+        getattr(coordinator, "data_manager", None), "register_version", None
     )
     monkeypatch.setitem(sys.modules, common_module_name, common_module)
 
@@ -1031,3 +1037,108 @@ def test_cop_sensor_none_when_modbus_power_missing(monkeypatch):
         device_class=None,
     )
     assert sensor.native_value is None
+
+
+def _derived_temperature_sensor(sensor_module, kind, data, version="v4"):
+    coordinator = SimpleNamespace(
+        data=data,
+        data_manager=SimpleNamespace(register_version=version),
+        hass=SimpleNamespace(states=SimpleNamespace(get=lambda entity_id: None)),
+    )
+    return getattr(sensor_module, kind)(
+        coordinator=coordinator,
+        entry=SimpleNamespace(data={}, options={}),
+        unique_id="test_derived_temperature",
+        unit=None,
+        device_class=None,
+    )
+
+
+@pytest.mark.parametrize(
+    "kind", ["DeltaTSensor", "ThermalHeatOutput", "CalculatedCoPSensor"]
+)
+@pytest.mark.parametrize(
+    ("outlet", "reported_return", "flow", "power"),
+    [
+        (47.9, 49.0, 40.2, 2.8),
+        (49.8, 51.1, 14.4, 1.5),
+        (56.6, 56.3, 22.0, 1.6),
+    ],
+)
+def test_v4_duplicated_return_does_not_produce_derived_readings(
+    monkeypatch, kind, outlet, reported_return, flow, power
+):
+    """Issue #97 affects both negative and plausible positive temperature rises."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    data = {
+        "input_40": {"value": outlet},
+        "input_42": {"value": reported_return},
+        "input_74": {"value": reported_return},
+        "input_45": {"value": 43.0},
+        "input_49": {"value": flow},
+        "input_51": {"value": power},
+    }
+    sensor = _derived_temperature_sensor(sensor_module, kind, data)
+
+    assert sensor.native_value is None
+    # Keep both original temperatures available for diagnosis; do not substitute
+    # the superficially plausible refrigerant-liquid reading from input_45.
+    assert data["input_42"]["value"] == reported_return
+    assert data["input_74"]["value"] == reported_return
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        ("DeltaTSensor", 5.0),
+        ("ThermalHeatOutput", 3500.0),
+        ("CalculatedCoPSensor", 3.5),
+    ],
+)
+@pytest.mark.parametrize(
+    ("version", "outdoor"),
+    [("v2/v3", 40.0), (None, 40.0), ("v4", 46.0), ("v4", None), ("v4", 32766)],
+)
+def test_duplicate_guard_preserves_other_maps_and_distinct_or_missing_channels(
+    monkeypatch, kind, expected, version, outdoor
+):
+    """Only a matching pair on the detected v4 map triggers the mitigation."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    data = {
+        "input_40": {"value": 45.0},
+        "input_42": {"value": 40.0},
+        "input_49": {"value": 10.0},
+        "input_51": {"value": 1.0},
+    }
+    if outdoor is not None:
+        data["input_74"] = {"value": outdoor}
+    sensor = _derived_temperature_sensor(sensor_module, kind, data, version)
+
+    assert sensor.native_value == expected
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        ("DeltaTSensor", 4.33),
+        ("ThermalHeatOutput", 12184.62),
+        ("CalculatedCoPSensor", 4.35),
+    ],
+)
+def test_v4_derived_readings_recover_when_return_channel_becomes_distinct(
+    monkeypatch, kind, expected
+):
+    """Suppress the affected sample without permanently disabling all v4 units."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    data = {
+        "input_40": {"value": 47.9},
+        "input_42": {"value": 49.0},
+        "input_74": {"value": 49.0},
+        "input_49": {"value": 40.2},
+        "input_51": {"value": 2.8},
+    }
+    sensor = _derived_temperature_sensor(sensor_module, kind, data)
+    assert sensor.native_value is None
+
+    data["input_42"]["value"] = 43.57
+    assert sensor.native_value == expected

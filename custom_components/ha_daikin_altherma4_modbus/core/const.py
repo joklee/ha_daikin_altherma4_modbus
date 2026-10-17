@@ -67,6 +67,7 @@ REGISTER_DHW_BOOSTER_TEMP = "input_43"  # DHW temperature
 REGISTER_FLOW_RATE = "input_49"  # Flow rate in L/min
 REGISTER_LEAVING_WATER_TEMP = "input_40"  # Leaving water temperature PHE
 REGISTER_RETURN_WATER_TEMP = "input_42"  # Return water temperature
+REGISTER_LEAVING_WATER_TEMP_OUTDOOR = "input_74"  # Outdoor pre-PHE temperature
 REGISTER_HEAT_PUMP_POWER = "input_51"  # Heat pump power consumption
 
 # Fan mode constants (quiet mode)
