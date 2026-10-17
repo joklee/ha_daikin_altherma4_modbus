@@ -15,6 +15,17 @@
 > Do not update the MMI user interface firmware to 4.x (tested with 4.1.0) if you rely on the return water temperature, Delta-T, thermal power or CoP.
 > After the update, input_42 no longer reports the real return water temperature (see above). As far as I know, there is no way to roll back the MMI firmware via ONECTA, so the update cannot be easily undone.
 
+For the detected v4 register map, calculated Delta-T, thermal output and CoP
+report `unknown` whenever the available `input_42` and `input_74` temperatures
+are identical, matching the suspect return/outdoor pair in
+[issue #97](https://github.com/joklee/ha_daikin_altherma4_modbus/issues/97).
+The original register sensors remain available for diagnosis. This conservative
+check also suppresses coincidentally equal readings; calculations resume when
+the channels differ. It does not validate nonmatching readings, fix the MMI
+export, or replace the return temperature with the refrigerant sensor
+`input_45`. Other register maps and samples without an available `input_74`
+retain their existing behavior.
+
 **Short description:** This integration connects Daikin Altherma 4 heat pumps (EPSX series) to Home Assistant via Modbus TCP. It provides comprehensive monitoring of temperatures, power consumption, and operating states, as well as control of heating zones, domestic hot water, and operation modes.
 
 **⚠️ WARNING: Use at your own risk! This integration modifies heat pump settings. Incorrect configuration may damage your equipment or void your warranty. Always consult the official Daikin documentation before making changes.**
