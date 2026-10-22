@@ -6,6 +6,8 @@ import types
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 
 def _reset_modules(*names: str) -> None:
     for name in names:
@@ -297,7 +299,7 @@ def _load_sensor_module(monkeypatch):
         return True
 
     def is_unavailable_value(val):
-        return val in [32765, 32766]
+        return val in [32765, 32766, 32767]
 
     def to_signed_16bit(val):
         if val > 32767:
@@ -885,6 +887,48 @@ def test_delta_t_value_when_data_present(monkeypatch):
         },
     )
     assert sensor.native_value == 5.0
+
+
+@pytest.mark.parametrize("special", [32765, 32766, 32767])
+def test_delta_t_none_when_flow_temp_is_special_value(monkeypatch, special):
+    """Special register values must not leak into Delta-T (e.g. 27 - 32767)."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _delta_t_sensor(
+        sensor_module,
+        {
+            "input_40": {"value": special},
+            "input_42": {"value": 27.0},
+        },
+    )
+    assert sensor.native_value is None
+
+
+@pytest.mark.parametrize("special", [32765, 32766, 32767])
+def test_delta_t_none_when_return_temp_is_special_value(monkeypatch, special):
+    """A special return temperature must yield unknown, not a large negative."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _delta_t_sensor(
+        sensor_module,
+        {
+            "input_40": {"value": 27.0},
+            "input_42": {"value": special},
+        },
+    )
+    assert sensor.native_value is None
+
+
+def test_thermal_heat_output_none_when_return_temp_is_special_value(monkeypatch):
+    """Special return temperature must not produce a fake thermal output."""
+    sensor_module = _load_sensor_module(monkeypatch)
+    sensor = _thermal_sensor(
+        sensor_module,
+        {
+            "input_49": {"value": 10.0},
+            "input_40": {"value": 27.0},
+            "input_42": {"value": 32767},
+        },
+    )
+    assert sensor.native_value is None
 
 
 def test_cop_sensor_none_when_thermal_inputs_missing(monkeypatch):

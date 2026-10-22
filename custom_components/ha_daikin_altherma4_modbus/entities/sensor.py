@@ -461,7 +461,14 @@ def calculate_thermal_heat_output(coordinator):
     temp_rl_data = coordinator.data.get(REGISTER_RETURN_WATER_TEMP, {})
     temp_rl = get_register_value(temp_rl_data)  # Return water temperature in °C
 
-    if flow is None or temp_vl is None or temp_rl is None:
+    if (
+        flow is None
+        or temp_vl is None
+        or temp_rl is None
+        or is_unavailable_value(flow)
+        or is_unavailable_value(temp_vl)
+        or is_unavailable_value(temp_rl)
+    ):
         _LOGGER.debug(
             "thermal_heat_output unavailable: flow=%s vl=%s rl=%s",
             flow,
@@ -570,7 +577,7 @@ class CalculatedCoPSensor(
 
             power_data = self.coordinator.data.get(REGISTER_HEAT_PUMP_POWER, {})
             power_raw = get_register_value(power_data)  # in kW
-            if power_raw is None:
+            if power_raw is None or is_unavailable_value(power_raw):
                 electric_power = None
             else:
                 # Convert kW to W for consistent calculation
@@ -780,6 +787,17 @@ class DeltaTSensor(RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEnti
             # Fehlende Messwerte dürfen kein Delta-T von 0 K vortäuschen.
             _LOGGER.debug(
                 "Delta-T unavailable: flow_temp=%s return_temp=%s",
+                flow_temp,
+                return_temp,
+            )
+            return None
+
+        if is_unavailable_value(flow_temp) or is_unavailable_value(return_temp):
+            # Spezialwerte (32765/32766/32767) sind keine Messwerte und
+            # dürfen nicht in die Differenz einfließen.
+            _LOGGER.debug(
+                "Delta-T unavailable (special register value): "
+                "flow_temp=%s return_temp=%s",
                 flow_temp,
                 return_temp,
             )
