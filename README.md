@@ -65,6 +65,10 @@ Before using this integration, you need to enable Modbus TCP communication on yo
 - **Port without encryption:** 502
 - **Port with TLS encryption:** 802 (not tested)
 
+> **⚠️ Warning – Unsecured Modbus TCP connection**
+>
+> An exposed Modbus TCP connection (port 502, and port 802 even with TLS) is not protected by user authentication. Anyone with network access to the heat pump can read all registers and send commands (for example, change setpoints or operating modes). As a possible mitigation, segment your network: put the heat pump in a dedicated IoT VLAN and restrict access to ports 502 and 802 to Home Assistant only via firewall rules. Never expose the Modbus ports to the internet.
+
 > **Note:** If the unit receives commands from both Modbus and Cloud interfaces, it will execute the command that was received most recently.
 
 ### Connection Limits
