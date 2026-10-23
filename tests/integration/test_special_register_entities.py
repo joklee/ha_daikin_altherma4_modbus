@@ -209,12 +209,12 @@ def _dhw_manual(holding_10, input_43):
 class TestDhwThermostatSpecials:
     def test_unavailable_setpoint_is_none_not_32766(self):
         ent = _dhw_manual(32766, 44.5)
-        assert ent.target_temperature is None
-        assert ent.current_temperature == 44.5
+        assert ent.native_target_temperature is None
+        assert ent.native_current_temperature == 44.5
 
     def test_normal_setpoint(self):
         ent = _dhw_manual(48, 44.5)
-        assert ent.target_temperature == 48
+        assert ent.native_target_temperature == 48
 
 
 # ── main thermostat: unavailable is None, never 0 ─────────────────────
@@ -238,21 +238,21 @@ class TestMainThermostatSpecials:
         return ent
 
     def test_unavailable_current_is_none(self):
-        assert self._climate(32766).current_temperature is None
+        assert self._climate(32766).native_current_temperature is None
 
     def test_scaled_guard_current_is_none(self):
-        assert self._climate(327.66).current_temperature is None
+        assert self._climate(327.66).native_current_temperature is None
 
     def test_normal_current(self):
-        assert self._climate(32.4).current_temperature == 32.4
+        assert self._climate(32.4).native_current_temperature == 32.4
 
     def test_unavailable_offset_gives_none_target(self):
-        assert self._climate(32.4, holding_54=32766).target_temperature is None
+        assert self._climate(32.4, holding_54=32766).native_target_temperature is None
 
     def test_normal_offset_gives_target(self):
-        assert self._climate(32.4, holding_54=2).target_temperature == 2.0
+        assert self._climate(32.4, holding_54=2).native_target_temperature == 2.0
 
     def test_unavailable_op_mode_falls_back_to_heating_offset(self):
         ent = self._climate(32.4, holding_54=2, holding_3=32766)
-        assert ent.current_temperature == 32.4
-        assert ent.target_temperature == 2.0
+        assert ent.native_current_temperature == 32.4
+        assert ent.native_target_temperature == 2.0
