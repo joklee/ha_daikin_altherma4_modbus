@@ -1,7 +1,7 @@
 """Climate Entity and Platform for Daikin Altherma 4 Modbus integration."""
 
 import logging
-from typing import Any
+from typing import Any, ClassVar
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
@@ -56,6 +56,7 @@ from ..core.const import (
     REGISTER_ROOM_HEATING_SETPOINT_FINE,
     REGISTER_ROOM_OPERATION_MODE_ACTUAL,
     REGISTER_ROOM_TEMP_MAIN,
+    REGISTER_SPACE_HEATING_COOLING_SWITCH,
 )
 from ..core.register_constants import (
     CALCULATED_DEVICE_INFO,
@@ -68,8 +69,103 @@ _LOGGER = logging.getLogger(__name__)
 PARALLEL_UPDATES = 0  # Managed by DataUpdateCoordinator
 
 
+class OperationModeHvacMixin:
+    """Shared HVAC mode/on-off handling.
+
+    On/off is controlled by ``holding_4`` (space heating/cooling), while the
+    operating mode (auto/heat/cool) comes from ``holding_3``.
+    """
+
+    _OPERATION_MODE_TO_HVAC_MODE: ClassVar[dict[int, str]] = {
+        HVAC_OFF: HVACMode.AUTO,
+        HVAC_HEAT: HVACMode.HEAT,
+        HVAC_COOL: HVACMode.COOL,
+    }
+    _HVAC_MODE_TO_OPERATION_MODE: ClassVar[dict[str, int]] = {
+        HVACMode.AUTO: 0,
+        HVACMode.HEAT: HVAC_HEAT,
+        HVACMode.COOL: HVAC_COOL,
+    }
+
+    def _get_operation_mode(self):
+        """Get the current operation mode value (None if unavailable)."""
+        op_mode_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OPERATION_MODE}")
+        val = get_register_value(op_mode_data)
+        if val is None or is_unavailable_value(val):
+            return None
+        return val
+
+    def _operation_mode_to_hvac_mode(self, op_mode_raw):
+        """Map a raw operation mode to its HA HVAC mode."""
+        return self._OPERATION_MODE_TO_HVAC_MODE.get(op_mode_raw, HVACMode.AUTO)
+
+    def _is_space_heating_cooling_on(self) -> bool:
+        """Return True if space heating/cooling is enabled (holding_4)."""
+        data = self._get_register_data(
+            f"{DOMAIN}_{REGISTER_SPACE_HEATING_COOLING_SWITCH}"
+        )
+        val = get_register_value(data)
+        if val is None or is_unavailable_value(val):
+            return False
+        return bool(val)
+
+    @property
+    def hvac_mode(self):
+        """Return OFF when switched off, else the holding_3 operation mode."""
+        if not self._is_space_heating_cooling_on():
+            return HVACMode.OFF
+        return self._operation_mode_to_hvac_mode(self._get_operation_mode())
+
+    async def async_set_hvac_mode(self, hvac_mode):
+        """Switch space heating/cooling and set the operation mode."""
+        if hvac_mode == HVACMode.OFF:
+            await safe_write_register(
+                self.coordinator.data_manager.write_holding_register,
+                REGISTER_SPACE_HEATING_COOLING_SWITCH,
+                0,
+                operation_name="turn off",
+                register_type="space heating/cooling",
+                coordinator=self.coordinator,
+            )
+            _LOGGER.debug("Turned space heating/cooling off (holding_4)")
+            return
+
+        if hvac_mode not in (HVACMode.AUTO, HVACMode.HEAT, HVACMode.COOL):
+            _LOGGER.warning(f"Unsupported HVAC mode: {hvac_mode}")
+            return
+
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            REGISTER_SPACE_HEATING_COOLING_SWITCH,
+            1,
+            operation_name="turn on",
+            register_type="space heating/cooling",
+            coordinator=self.coordinator,
+        )
+        if self._get_operation_mode() is None:
+            _LOGGER.debug(
+                "Skipping operation mode write: holding_3 unavailable "
+                "(e.g. heat-only device)"
+            )
+            return
+
+        mode_raw = self._HVAC_MODE_TO_OPERATION_MODE.get(hvac_mode, 0)
+        await safe_write_register(
+            self.coordinator.data_manager.write_holding_register,
+            REGISTER_OPERATION_MODE,
+            mode_raw,
+            operation_name="set",
+            register_type="HVAC mode",
+            coordinator=self.coordinator,
+        )
+        _LOGGER.debug(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
+
+
 class DaikinThermostatClimate(
-    RegisterVersionDeviceInfoMixin, CoordinatorEntity, ClimateEntity
+    OperationModeHvacMixin,
+    RegisterVersionDeviceInfoMixin,
+    CoordinatorEntity,
+    ClimateEntity,
 ):
     """Climate Entity for Daikin Altherma 4 Thermostat Control."""
 
@@ -86,8 +182,13 @@ class DaikinThermostatClimate(
         self._attr_supported_features = (
             ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
         )
-        # Register holding_3 supports Auto/Heating/Cooling, but no dedicated Off state.
-        self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO]
+        # OFF is handled via holding_4; holding_3 selects Auto/Heating/Cooling.
+        self._attr_hvac_modes = [
+            HVACMode.OFF,
+            HVACMode.HEAT,
+            HVACMode.COOL,
+            HVACMode.AUTO,
+        ]
         self._attr_device_info = CALCULATED_DEVICE_INFO
         self._attr_translation_key = "daikin_thermostat_climate"
 
@@ -102,14 +203,6 @@ class DaikinThermostatClimate(
     def _get_register_data(self, register_name):
         """Get register data without DOMAIN prefix."""
         return get_coordinator_register_data(self.coordinator, register_name)
-
-    def _get_operation_mode(self):
-        """Get the current operation mode value (None if unavailable)."""
-        op_mode_data = self._get_register_data(f"{DOMAIN}_{REGISTER_OPERATION_MODE}")
-        val = get_register_value(op_mode_data)
-        if val is None or is_unavailable_value(val):
-            return None
-        return val
 
     def _get_offset_register_config(self):
         """Get the appropriate offset register config based on operation mode."""
@@ -221,18 +314,6 @@ class DaikinThermostatClimate(
         return [FAN_OFF, FAN_AUTO, FAN_MANUAL]
 
     @property
-    def hvac_mode(self):
-        """Return current operation mode."""
-        op_mode_raw = self._get_operation_mode()
-
-        mode_map = {
-            HVAC_OFF: HVACMode.AUTO,
-            HVAC_HEAT: HVACMode.HEAT,
-            HVAC_COOL: HVACMode.COOL,
-        }
-        return mode_map.get(op_mode_raw, HVACMode.AUTO)
-
-    @property
     def hvac_action(self):
         """Return the current running hvac operation."""
         comp_data = self._get_register_data(f"{DOMAIN}_{REGISTER_COMPRESSOR}")
@@ -297,32 +378,6 @@ class DaikinThermostatClimate(
                 coordinator=self.coordinator,
             )
         _LOGGER.debug(f"Set thermostat offset to {offset}°C (raw: {offset_raw})")
-
-    async def async_set_hvac_mode(self, hvac_mode):
-        """Set new target hvac mode."""
-        # Keep semantics explicit: this entity has no native OFF in holding_3.
-        # For service compatibility, OFF is coerced to AUTO.
-        mode_map = {
-            HVACMode.AUTO: 0,
-            HVACMode.HEAT: HVAC_HEAT,
-            HVACMode.COOL: HVAC_COOL,
-            HVACMode.OFF: 0,
-        }
-        if hvac_mode == HVACMode.OFF:
-            _LOGGER.debug(
-                "HVAC OFF requested but not supported by holding_3; using AUTO"
-            )
-        mode_raw = mode_map.get(hvac_mode, 0)
-
-        await safe_write_register(
-            self.coordinator.data_manager.write_holding_register,
-            REGISTER_OPERATION_MODE,
-            mode_raw,
-            operation_name="set",
-            register_type="HVAC mode",
-            coordinator=self.coordinator,
-        )
-        _LOGGER.debug(f"Set HVAC mode to {hvac_mode} (raw: {mode_raw})")
 
     async def async_set_fan_mode(self, fan_mode):
         """Set new fan mode (quiet mode)."""
@@ -396,12 +451,15 @@ class DaikinThermostatClimate(
         await self.async_set_hvac_mode(HVACMode.AUTO)
 
     async def async_turn_off(self):
-        """Compatibility path for turn_off; this thermostat has no native OFF."""
-        await self.async_set_hvac_mode(HVACMode.AUTO)
+        """Turn space heating/cooling off (holding_4 OFF)."""
+        await self.async_set_hvac_mode(HVACMode.OFF)
 
 
 class DaikinRoomThermostatMainClimate(
-    RegisterVersionDeviceInfoMixin, CoordinatorEntity, ClimateEntity
+    OperationModeHvacMixin,
+    RegisterVersionDeviceInfoMixin,
+    CoordinatorEntity,
+    ClimateEntity,
 ):
     """Climate Entity for the Main-zone room thermostat (issue #94).
 
@@ -413,7 +471,8 @@ class DaikinRoomThermostatMainClimate(
     - Target temperature: ``holding_76`` (heat) / ``holding_77`` (cool),
       Temp16 fine setpoints written as ``round(temp / scale)`` (x100)
     - Limits: ``input_84/85`` (heat) / ``input_86/87`` (cool), catalog fallback
-    - On/Off: ``coil_2`` — OFF physically disables the main zone
+    - On/Off: ``holding_4`` (space heating/cooling)
+    - Mode: ``holding_3`` via the shared operation-mode mapping (Auto/Heat/Cool)
     - Action: ``discrete_20`` (main zone running)
     """
 
@@ -427,7 +486,12 @@ class DaikinRoomThermostatMainClimate(
         self._attr_unique_id = f"{DOMAIN}_room_thermostat_main_climate"
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
         self._attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
-        self._attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT, HVACMode.COOL]
+        self._attr_hvac_modes = [
+            HVACMode.OFF,
+            HVACMode.HEAT,
+            HVACMode.COOL,
+            HVACMode.AUTO,
+        ]
         self._attr_device_info = CALCULATED_DEVICE_INFO
         self._attr_translation_key = "daikin_room_thermostat_main_climate"
 
@@ -539,22 +603,6 @@ class DaikinRoomThermostatMainClimate(
         """Return the device upper limit (or catalog fallback)."""
         return self._get_limits()[1]
 
-    def _is_main_zone_on(self) -> bool:
-        """Return True if the main zone is enabled (coil_2)."""
-        val = self._get_register_value(REGISTER_MAIN_ZONE_SWITCH)
-        if val is None:
-            return False
-        return bool(val)
-
-    @property
-    def hvac_mode(self):
-        """Return OFF when the zone is disabled, else HEAT/COOL by mode."""
-        if not self._is_main_zone_on():
-            return HVACMode.OFF
-        if self._is_cool_mode():
-            return HVACMode.COOL
-        return HVACMode.HEAT
-
     @property
     def hvac_action(self):
         """Return HEATING/COOLING while the zone runs, else IDLE/OFF."""
@@ -563,7 +611,7 @@ class DaikinRoomThermostatMainClimate(
             return HVACAction.OFF
         running = self._get_register_value(REGISTER_MAIN_ZONE_RUNNING)
         if running:
-            return HVACAction.COOLING if mode == HVACMode.COOL else HVACAction.HEATING
+            return HVACAction.COOLING if self._is_cool_mode() else HVACAction.HEATING
         return HVACAction.IDLE
 
     async def async_set_temperature(self, **kwargs):
@@ -595,54 +643,6 @@ class DaikinRoomThermostatMainClimate(
         )
         _LOGGER.debug(f"Set room thermostat setpoint to {clamped}°C (raw: {raw_value})")
 
-    async def async_set_hvac_mode(self, hvac_mode):
-        """Enable/disable the main zone and select heat/cool.
-
-        OFF only switches coil_2 off (and physically disables the zone);
-        HEAT/COOL enable the zone and set the operation mode (holding_3).
-        The holding_3 write is skipped on heat-only devices where the
-        register reports unavailable.
-        """
-        if hvac_mode == HVACMode.OFF:
-            await safe_write_register(
-                self.coordinator.data_manager.write_coil_register,
-                REGISTER_MAIN_ZONE_SWITCH,
-                False,
-                operation_name="turn off",
-                register_type="main zone",
-                coordinator=self.coordinator,
-            )
-            _LOGGER.debug("Turned main zone off (coil_2)")
-            return
-
-        if hvac_mode not in (HVACMode.HEAT, HVACMode.COOL):
-            _LOGGER.warning(f"Unsupported HVAC mode for room thermostat: {hvac_mode}")
-            return
-
-        await safe_write_register(
-            self.coordinator.data_manager.write_coil_register,
-            REGISTER_MAIN_ZONE_SWITCH,
-            True,
-            operation_name="turn on",
-            register_type="main zone",
-            coordinator=self.coordinator,
-        )
-        if self._get_register_value(REGISTER_OPERATION_MODE) is None:
-            _LOGGER.debug(
-                "Skipping operation mode write: holding_3 unavailable "
-                "(e.g. heat-only device)"
-            )
-            return
-        await safe_write_register(
-            self.coordinator.data_manager.write_holding_register,
-            REGISTER_OPERATION_MODE,
-            HVAC_COOL if hvac_mode == HVACMode.COOL else HVAC_HEAT,
-            operation_name="set",
-            register_type="operation mode",
-            coordinator=self.coordinator,
-        )
-        _LOGGER.debug(f"Set room thermostat HVAC mode to {hvac_mode}")
-
     @property
     def extra_state_attributes(self):
         """Return diagnostic attributes for the room thermostat."""
@@ -651,7 +651,8 @@ class DaikinRoomThermostatMainClimate(
             "setpoint_register": self._active_setpoint_register(),
             "min_limit": self.min_temp,
             "max_limit": self.max_temp,
-            "main_zone_enabled": self._is_main_zone_on(),
+            "main_zone_enabled": self._get_register_value(REGISTER_MAIN_ZONE_SWITCH),
+            "space_heating_cooling_on": self._is_space_heating_cooling_on(),
             "main_zone_running": self._get_register_value(REGISTER_MAIN_ZONE_RUNNING),
             "compressor_running": self._get_register_value(REGISTER_COMPRESSOR),
             "operation_mode_actual": self._get_register_value(
@@ -664,7 +665,7 @@ class DaikinRoomThermostatMainClimate(
         await self.async_set_hvac_mode(HVACMode.HEAT)
 
     async def async_turn_off(self):
-        """Turn the main zone off (coil_2 OFF)."""
+        """Turn space heating/cooling off (holding_4 OFF)."""
         await self.async_set_hvac_mode(HVACMode.OFF)
 
 
