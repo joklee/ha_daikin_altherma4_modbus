@@ -203,7 +203,7 @@ You can change the host address, port, and unit ID via the reconfigure flow:
 | Switch | 7 | On/Off control (coils + holding, incl. v4 model restart) |
 | Number | 18 | Setpoint settings |
 | Select | 8 | Operation mode selection |
-| Climate | 2 | Thermostat control |
+| Climate | 4 | Thermostat control (heating, room thermostat, DHW manual/booster) |
 | Connection diagnostics (Enhanced device) | 2 binary + 6 sensors | Reachability, link status, timestamps, error counters (all diagnostic) |
 
 #### Register map versions (MMI v2/v3 vs. v4.x)
@@ -333,7 +333,7 @@ All binary sensors have the **Diagnostic** category.
 #### Holding Registers (Switchable)
 | Switch | Address | Description |
 |--------|---------|-------------|
-| Space heating/cooling On/Off | 4 | Heating/cooling operation |
+| Space heating/cooling On/Off | 4 | Heating/cooling operation (also used by the heating climate entities) |
 | DHW booster mode (Powerful) | 13 | DHW rapid heating |
 | DHW Single heat-up (Manual) | 15 | Manual DHW one-time heat-up |
 | Execute model restart now | 81 | Triggers a pending model restart (MMI v4.x only) |
@@ -378,8 +378,15 @@ All binary sensors have the **Diagnostic** category.
 
 | Climate | Description |
 |---------|-------------|
-| Main zone | Thermostat control for main heating zone with operation modes |
-| DHW | Domestic hot water control |
+| Heating Thermostat Control | Leaving-water offset control; mode via `holding_3` |
+| Room Thermostat Main | Main-zone room setpoint (`input_50`, `holding_76/77`); mode via `holding_3` |
+| DHW Single Heat-up Thermostat Control | Manual DHW heat-up (`holding_15/16`) |
+| DHW Booster Thermostat Control | Powerful DHW boost (`holding_13/14`) |
+
+Both heating thermostats use `holding_4` (space heating/cooling on/off) for
+their On/Off state. `holding_3` selects Auto/Heating/Cooling, and
+`discrete_20` reports whether the main zone is actually running. The DHW
+thermostats use their own DHW registers instead.
 
 ### Calculated Sensors
 
