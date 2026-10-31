@@ -282,14 +282,14 @@ def test_room_thermostat_current_and_target_temperature(monkeypatch):
     """Room thermostat reads input_50 and the mode-selected setpoint."""
     module = _load_climate_module(monkeypatch)
     room = _make_room_thermostat(module)
-    assert room.current_temperature == pytest.approx(21.3)
-    assert room.target_temperature == pytest.approx(21.5)
+    assert room.native_current_temperature == pytest.approx(21.3)
+    assert room.native_target_temperature == pytest.approx(21.5)
 
     room.coordinator.data["input_50"] = {"value": 32766}
-    assert room.current_temperature is None
+    assert room.native_current_temperature is None
 
     cool = _make_room_thermostat(module, input_38={"value": 2})
-    assert cool.target_temperature == pytest.approx(23.0)
+    assert cool.native_target_temperature == pytest.approx(23.0)
 
 
 def test_room_thermostat_limits_from_device_and_fallback(monkeypatch):
@@ -470,24 +470,49 @@ def test_room_thermostat_available_and_attributes(monkeypatch):
     assert attrs["space_heating_cooling_on"] is True
 
 
-def test_thermostat_current_temperature_scaled_and_unscaled(monkeypatch):
+def test_thermostat_native_current_temperature_scaled_and_unscaled(monkeypatch):
     """Current temperature honors pre-scaled values and scales raw ones."""
     module = _load_climate_module(monkeypatch)
     thermostat = _make_thermostat(module)
-    assert thermostat.current_temperature == pytest.approx(21.5)
+    assert thermostat.native_current_temperature == pytest.approx(21.5)
 
     thermostat.coordinator.data["input_37"] = {"value": 2150}
-    assert thermostat.current_temperature == pytest.approx(2150.0)
+    assert thermostat.native_current_temperature == pytest.approx(2150.0)
 
 
-def test_thermostat_target_temperature_heating_and_cooling(monkeypatch):
+def test_thermostat_native_target_temperature_heating_and_cooling(monkeypatch):
     """Target temperature follows the mode-selected offset register."""
     module = _load_climate_module(monkeypatch)
-    assert _make_thermostat(module).target_temperature == pytest.approx(0.0)
+    assert _make_thermostat(module).native_target_temperature == pytest.approx(0.0)
 
     cool = _make_thermostat(module, op_mode_raw=2)
     cool.coordinator.data["holding_6"] = {"value": 200}
-    assert cool.target_temperature == pytest.approx(200.0)
+    assert cool.native_target_temperature == pytest.approx(200.0)
+
+
+def test_climate_uses_native_temperature_api(monkeypatch):
+    """HA 2026.11: entities expose native_* props, no legacy _attr_temperature_unit."""
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    dhw = _make_dhw_thermostat(module)
+    room = _make_room_thermostat(module)
+
+    for cls in (
+        module.DaikinThermostatClimate,
+        module.DaikinDHWThermostat,
+        module.DaikinRoomThermostatMainClimate,
+    ):
+        assert "native_current_temperature" in cls.__dict__
+        assert "native_target_temperature" in cls.__dict__
+        assert "current_temperature" not in cls.__dict__
+        assert "target_temperature" not in cls.__dict__
+
+    assert thermostat._attr_native_temperature_unit == "°C"
+    assert dhw._attr_native_temperature_unit == "°C"
+    assert room._attr_native_temperature_unit == "°C"
+    assert not hasattr(thermostat, "_attr_temperature_unit")
+    assert not hasattr(dhw, "_attr_temperature_unit")
+    assert not hasattr(room, "_attr_temperature_unit")
 
 
 def test_thermostat_fan_and_hvac_modes(monkeypatch):
@@ -599,8 +624,8 @@ async def test_dhw_thermostat_modes_and_temps(monkeypatch):
     dhw = _make_dhw_thermostat(module)
     assert dhw.hvac_mode == "heat"
     assert dhw.hvac_action == "heating"
-    assert dhw.current_temperature == pytest.approx(50.0)
-    assert dhw.target_temperature == pytest.approx(45)
+    assert dhw.native_current_temperature == pytest.approx(50.0)
+    assert dhw.native_target_temperature == pytest.approx(45)
     assert dhw.available is True
 
     dhw.coordinator.data["coil_1"] = {"value": 0}
