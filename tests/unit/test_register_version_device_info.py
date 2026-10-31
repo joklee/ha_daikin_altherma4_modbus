@@ -11,6 +11,7 @@ every entity with the detected Modbus register map as ``sw_version``
 
 from __future__ import annotations
 
+import copy
 from types import SimpleNamespace
 
 from custom_components.ha_daikin_altherma4_modbus.common.helpers import (
@@ -37,11 +38,18 @@ def _coordinator_with_version(version) -> SimpleNamespace:
     return SimpleNamespace(data_manager=data_manager)
 
 
+def _field(info, key):
+    """Read a device-info field on both the TypedDict and dataclass forms."""
+    return info[key] if isinstance(info, dict) else getattr(info, key)
+
+
 def test_helper_adds_detected_version_without_mutating_base() -> None:
-    base = dict(INPUT_DEVICE_INFO)
+    base = copy.copy(INPUT_DEVICE_INFO)
     info = device_info_with_register_version(INPUT_DEVICE_INFO, "v4")
-    assert info["sw_version"] == "Register v4"
-    assert info["translation_key"] == INPUT_DEVICE_INFO["translation_key"]
+    assert _field(info, "sw_version") == "Register v4"
+    assert _field(info, "translation_key") == _field(
+        INPUT_DEVICE_INFO, "translation_key"
+    )
     # The shared base dict is never mutated.
     assert "sw_version" not in INPUT_DEVICE_INFO
     assert base == INPUT_DEVICE_INFO
@@ -49,7 +57,7 @@ def test_helper_adds_detected_version_without_mutating_base() -> None:
 
 def test_helper_reports_unknown_label_without_version() -> None:
     assert (
-        device_info_with_register_version(INPUT_DEVICE_INFO, None)["sw_version"]
+        _field(device_info_with_register_version(INPUT_DEVICE_INFO, None), "sw_version")
         == REGISTER_VERSION_UNKNOWN_LABEL
     )
     assert REGISTER_VERSION_UNKNOWN_LABEL == "Register unbekannt"
@@ -64,15 +72,15 @@ def test_resolve_register_version_reads_data_manager() -> None:
 
 def test_mixin_shows_detected_version_in_device_info() -> None:
     entity = _StubEntity(_coordinator_with_version("v2/v3"), INPUT_DEVICE_INFO)
-    assert entity.device_info["sw_version"] == "Register v2/v3"
+    assert _field(entity.device_info, "sw_version") == "Register v2/v3"
 
     entity = _StubEntity(_coordinator_with_version("v4"), INPUT_DEVICE_INFO)
-    assert entity.device_info["sw_version"] == "Register v4"
+    assert _field(entity.device_info, "sw_version") == "Register v4"
 
 
 def test_mixin_shows_unbekannt_while_map_unknown() -> None:
     entity = _StubEntity(_coordinator_with_version(None), INPUT_DEVICE_INFO)
-    assert entity.device_info["sw_version"] == "Register unbekannt"
+    assert _field(entity.device_info, "sw_version") == "Register unbekannt"
 
     entity = _StubEntity(None, INPUT_DEVICE_INFO)
-    assert entity.device_info["sw_version"] == "Register unbekannt"
+    assert _field(entity.device_info, "sw_version") == "Register unbekannt"
