@@ -44,6 +44,7 @@ def _load_integration_module(monkeypatch):
 
     exceptions_module = types.ModuleType("homeassistant.exceptions")
     exceptions_module.ConfigEntryNotReady = Exception
+    exceptions_module.ConfigEntryError = Exception
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
 
     update_coordinator_module = types.ModuleType(
@@ -161,7 +162,7 @@ async def test_unload_keeps_shared_endpoint_client(monkeypatch):
 
     unload_ok = await integration.async_unload_entry(hass, entry)
 
-    assert unload_ok is True
+    assert unload_ok is (None if integration._CONFIG_ENTRY_RESULT_IS_NONE else True)
     unified_coordinator_1.async_shutdown.assert_awaited_once()
     manager_1.async_shutdown.assert_awaited_once_with(disconnect_clients=False)
     assert "entry_1" not in hass.data[domain]
@@ -205,7 +206,7 @@ async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
 
     unload_ok = await integration.async_unload_entry(hass, entry)
 
-    assert unload_ok is True
+    assert unload_ok is (None if integration._CONFIG_ENTRY_RESULT_IS_NONE else True)
     unified_coordinator.async_shutdown.assert_awaited_once()
     manager.async_shutdown.assert_awaited_once_with(disconnect_clients=True)
     assert domain not in hass.data

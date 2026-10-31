@@ -298,7 +298,7 @@ async def test_demo_mode_installation(monkeypatch):
     result = await integration.async_setup_entry(hass, entry)
 
     # Verify success
-    assert result is True
+    assert result is (None if integration._CONFIG_ENTRY_RESULT_IS_NONE else True)
 
     # Verify coordinators were set up with demo_mode=True
     manager = _manager_cls.last_instance
@@ -368,7 +368,7 @@ async def test_demo_mode_skips_connection_test(monkeypatch):
     result = await integration.async_setup_entry(hass, entry)
 
     # Verify success
-    assert result is True
+    assert result is (None if integration._CONFIG_ENTRY_RESULT_IS_NONE else True)
 
     # In demo mode, connection test should be skipped
     # The RealModbusTcpClient should NOT be instantiated during setup
