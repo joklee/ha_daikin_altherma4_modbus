@@ -4,9 +4,12 @@ try:
     from homeassistant.components.binary_sensor import BinarySensorDeviceClass
     from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
     from homeassistant.const import EntityCategory
+    from homeassistant.helpers.device_registry import DeviceInfo
 except ImportError:  # pragma: no cover - fallback only without Home Assistant
     # Fallback for testing when homeassistant is not available
     from enum import StrEnum
+
+    DeviceInfo = dict
 
     class BinarySensorDeviceClass(StrEnum):
         RUNNING = "running"
@@ -45,40 +48,40 @@ from .register_types import (
 )
 
 # Device information constants
-INPUT_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "input_registers")},
-    "translation_key": "daikin_altherma_modbus_input_registers",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
+INPUT_DEVICE_INFO = DeviceInfo(
+    identifiers={("daikin_altherma_modbus", "input_registers")},
+    translation_key="daikin_altherma_modbus_input_registers",
+    manufacturer="Daikin",
+    model="Altherma 4",
+)
 
-HOLDING_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "holding_registers")},
-    "translation_key": "daikin_altherma_modbus_holding_registers",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
+HOLDING_DEVICE_INFO = DeviceInfo(
+    identifiers={("daikin_altherma_modbus", "holding_registers")},
+    translation_key="daikin_altherma_modbus_holding_registers",
+    manufacturer="Daikin",
+    model="Altherma 4",
+)
 
-CALCULATED_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "calculated_sensors")},
-    "translation_key": "daikin_altherma_modbus_calculated_sensors",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
+CALCULATED_DEVICE_INFO = DeviceInfo(
+    identifiers={("daikin_altherma_modbus", "calculated_sensors")},
+    translation_key="daikin_altherma_modbus_calculated_sensors",
+    manufacturer="Daikin",
+    model="Altherma 4",
+)
 
-DISCRETE_INPUT_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "discrete_input_registers")},
-    "translation_key": "daikin_altherma_modbus_discrete_input_registers",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
+DISCRETE_INPUT_DEVICE_INFO = DeviceInfo(
+    identifiers={("daikin_altherma_modbus", "discrete_input_registers")},
+    translation_key="daikin_altherma_modbus_discrete_input_registers",
+    manufacturer="Daikin",
+    model="Altherma 4",
+)
 
-COIL_DEVICE_INFO = {
-    "identifiers": {("daikin_altherma_modbus", "coil_registers")},
-    "translation_key": "daikin_altherma_modbus_coil_registers",
-    "manufacturer": "Daikin",
-    "model": "Altherma 4",
-}
+COIL_DEVICE_INFO = DeviceInfo(
+    identifiers={("daikin_altherma_modbus", "coil_registers")},
+    translation_key="daikin_altherma_modbus_coil_registers",
+    manufacturer="Daikin",
+    model="Altherma 4",
+)
 
 # Input Registers using dataclasses
 INPUT_REGISTERS = [
