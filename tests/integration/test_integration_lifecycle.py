@@ -3,10 +3,12 @@
 import importlib
 import sys
 import types
+from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from homeassistant.exceptions import ConfigEntryError
 
 
 @pytest.fixture(autouse=True)
@@ -242,6 +244,16 @@ def _load_integration_module(monkeypatch):
     repair_module.async_delete_connection_issue = lambda hass, entry: None
     repair_module.async_create_abnormality_issue = MagicMock()
     repair_module.async_delete_abnormality_issue = lambda hass, entry: None
+    repair_module.connection_issue_id = lambda entry: (
+        f"connection_lost_{entry.entry_id}"
+    )
+    repair_module.abnormality_issue_id = lambda entry: (
+        f"device_abnormality_{entry.entry_id}"
+    )
+    repair_module.abnormality_issue_pattern = lambda entry: "device_abnormality"
+    repair_module.async_refresh_issue_set = lambda hass, entry, pattern: nullcontext(
+        False
+    )
     monkeypatch.setitem(sys.modules, repair_name, repair_module)
 
     # Mock runtime_data module
@@ -289,7 +301,7 @@ async def test_async_setup_entry_success(monkeypatch):
     entry.runtime_data = None
 
     result = await integration_module.async_setup_entry(hass, entry)
-    assert result is True
+    assert result is (None if integration_module._CONFIG_ENTRY_RESULT_IS_NONE else True)
     assert hasattr(entry, "runtime_data")
     assert entry.runtime_data is not None
 
@@ -359,7 +371,7 @@ async def test_async_unload_entry(monkeypatch):
     )
 
     result = await integration_module.async_unload_entry(hass, entry)
-    assert result is True
+    assert result is (None if integration_module._CONFIG_ENTRY_RESULT_IS_NONE else True)
     mock_manager.async_shutdown.assert_called_once()
 
 
@@ -386,8 +398,8 @@ async def test_async_unload_entry_failure(monkeypatch):
         manager=mock_manager, coordinator=mock_coordinator
     )
 
-    result = await integration_module.async_unload_entry(hass, entry)
-    assert result is False
+    with pytest.raises(ConfigEntryError):
+        await integration_module.async_unload_entry(hass, entry)
     mock_manager.async_shutdown.assert_not_called()
 
 
@@ -418,6 +430,6 @@ async def test_async_setup_entry_demo_mode(monkeypatch):
     entry.runtime_data = None
 
     result = await integration_module.async_setup_entry(hass, entry)
-    assert result is True
+    assert result is (None if integration_module._CONFIG_ENTRY_RESULT_IS_NONE else True)
     assert hasattr(entry, "runtime_data")
     assert entry.runtime_data is not None

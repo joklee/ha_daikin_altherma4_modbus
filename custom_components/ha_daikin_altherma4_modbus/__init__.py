@@ -1,6 +1,7 @@
 import logging
 
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.config_entries import ConfigEntries
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 
 from .config_flow import ConfigFlow as ConfigFlow
 from .core.const import (
@@ -23,8 +24,13 @@ from .integration.services import async_cancel_single_heatup, register_services
 
 _LOGGER = logging.getLogger(__name__)
 
+# Home Assistant 2026.11 allows async_setup_entry/async_migrate_entry to return
+# None and added async_unload_platforms_or_raise. Older releases still require a
+# boolean result, so keep returning one there.
+_CONFIG_ENTRY_RESULT_IS_NONE = hasattr(ConfigEntries, "async_unload_platforms_or_raise")
 
-async def async_migrate_entry(hass, entry):
+
+async def async_migrate_entry(hass, entry) -> bool | None:
     """Migrate a stored config entry to a newer version.
 
     Version 2 introduces the Modbus unit id (``unit_id``) to the entry
@@ -50,7 +56,9 @@ async def async_migrate_entry(hass, entry):
         ):
             updates["unique_id"] = f"{host}:{port}:{data[CONF_UNIT_ID]}"
         hass.config_entries.async_update_entry(entry, **updates)
-    return True
+
+    if not _CONFIG_ENTRY_RESULT_IS_NONE:
+        return True
 
 
 def _has_other_entry_for_endpoint(
@@ -68,7 +76,7 @@ def _has_other_entry_for_endpoint(
     return False
 
 
-async def async_setup_entry(hass, entry):
+async def async_setup_entry(hass, entry) -> bool | None:
     """Set up config entry and roll back resources on partial failure."""
     host = entry_data_value(entry, "host", "")
     port = entry_data_value(entry, "port", 502)
@@ -161,7 +169,8 @@ async def async_setup_entry(hass, entry):
         # Connection is healthy - delete any existing connection repair issue
         async_delete_connection_issue(hass, entry)
 
-        return True
+        if not _CONFIG_ENTRY_RESULT_IS_NONE:
+            return True
     except Exception as err:
         _LOGGER.error("Failed to set up entry %s: %s", entry.entry_id, err)
 
@@ -195,7 +204,7 @@ async def async_setup_entry(hass, entry):
         raise ConfigEntryNotReady(f"Failed to set up entry: {err}") from err
 
 
-async def async_unload_entry(hass, entry):
+async def async_unload_entry(hass, entry) -> bool | None:
     """Handle config entry unload and close connections before HA restart."""
     _LOGGER.info("Unloading entry %s - closing Modbus connections", entry.entry_id)
 
@@ -203,7 +212,9 @@ async def async_unload_entry(hass, entry):
     runtime_data = getattr(entry, "runtime_data", None)
     if not runtime_data:
         _LOGGER.warning("No runtime data found for entry %s", entry.entry_id)
-        return False
+        if not _CONFIG_ENTRY_RESULT_IS_NONE:
+            return False
+        return
 
     unified_coordinator = runtime_data.coordinator
     manager = runtime_data.manager
@@ -212,12 +223,17 @@ async def async_unload_entry(hass, entry):
     # torn-down device after this point.
     await async_cancel_single_heatup(entry.entry_id)
 
-    unload_ok = await hass.config_entries.async_unload_platforms(
-        entry, ["sensor", "binary_sensor", "number", "select", "climate", "switch"]
+    platforms = ["sensor", "binary_sensor", "number", "select", "climate", "switch"]
+    unload_or_raise = getattr(
+        hass.config_entries, "async_unload_platforms_or_raise", None
     )
-    if not unload_ok:
-        _LOGGER.warning("Failed to unload entry %s", entry.entry_id)
-        return False
+    if unload_or_raise is not None:
+        await unload_or_raise(entry, platforms)
+    else:
+        unload_ok = await hass.config_entries.async_unload_platforms(entry, platforms)
+        if not unload_ok:
+            _LOGGER.warning("Failed to unload entry %s", entry.entry_id)
+            raise ConfigEntryError(f"Failed to unload entry {entry.entry_id}")
 
     if unified_coordinator and hasattr(unified_coordinator, "async_shutdown"):
         try:
@@ -249,4 +265,6 @@ async def async_unload_entry(hass, entry):
         hass.data.pop(DOMAIN, None)
 
     _LOGGER.info("Successfully unloaded entry %s", entry.entry_id)
-    return True
+
+    if not _CONFIG_ENTRY_RESULT_IS_NONE:
+        return True

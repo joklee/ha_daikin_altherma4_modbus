@@ -15,7 +15,11 @@ from ..core.exceptions import (
     ModbusTimeoutException,
 )
 from ..core.retry_utils import DEFAULT_JITTER, add_jitter
-from .repair import async_create_connection_issue, async_delete_connection_issue
+from .repair import (
+    async_create_connection_issue,
+    async_delete_connection_issue,
+    connection_issue_id,
+)
 
 _LOGGER = logging.getLogger(__name__)
 _COORDINATOR_IO_EXCEPTIONS = (
@@ -236,15 +240,12 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
                 entry = self._find_config_entry()
                 if entry:
                     # Only create if no issue exists yet (normal coordinator may have created one)
-                    from .repair import ISSUE_CONNECTION_LOST
-
-                    issue_id = f"{ISSUE_CONNECTION_LOST}_{entry.entry_id}"
                     from homeassistant.helpers.issue_registry import (
                         async_get as async_get_issue_registry,
                     )
 
                     issue_registry = async_get_issue_registry(self.hass)
-                    if issue_id not in issue_registry.issues:
+                    if connection_issue_id(entry) not in issue_registry.issues:
                         async_create_connection_issue(
                             self.hass, entry, f"Polling failed: {err}"
                         )

@@ -23,8 +23,10 @@ from ..core.register_constants import (
 from ..core.register_types import TEXT16
 from ..integration.config_entry_utils import entry_value
 from ..integration.repair import (
+    abnormality_issue_pattern,
     async_create_abnormality_issue,
     async_delete_abnormality_issue,
+    async_refresh_issue_set,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -260,14 +262,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if data is None:
             return
         val = get_register_value(data)
-        if val is None:
+        if val is None or val not in (0, 1, 2):
             return
-
-        # Get abnormality code and sub code for the issue message
-        code_data = unified_coordinator.data.get("input_22")
-        code_val = get_register_value(code_data) if code_data else None
-        sub_code_data = unified_coordinator.data.get("input_23")
-        sub_code_val = get_register_value(sub_code_data) if sub_code_data else None
 
         if val in (1, 2) and not _abnormality_state["issue_created"]:
             # fault=1 or warning=2; report the decoded fault code (issue
@@ -277,17 +273,28 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 raw_sub_code,
             )
 
+            code_data = unified_coordinator.data.get("input_22")
+            code_val = get_register_value(code_data) if code_data else None
+            sub_code_data = unified_coordinator.data.get("input_23")
+            sub_code_val = get_register_value(sub_code_data) if sub_code_data else None
             code_label = format_abnormality_label(code_val, sub_code_val)
-            async_create_abnormality_issue(
-                hass,
-                entry,
-                abnormality_code=code_label,
-                abnormality_sub_code=raw_sub_code(sub_code_val) or 0,
-            )
+
+            # HA 2026.11+ refreshes the issue set, deleting stale issues.
+            with async_refresh_issue_set(hass, entry, abnormality_issue_pattern(entry)):
+                async_create_abnormality_issue(
+                    hass,
+                    entry,
+                    abnormality_code=code_label,
+                    abnormality_sub_code=raw_sub_code(sub_code_val) or 0,
+                )
             _abnormality_state["issue_created"] = True
         elif val == 0 and _abnormality_state["issue_created"]:
-            # no_error=0 - delete the issue
-            async_delete_abnormality_issue(hass, entry)
+            # no_error=0 - the refresh deletes the stale issue on HA 2026.11+.
+            with async_refresh_issue_set(
+                hass, entry, abnormality_issue_pattern(entry)
+            ) as refreshed:
+                if not refreshed:
+                    async_delete_abnormality_issue(hass, entry)
             _abnormality_state["issue_created"] = False
 
     unified_coordinator.async_add_listener(_check_abnormality)

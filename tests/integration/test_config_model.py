@@ -1,6 +1,7 @@
 import importlib
 import sys
 import types
+from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -57,6 +58,7 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
 
     exceptions_module = types.ModuleType("homeassistant.exceptions")
     exceptions_module.ConfigEntryNotReady = Exception
+    exceptions_module.ConfigEntryError = Exception
     exceptions_module.HomeAssistantError = type("HomeAssistantError", (Exception,), {})
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
 
@@ -361,8 +363,19 @@ def _load_integration_module(monkeypatch):
 
     exceptions_module = types.ModuleType("homeassistant.exceptions")
     exceptions_module.ConfigEntryNotReady = Exception
+    exceptions_module.ConfigEntryError = Exception
     exceptions_module.HomeAssistantError = type("HomeAssistantError", (Exception,), {})
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
+
+    config_entries_module = types.ModuleType("homeassistant.config_entries")
+
+    class FakeConfigEntries:
+        pass
+
+    config_entries_module.ConfigEntries = FakeConfigEntries
+    monkeypatch.setitem(
+        sys.modules, "homeassistant.config_entries", config_entries_module
+    )
 
     package_name = "custom_components.ha_daikin_altherma4_modbus"
     const_name = f"{package_name}.core.const"
@@ -535,6 +548,16 @@ def _load_integration_module(monkeypatch):
     repair_module.async_delete_connection_issue = lambda hass, entry: None
     repair_module.async_create_abnormality_issue = AsyncMock()
     repair_module.async_delete_abnormality_issue = lambda hass, entry: None
+    repair_module.connection_issue_id = lambda entry: (
+        f"connection_lost_{entry.entry_id}"
+    )
+    repair_module.abnormality_issue_id = lambda entry: (
+        f"device_abnormality_{entry.entry_id}"
+    )
+    repair_module.abnormality_issue_pattern = lambda entry: "device_abnormality"
+    repair_module.async_refresh_issue_set = lambda hass, entry, pattern: nullcontext(
+        False
+    )
     monkeypatch.setitem(sys.modules, repair_name, repair_module)
 
     services_name = f"{package_name}.integration.services"
@@ -865,7 +888,7 @@ async def test_setup_entry_runs_single_initial_refresh_per_coordinator(monkeypat
 
     setup_ok = await integration.async_setup_entry(hass, entry)
 
-    assert setup_ok is True
+    assert setup_ok is (None if integration._CONFIG_ENTRY_RESULT_IS_NONE else True)
     manager = manager_cls.last_instance
     assert manager is not None
     assert manager.normal.async_config_entry_first_refresh.await_count == 1
