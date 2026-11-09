@@ -3,9 +3,9 @@
 ![GitHub stars](https://img.shields.io/github/stars/joklee/ha_daikin_altherma4_modbus?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/joklee/ha_daikin_altherma4_modbus)
 ![License](https://img.shields.io/github/license/joklee/ha_daikin_altherma4_modbus)
-![HACS](https://img.shields.io/badge/HACS-Default-orange)
+   ![Marketplace](https://img.shields.io/badge/Home_Assistant_Marketplace-Integration-blue)
 ![Python](https://img.shields.io/badge/python-3.13%2B-blue)
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.9%2B-blue)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.11%2B-blue)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/joklee)
 
 # Daikin Altherma 4 Modbus Integration for Home Assistant
@@ -45,7 +45,7 @@
 3. **Ethernet network access** to the heat pump (WiFi is not supported)
 4. **Network cable (RJ45)** connected between your heat pump and network
 5. **Modbus TCP enabled** on your heat pump (see activation instructions below)
-6. **Home Assistant 2026.9 or higher** (uses HA's shared `modbus` component)
+6. **Home Assistant 2026.11 or higher** (the integration is installed through the built-in **Marketplace** and uses HA's shared `modbus` component)
 
 ---
 
@@ -95,18 +95,20 @@ addressed unit on that shared connection.
 
 ## Installation
 
-### HACS Installation (Recommended)
+### Marketplace Installation (Recommended)
 
-1. Open Home Assistant and navigate to **HACS** → **Integrations**
-2. Click the three dots menu (⋮) and select **Custom repositories**
-3. Add repository URL: `https://github.com/joklee/ha_daikin_altherma4_modbus`
-4. Select category: **Integration**
-5. Click **Download** to install the integration
-6. Restart Home Assistant
-7. Go to **Settings** → **Devices & Services** → **Integrations**
-8. Click **+ Add Integration** and search for "Daikin Altherma 4 Modbus"
-9. Enter your heat pump's IP address, port (default: 502) and unit ID (default: 1)
-10. Complete the configuration with your preferred polling intervals
+The integration is installed through the built-in **Marketplace** in Home Assistant 2026.11+ — there is nothing extra to install.
+
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=ha_daikin_altherma4_modbus)
+
+1. Open Home Assistant and navigate to **Settings** → **Marketplace**
+2. If the integration is not listed in the catalog, click **Add from link** and enter the repository URL: `https://github.com/joklee/ha_daikin_altherma4_modbus`
+3. Select the integration **Daikin Altherma 4 Modbus** and click **Install**
+4. The configuration flow opens automatically (a restart is only prompted in the Marketplace repair list if needed)
+5. Enter your heat pump's IP address, port (default: 502) and unit ID (default: 1)
+6. Complete the configuration with your preferred polling intervals
+
+The integration will appear alongside your other updates via its update entity — future releases are installed through **Settings** → **Updates**.
 
 ### Manual Installation
 
@@ -757,11 +759,11 @@ The integration uses the Home Assistant Repair system:
 
 ### Cleanup (Optional)
 
-**For HACS installation:**
-1. Go to **HACS** → **Integrations**
+**For Marketplace installation:**
+1. Go to **Settings** → **Marketplace**
 2. Find **Daikin Altherma 4 Modbus**
 3. Click the three dots menu (⋮) and select **Uninstall**
-4. Restart Home Assistant
+4. Restart Home Assistant (a repair prompts you if needed)
 
 **For manual installation:**
 1. Remove the `custom_components/ha_daikin_altherma4_modbus` folder from your Home Assistant configuration directory
