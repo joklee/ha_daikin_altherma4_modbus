@@ -24,15 +24,6 @@ except ImportError:  # pragma: no cover - HA component not available in tests
     async_get_unit = None  # type: ignore[assignment]
     ModbusTcpParams = None  # type: ignore[assignment]
 
-# HA 2026.9 introduces the shared ``modbus`` provider helpers
-# (``async_get_unit`` / ``async_get_temporary_unit``). Until the runtime is
-# upgraded, they may be missing even when ``modbus_connection`` is installed;
-# the provider layer below must degrade gracefully instead of failing at
-# import time.
-_HAS_SHARED_UNIT_PROVIDER = (
-    async_get_unit is not None and async_get_temporary_unit is not None
-)
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -52,7 +43,7 @@ async def async_get_ha_unit(
     Raises ``HomeAssistantError`` if the device is already in use under
     different link settings.
     """
-    if not _HAS_SHARED_UNIT_PROVIDER or ModbusTcpParams is None:
+    if ModbusTcpParams is None:
         raise ModbusConnectionException(
             f"HA modbus component not available for {host}:{port}"
         )
@@ -83,7 +74,7 @@ async def async_test_connection_with_temporary_unit(
         - error_message: None if successful, otherwise the error description
     """
     try:
-        if not _HAS_SHARED_UNIT_PROVIDER or ModbusTcpParams is None:
+        if ModbusTcpParams is None:
             raise ModbusConnectionException(
                 f"HA modbus component not available for {host}:{port}"
             )

@@ -154,7 +154,7 @@ async def test_unload_keeps_shared_endpoint_client(monkeypatch):
         }
     }
     hass.config_entries = SimpleNamespace(
-        async_unload_platforms=AsyncMock(return_value=True),
+        async_unload_platforms_or_raise=AsyncMock(),
         async_entries=lambda domain: [entry_1, entry_2],
     )
 
@@ -162,7 +162,7 @@ async def test_unload_keeps_shared_endpoint_client(monkeypatch):
 
     unload_ok = await integration.async_unload_entry(hass, entry)
 
-    assert unload_ok is (None if integration._CONFIG_ENTRY_RESULT_IS_NONE else True)
+    assert unload_ok is True
     unified_coordinator_1.async_shutdown.assert_awaited_once()
     manager_1.async_shutdown.assert_awaited_once_with(disconnect_clients=False)
     assert "entry_1" not in hass.data[domain]
@@ -196,7 +196,7 @@ async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
         }
     }
     hass.config_entries = SimpleNamespace(
-        async_unload_platforms=AsyncMock(return_value=True),
+        async_unload_platforms_or_raise=AsyncMock(),
         async_entries=lambda domain: [],
     )
 
@@ -206,7 +206,7 @@ async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
 
     unload_ok = await integration.async_unload_entry(hass, entry)
 
-    assert unload_ok is (None if integration._CONFIG_ENTRY_RESULT_IS_NONE else True)
+    assert unload_ok is True
     unified_coordinator.async_shutdown.assert_awaited_once()
     manager.async_shutdown.assert_awaited_once_with(disconnect_clients=True)
     assert domain not in hass.data

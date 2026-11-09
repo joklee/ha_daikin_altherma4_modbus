@@ -18,7 +18,6 @@ from homeassistant.helpers.issue_registry import async_get as async_get_issue_re
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.ha_daikin_altherma4_modbus import (
-    _CONFIG_ENTRY_RESULT_IS_NONE,
     _has_other_entry_for_endpoint,
     async_migrate_entry,
     async_setup_entry,
@@ -68,9 +67,7 @@ async def test_migrate_v1_adds_default_unit_id():
         data={CONF_HOST: "h", CONF_PORT: 502},
     )
 
-    assert await async_migrate_entry(hass, entry) is (
-        None if _CONFIG_ENTRY_RESULT_IS_NONE else True
-    )
+    assert await async_migrate_entry(hass, entry) is True
     assert updated["data"][CONF_UNIT_ID] == 1
     assert updated["data"][CONF_HOST] == "h"
     assert updated["version"] == 2
@@ -97,9 +94,7 @@ async def test_migrate_v1_preserves_unknown_keys():
         },
     )
 
-    assert await async_migrate_entry(hass, entry) is (
-        None if _CONFIG_ENTRY_RESULT_IS_NONE else True
-    )
+    assert await async_migrate_entry(hass, entry) is True
     assert updated["data"][CONF_UNIT_ID] == 5
     assert updated["data"]["some_future_key"] == "keep-me"
     assert updated["unique_id"] == "h:502:5"
@@ -118,9 +113,7 @@ async def test_migrate_v1_leaves_nonstandard_unique_id():
         version=1, unique_id="custom-id", data={CONF_HOST: "h", CONF_PORT: 502}
     )
 
-    assert await async_migrate_entry(hass, entry) is (
-        None if _CONFIG_ENTRY_RESULT_IS_NONE else True
-    )
+    assert await async_migrate_entry(hass, entry) is True
     assert "unique_id" not in updated
     assert updated["version"] == 2
 
@@ -134,9 +127,7 @@ async def test_migrate_v2_is_noop():
         version=2, data={CONF_HOST: "h", CONF_PORT: 502, CONF_UNIT_ID: 3}
     )
 
-    assert await async_migrate_entry(hass, entry) is (
-        None if _CONFIG_ENTRY_RESULT_IS_NONE else True
-    )
+    assert await async_migrate_entry(hass, entry) is True
     hass.config_entries.async_update_entry.assert_not_called()
 
 
@@ -224,9 +215,7 @@ async def test_unload_without_runtime_data_is_noop(hass, enable_custom_integrati
     """Unload without prior setup is a graceful no-op."""
     entry = _demo_entry()
     entry.add_to_hass(hass)
-    assert await async_unload_entry(hass, entry) is (
-        None if _CONFIG_ENTRY_RESULT_IS_NONE else False
-    )
+    assert await async_unload_entry(hass, entry) is False
 
 
 async def test_unload_swallows_manager_shutdown_error(hass, enable_custom_integrations):

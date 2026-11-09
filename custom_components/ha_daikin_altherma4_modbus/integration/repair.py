@@ -1,6 +1,5 @@
 """Repair issue management for Daikin Altherma 4 Modbus integration."""
 
-import inspect
 import logging
 import re
 from contextlib import contextmanager
@@ -15,13 +14,6 @@ _LOGGER = logging.getLogger(__name__)
 # Issue IDs
 ISSUE_CONNECTION_LOST = "connection_lost"
 ISSUE_DEVICE_ABNORMALITY = "device_abnormality"
-
-# Home Assistant 2026.11 added config_entry_id and async_refresh_issues to the
-# issue registry. Detect support so the integration keeps working on older
-# releases while using the new APIs once they are available.
-_SUPPORTS_CONFIG_ENTRY_ID = (
-    "config_entry_id" in inspect.signature(ir.async_create_issue).parameters
-)
 
 
 def connection_issue_id(entry) -> str:
@@ -40,29 +32,26 @@ def abnormality_issue_pattern(entry) -> str:
 
 
 def _create_issue(hass, entry, issue_id: str, **kwargs) -> None:
-    """Create a repair issue, linked to the entry when supported."""
-    if _SUPPORTS_CONFIG_ENTRY_ID:
-        kwargs["config_entry_id"] = entry.entry_id
-    ir.async_create_issue(hass, DOMAIN, issue_id, **kwargs)
+    """Create a repair issue, linked to the config entry."""
+    ir.async_create_issue(
+        hass, DOMAIN, issue_id, config_entry_id=entry.entry_id, **kwargs
+    )
 
 
 @contextmanager
 def async_refresh_issue_set(hass, entry, issue_id_pattern: str):
-    """Refresh a set of repair issues when Home Assistant supports it.
+    """Refresh a set of repair issues via the HA 2026.11+ refresh API.
 
-    Yields ``True`` when the native 2026.11+ refresh API is active. Older
-    releases yield ``False`` so callers can fall back to explicit deletes.
+    Issues matching the pattern are deleted when they are not recreated
+    inside the context.
     """
-    refresh = getattr(ir, "async_refresh_issues", None)
-    if refresh is None:
-        yield False
-        return
-
-    kwargs = {"issue_id_pattern": issue_id_pattern}
-    if _SUPPORTS_CONFIG_ENTRY_ID:
-        kwargs["config_entry_id"] = entry.entry_id
-    with refresh(hass, DOMAIN, **kwargs):
-        yield True
+    with ir.async_refresh_issues(
+        hass,
+        DOMAIN,
+        issue_id_pattern=issue_id_pattern,
+        config_entry_id=entry.entry_id,
+    ):
+        yield
 
 
 def async_create_connection_issue(hass, entry, error_message: str) -> None:

@@ -3,7 +3,6 @@
 import re
 from contextlib import contextmanager
 
-from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.issue_registry import async_get as async_get_issue_registry
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -18,7 +17,6 @@ from custom_components.ha_daikin_altherma4_modbus.integration.repair import (
     async_create_connection_issue,
     async_delete_abnormality_issue,
     async_delete_connection_issue,
-    async_refresh_issue_set,
     connection_issue_id,
 )
 
@@ -84,31 +82,8 @@ def test_issue_ids_and_refresh_pattern(hass):
     assert re.fullmatch(pattern, f"{ISSUE_DEVICE_ABNORMALITY}_other") is None
 
 
-def test_refresh_issue_set_uses_native_api_when_available(hass):
-    """The refresh helper reports whether the HA 2026.11+ API is active."""
-    entry = _entry(hass)
-    with async_refresh_issue_set(hass, entry, "connection_lost_") as refreshed:
-        assert refreshed is hasattr(ir, "async_refresh_issues")
-
-
-def test_create_issue_links_entry_when_supported(hass, monkeypatch):
-    """HA 2026.11+ creates issues linked to the config entry."""
-    entry = _entry(hass)
-    captured = {}
-
-    def fake_create_issue(hass_, domain, issue_id, **kwargs):
-        captured.update(kwargs)
-
-    monkeypatch.setattr(repair, "_SUPPORTS_CONFIG_ENTRY_ID", True)
-    monkeypatch.setattr(repair.ir, "async_create_issue", fake_create_issue)
-
-    repair.async_create_connection_issue(hass, entry, "boom")
-
-    assert captured["config_entry_id"] == entry.entry_id
-
-
-def test_refresh_issue_set_uses_native_api_when_supported(hass, monkeypatch):
-    """HA 2026.11+ refreshes issues without falling back to explicit deletes."""
+def test_refresh_issue_set_uses_native_api(hass, monkeypatch):
+    """The refresh helper delegates to HA's native refresh API."""
     entry = _entry(hass)
     calls = []
 
@@ -117,13 +92,12 @@ def test_refresh_issue_set_uses_native_api_when_supported(hass, monkeypatch):
         calls.append((domain, kwargs))
         yield
 
-    monkeypatch.setattr(repair, "_SUPPORTS_CONFIG_ENTRY_ID", True)
     monkeypatch.setattr(
         repair.ir, "async_refresh_issues", fake_refresh_issues, raising=False
     )
 
-    with repair.async_refresh_issue_set(hass, entry, "pattern") as refreshed:
-        assert refreshed is True
+    with repair.async_refresh_issue_set(hass, entry, "pattern"):
+        pass
 
     assert calls == [
         (
@@ -131,3 +105,18 @@ def test_refresh_issue_set_uses_native_api_when_supported(hass, monkeypatch):
             {"issue_id_pattern": "pattern", "config_entry_id": entry.entry_id},
         )
     ]
+
+
+def test_create_issue_links_entry(hass, monkeypatch):
+    """Issues are created linked to the config entry."""
+    entry = _entry(hass)
+    captured = {}
+
+    def fake_create_issue(hass_, domain, issue_id, **kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(repair.ir, "async_create_issue", fake_create_issue)
+
+    repair.async_create_connection_issue(hass, entry, "boom")
+
+    assert captured["config_entry_id"] == entry.entry_id

@@ -25,7 +25,6 @@ from ..integration.config_entry_utils import entry_value
 from ..integration.repair import (
     abnormality_issue_pattern,
     async_create_abnormality_issue,
-    async_delete_abnormality_issue,
     async_refresh_issue_set,
 )
 
@@ -279,7 +278,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             sub_code_val = get_register_value(sub_code_data) if sub_code_data else None
             code_label = format_abnormality_label(code_val, sub_code_val)
 
-            # HA 2026.11+ refreshes the issue set, deleting stale issues.
+            # The refresh deletes the stale issue when it is not recreated.
             with async_refresh_issue_set(hass, entry, abnormality_issue_pattern(entry)):
                 async_create_abnormality_issue(
                     hass,
@@ -289,12 +288,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 )
             _abnormality_state["issue_created"] = True
         elif val == 0 and _abnormality_state["issue_created"]:
-            # no_error=0 - the refresh deletes the stale issue on HA 2026.11+.
-            with async_refresh_issue_set(
-                hass, entry, abnormality_issue_pattern(entry)
-            ) as refreshed:
-                if not refreshed:
-                    async_delete_abnormality_issue(hass, entry)
+            # no_error=0 - the refresh deletes the stale issue.
+            with async_refresh_issue_set(hass, entry, abnormality_issue_pattern(entry)):
+                pass
             _abnormality_state["issue_created"] = False
 
     unified_coordinator.async_add_listener(_check_abnormality)

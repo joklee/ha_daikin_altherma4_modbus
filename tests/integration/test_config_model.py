@@ -373,6 +373,16 @@ def _load_integration_module(monkeypatch):
         pass
 
     config_entries_module.ConfigEntries = FakeConfigEntries
+
+    # The package __init__ re-exports the config flow, whose class body
+    # expects ``config_entries.ConfigFlow`` at import time.
+    def _accept_subclass_kwargs(cls, **kwargs):
+        pass
+
+    config_entries_module.ConfigFlow = type(
+        "ConfigFlow", (), {"__init_subclass__": _accept_subclass_kwargs}
+    )
+    config_entries_module.OptionsFlow = type("OptionsFlow", (), {})
     monkeypatch.setitem(
         sys.modules, "homeassistant.config_entries", config_entries_module
     )
@@ -888,7 +898,7 @@ async def test_setup_entry_runs_single_initial_refresh_per_coordinator(monkeypat
 
     setup_ok = await integration.async_setup_entry(hass, entry)
 
-    assert setup_ok is (None if integration._CONFIG_ENTRY_RESULT_IS_NONE else True)
+    assert setup_ok is True
     manager = manager_cls.last_instance
     assert manager is not None
     assert manager.normal.async_config_entry_first_refresh.await_count == 1

@@ -14,7 +14,9 @@ fakes must install them test-locally (e.g. via
 automatically after the test.
 """
 
+import re
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -23,6 +25,72 @@ import pytest
 PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+# ---------------------------------------------------------------------------
+# TEMPORARY Home Assistant 2026.11 shims.
+#
+# This integration targets Home Assistant 2026.11 minimum. The last
+# ``pytest-homeassistant-custom-component`` release (0.13.375) still bundles
+# Home Assistant 2026.10.4, which lacks:
+#
+#   * ``ConfigEntries.async_unload_platforms_or_raise``
+#   * ``issue_registry.async_create_issue(config_entry_id=...)``
+#   * ``issue_registry.async_refresh_issues``
+#
+# The shims below backport these APIs so the suite keeps exercising the
+# production 2026.11-only code paths on the current test runtime. REMOVE the
+# whole block once pytest-homeassistant-custom-component ships a release
+# bundled with Home Assistant 2026.11.
+import homeassistant.config_entries as _config_entries
+from homeassistant.helpers import issue_registry as _ir
+
+if not hasattr(_config_entries.ConfigEntries, "async_unload_platforms_or_raise"):
+
+    async def _shim_unload_platforms_or_raise(self, entry, platforms):
+        unload_ok = await self.async_unload_platforms(entry, platforms)
+        if not unload_ok:
+            raise RuntimeError(f"Failed to unload config entry {entry.entry_id}")
+
+    _config_entries.ConfigEntries.async_unload_platforms_or_raise = (
+        _shim_unload_platforms_or_raise
+    )
+
+if not hasattr(_ir, "async_refresh_issues"):
+    _native_create_issue = _ir.async_create_issue
+
+    def _shim_create_issue(hass, domain, issue_id, **kwargs):
+        # ``config_entry_id`` linkage is not available below 2026.11.
+        kwargs.pop("config_entry_id", None)
+        return _native_create_issue(hass, domain, issue_id, **kwargs)
+
+    _ir.async_create_issue = _shim_create_issue
+
+    @contextmanager
+    def _shim_refresh_issues(hass, domain, *, issue_id_pattern, **kwargs):
+        # Approximation of the 2026.11 semantics: pre-existing matching
+        # issues that are still the same registry object after the context
+        # body ran were not recreated and are deleted.
+        registry = _ir.async_get(hass)
+
+        def _matching():
+            return {
+                key: issue
+                for key, issue in registry.issues.items()
+                if key[0] == domain and re.fullmatch(issue_id_pattern, key[1])
+            }
+
+        pre = _matching()
+        try:
+            yield
+        finally:
+            post = _matching()
+            for key, issue in pre.items():
+                if post.get(key) is issue:
+                    _ir.async_delete_issue(hass, domain, key[1])
+
+    _ir.async_refresh_issues = _shim_refresh_issues
+# ---------------------------------------------------------------------------
+# end TEMPORARY 2026.11 shims
 
 # Home Assistant's integration loader
 # (homeassistant.loader._get_custom_components) discovers custom

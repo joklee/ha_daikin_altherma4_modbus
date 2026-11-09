@@ -289,7 +289,9 @@ async def test_async_setup_entry_success(monkeypatch):
 
     # Create mock hass and entry
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(),
+    )
     hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}
@@ -301,7 +303,7 @@ async def test_async_setup_entry_success(monkeypatch):
     entry.runtime_data = None
 
     result = await integration_module.async_setup_entry(hass, entry)
-    assert result is (None if integration_module._CONFIG_ENTRY_RESULT_IS_NONE else True)
+    assert result is True
     assert hasattr(entry, "runtime_data")
     assert entry.runtime_data is not None
 
@@ -327,7 +329,9 @@ async def test_async_setup_entry_connection_failure(monkeypatch):
     )
 
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(),
+    )
     hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}
@@ -352,7 +356,9 @@ async def test_async_unload_entry(monkeypatch):
     integration_module = _load_integration_module(monkeypatch)
 
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(),
+    )
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}
@@ -371,7 +377,7 @@ async def test_async_unload_entry(monkeypatch):
     )
 
     result = await integration_module.async_unload_entry(hass, entry)
-    assert result is (None if integration_module._CONFIG_ENTRY_RESULT_IS_NONE else True)
+    assert result is True
     mock_manager.async_shutdown.assert_called_once()
 
 
@@ -381,8 +387,11 @@ async def test_async_unload_entry_failure(monkeypatch):
     integration_module = _load_integration_module(monkeypatch)
 
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
-    hass.config_entries.async_unload_platforms = AsyncMock(return_value=False)
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(
+            side_effect=ConfigEntryError("unload failed")
+        ),
+    )
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}
 
@@ -418,7 +427,9 @@ async def test_async_setup_entry_demo_mode(monkeypatch):
     integration_module = _load_integration_module(monkeypatch)
 
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(),
+    )
     hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}
@@ -430,6 +441,6 @@ async def test_async_setup_entry_demo_mode(monkeypatch):
     entry.runtime_data = None
 
     result = await integration_module.async_setup_entry(hass, entry)
-    assert result is (None if integration_module._CONFIG_ENTRY_RESULT_IS_NONE else True)
+    assert result is True
     assert hasattr(entry, "runtime_data")
     assert entry.runtime_data is not None
