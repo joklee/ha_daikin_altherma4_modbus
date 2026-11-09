@@ -3,6 +3,8 @@
 import re
 from contextlib import contextmanager
 
+import pytest
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.issue_registry import async_get as async_get_issue_registry
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -120,3 +122,82 @@ def test_create_issue_links_entry(hass, monkeypatch):
     repair.async_create_connection_issue(hass, entry, "boom")
 
     assert captured["config_entry_id"] == entry.entry_id
+
+
+def _create_marker_issue(hass, entry, issue_id, severity=ir.IssueSeverity.ERROR):
+    """Create a raw issue in the registry, as a previous run would have left it."""
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        issue_id,
+        is_fixable=False,
+        is_persistent=False,
+        severity=severity,
+        translation_key="device_abnormality",
+        translation_placeholders={},
+    )
+
+
+def test_refresh_keeps_recreated_issue(hass):
+    """An existing issue recreated inside the refresh survives."""
+    entry = _entry(hass)
+    issue_id = f"device_abnormality_{entry.entry_id}"
+    _create_marker_issue(hass, entry, issue_id)
+
+    with repair.async_refresh_issue_set(hass, entry, abnormality_issue_pattern(entry)):
+        _create_marker_issue(hass, entry, issue_id)
+
+    assert (DOMAIN, issue_id) in async_get_issue_registry(hass).issues
+
+
+def test_refresh_deletes_untouched_issue(hass):
+    """An existing issue not recreated inside the refresh is deleted."""
+    entry = _entry(hass)
+    issue_id = f"device_abnormality_{entry.entry_id}"
+    _create_marker_issue(hass, entry, issue_id)
+
+    with repair.async_refresh_issue_set(hass, entry, abnormality_issue_pattern(entry)):
+        pass
+
+    assert (DOMAIN, issue_id) not in async_get_issue_registry(hass).issues
+
+
+def test_refresh_keeps_newly_created_issue(hass):
+    """An issue first created inside the refresh is not affected."""
+    entry = _entry(hass)
+    issue_id = f"device_abnormality_{entry.entry_id}"
+
+    with repair.async_refresh_issue_set(hass, entry, abnormality_issue_pattern(entry)):
+        _create_marker_issue(hass, entry, issue_id)
+
+    assert (DOMAIN, issue_id) in async_get_issue_registry(hass).issues
+
+
+@pytest.mark.skipif(not hasattr(ir, "async_ignore_issue"), reason="HA < 2026.10")
+def test_refresh_keeps_ignored_recreated_issue(hass):
+    """A recreated ignored issue survives and keeps its ignore flag."""
+    entry = _entry(hass)
+    issue_id = f"device_abnormality_{entry.entry_id}"
+    _create_marker_issue(hass, entry, issue_id)
+    ir.async_ignore_issue(hass, DOMAIN, issue_id, ignore=True)
+
+    with repair.async_refresh_issue_set(hass, entry, abnormality_issue_pattern(entry)):
+        _create_marker_issue(hass, entry, issue_id)
+
+    issue = async_get_issue_registry(hass).issues[(DOMAIN, issue_id)]
+    assert issue.dismissed_version is not None
+
+
+def test_refresh_cancels_on_error(hass):
+    """An exception inside the refresh cancels it and deletes nothing."""
+    entry = _entry(hass)
+    issue_id = f"device_abnormality_{entry.entry_id}"
+    _create_marker_issue(hass, entry, issue_id)
+
+    with (
+        pytest.raises(RuntimeError),
+        repair.async_refresh_issue_set(hass, entry, abnormality_issue_pattern(entry)),
+    ):
+        raise RuntimeError("boom")
+
+    assert (DOMAIN, issue_id) in async_get_issue_registry(hass).issues

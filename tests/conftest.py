@@ -35,13 +35,24 @@ if str(PROJECT_ROOT) not in sys.path:
 #
 #   * ``ConfigEntries.async_unload_platforms_or_raise``
 #   * ``issue_registry.async_create_issue(config_entry_id=...)``
-#   * ``issue_registry.async_refresh_issues``
+#   * ``issue_registry.async_refresh_issues`` (plus ``async_keep_issue``)
 #
 # The shims below backport these APIs so the suite keeps exercising the
-# production 2026.11-only code paths on the current test runtime. REMOVE the
-# whole block once pytest-homeassistant-custom-component ships a release
-# bundled with Home Assistant 2026.11.
+# production 2026.11-only code paths on the current test runtime. They
+# mirror the documented semantics of the 2026.11 implementation:
+#
+#   * a refresh snapshots the set of matching issues on entry;
+#   * every create, update, delete or keep during the refresh "touches"
+#     its issue and protects it (``IssueRegistry._async_touch``);
+#   * untouched issues are deleted when the refresh finishes; an
+#     exception cancels the refresh instead.
+#
+# REMOVE the whole block once pytest-homeassistant-custom-component
+# ships a release bundled with Home Assistant 2026.11.
+import dataclasses
+
 import homeassistant.config_entries as _config_entries
+from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import issue_registry as _ir
 
 if not hasattr(_config_entries.ConfigEntries, "async_unload_platforms_or_raise"):
@@ -49,7 +60,7 @@ if not hasattr(_config_entries.ConfigEntries, "async_unload_platforms_or_raise")
     async def _shim_unload_platforms_or_raise(self, entry, platforms):
         unload_ok = await self.async_unload_platforms(entry, platforms)
         if not unload_ok:
-            raise RuntimeError(f"Failed to unload config entry {entry.entry_id}")
+            raise ConfigEntryError(f"Failed to unload config entry {entry.entry_id}")
 
     _config_entries.ConfigEntries.async_unload_platforms_or_raise = (
         _shim_unload_platforms_or_raise
@@ -57,36 +68,76 @@ if not hasattr(_config_entries.ConfigEntries, "async_unload_platforms_or_raise")
 
 if not hasattr(_ir, "async_refresh_issues"):
     _native_create_issue = _ir.async_create_issue
+    _native_delete_issue = _ir.async_delete_issue
+
+    def _shim_touch(registry, key):
+        """Take a created/updated/deleted/kept issue out of active refreshes."""
+        for state in getattr(registry, "_shim_refreshes", ()):
+            state.untouched.discard(key)
 
     def _shim_create_issue(hass, domain, issue_id, **kwargs):
         # ``config_entry_id`` linkage is not available below 2026.11.
         kwargs.pop("config_entry_id", None)
+        _shim_touch(_ir.async_get(hass), (domain, issue_id))
         return _native_create_issue(hass, domain, issue_id, **kwargs)
 
+    def _shim_delete_issue(hass, domain, issue_id, **kwargs):
+        _shim_touch(_ir.async_get(hass), (domain, issue_id))
+        return _native_delete_issue(hass, domain, issue_id, **kwargs)
+
     _ir.async_create_issue = _shim_create_issue
+    _ir.async_delete_issue = _shim_delete_issue
+
+    @dataclasses.dataclass
+    class _ShimRefreshState:
+        """State of one active refresh: scope plus untouched issues."""
+
+        scope: frozenset
+        untouched: set
+
+    def _shim_refresh(hass, domain):
+        registry = _ir.async_get(hass)
+        refreshes = getattr(registry, "_shim_refreshes", None)
+        if refreshes is None:
+            refreshes = registry._shim_refreshes = []
+        return registry, refreshes
 
     @contextmanager
-    def _shim_refresh_issues(hass, domain, *, issue_id_pattern, **kwargs):
-        # Approximation of the 2026.11 semantics: pre-existing matching
-        # issues that are still the same registry object after the context
-        # body ran were not recreated and are deleted.
-        registry = _ir.async_get(hass)
-
-        def _matching():
-            return {
-                key: issue
-                for key, issue in registry.issues.items()
-                if key[0] == domain and re.fullmatch(issue_id_pattern, key[1])
+    def _shim_refresh_issues(
+        hass, domain, *, issue_id_pattern=None, issue_ids=None, config_entry_id=None
+    ):
+        registry, refreshes = _shim_refresh(hass, domain)
+        if issue_ids is not None:
+            scope = {
+                key
+                for issue_id in issue_ids
+                if (key := (domain, issue_id)) in registry.issues
             }
-
-        pre = _matching()
+        elif issue_id_pattern is not None:
+            pattern = re.compile(issue_id_pattern)
+            scope = {
+                key
+                for key in registry.issues
+                if key[0] == domain and pattern.match(key[1])
+            }
+        else:
+            scope = {key for key in registry.issues if key[0] == domain}
+        state = _ShimRefreshState(frozenset(scope), set(scope))
+        refreshes.append(state)
         try:
             yield
-        finally:
-            post = _matching()
-            for key, issue in pre.items():
-                if post.get(key) is issue:
-                    _ir.async_delete_issue(hass, domain, key[1])
+        except BaseException:
+            # Cancel: nothing is deleted (defer_to_refresh is never used).
+            refreshes.remove(state)
+            raise
+        # Finish: delete issues no newer refresh owns that were not touched.
+        idx = refreshes.index(state)
+        refreshes.remove(state)
+        newer = refreshes[idx:]
+        for key in state.untouched:
+            if any(key in newer_state.scope for newer_state in newer):
+                continue
+            registry.async_delete(key[0], key[1])
 
     _ir.async_refresh_issues = _shim_refresh_issues
 # ---------------------------------------------------------------------------
