@@ -109,6 +109,25 @@ async def test_async_get_ha_unit_raises_when_provider_missing(
     raise AssertionError("expected ModbusConnectionException")
 
 
+async def test_async_get_ha_unit_raises_when_one_helper_missing(
+    monkeypatch,
+) -> None:
+    """A partially available provider is rejected with the same clear error."""
+    from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
+        ModbusConnectionException,
+    )
+
+    real_params = connection_manager.ModbusTcpParams
+    monkeypatch.setattr(connection_manager, "ModbusTcpParams", real_params)
+    monkeypatch.setattr(connection_manager, "async_get_unit", None)
+
+    try:
+        await async_get_ha_unit(object(), object(), HOST, PORT, UNIT_ID)
+    except ModbusConnectionException:
+        return
+    raise AssertionError("expected ModbusConnectionException")
+
+
 async def test_async_test_connection_probe_fails_when_provider_missing(
     monkeypatch,
 ) -> None:

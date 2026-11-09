@@ -27,6 +27,15 @@ except ImportError:  # pragma: no cover - HA component not available in tests
 _LOGGER = logging.getLogger(__name__)
 
 
+def _provider_complete() -> bool:
+    """Return whether HA's shared modbus helpers are all importable."""
+    return (
+        async_get_unit is not None
+        and async_get_temporary_unit is not None
+        and ModbusTcpParams is not None
+    )
+
+
 async def async_get_ha_unit(
     hass: Any,
     entry: Any,
@@ -43,7 +52,7 @@ async def async_get_ha_unit(
     Raises ``HomeAssistantError`` if the device is already in use under
     different link settings.
     """
-    if ModbusTcpParams is None:
+    if not _provider_complete():
         raise ModbusConnectionException(
             f"HA modbus component not available for {host}:{port}"
         )
@@ -74,7 +83,7 @@ async def async_test_connection_with_temporary_unit(
         - error_message: None if successful, otherwise the error description
     """
     try:
-        if ModbusTcpParams is None:
+        if not _provider_complete():
             raise ModbusConnectionException(
                 f"HA modbus component not available for {host}:{port}"
             )
