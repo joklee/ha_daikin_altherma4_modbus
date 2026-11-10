@@ -102,7 +102,15 @@ def _load_climate_module(monkeypatch):
         monkeypatch.setitem(sys.modules, stub_name, stub_module)
 
     climate_component_module = types.ModuleType("homeassistant.components.climate")
-    climate_component_module.ClimateEntity = object
+    # Behavior-compatible minimal base: entities are tested through the
+    # public property API (native_temperature_unit), so the stub must
+    # resolve it like the real ClimateEntity (from _attr_native_temperature_unit).
+    class ClimateEntity:
+        @property
+        def native_temperature_unit(self):
+            return self._attr_native_temperature_unit
+
+    climate_component_module.ClimateEntity = ClimateEntity
     monkeypatch.setitem(
         sys.modules, "homeassistant.components.climate", climate_component_module
     )
@@ -507,14 +515,22 @@ def test_thermostat_native_target_temperature_heating_and_cooling(monkeypatch):
 def test_climate_uses_native_temperature_api(monkeypatch):
     """HA 2026.11: entities expose native_* props, no legacy _attr_temperature_unit.
 
-    This only pins the *configuration*; the behavior of the real climate
-    component (rendered state values, °C handling) is covered by
+    The member check is the deliberate anti-override guard (HA resolves
+    legacy names through its deprecation aliases; a subclass override
+    would break that). The actual *behavior* is verified on the public
+    property API here and by the real climate component in
     ``tests/integration/test_climate_ha_state.py``.
     """
     module = _load_climate_module(monkeypatch)
     thermostat = _make_thermostat(module)
     dhw = _make_dhw_thermostat(module)
     room = _make_room_thermostat(module)
+
+    for entity in (thermostat, dhw, room):
+        # Public API: what HA's climate component actually reads.
+        assert entity.native_temperature_unit == "°C"
+        assert entity.native_current_temperature is not None
+        assert entity.native_target_temperature is not None
 
     for cls in (
         module.DaikinThermostatClimate,
@@ -526,9 +542,6 @@ def test_climate_uses_native_temperature_api(monkeypatch):
         assert "current_temperature" not in cls.__dict__
         assert "target_temperature" not in cls.__dict__
 
-    assert thermostat._attr_native_temperature_unit == "°C"
-    assert dhw._attr_native_temperature_unit == "°C"
-    assert room._attr_native_temperature_unit == "°C"
     assert not hasattr(thermostat, "_attr_temperature_unit")
     assert not hasattr(dhw, "_attr_temperature_unit")
     assert not hasattr(room, "_attr_temperature_unit")

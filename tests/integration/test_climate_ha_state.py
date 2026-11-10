@@ -21,6 +21,11 @@ from custom_components.ha_daikin_altherma4_modbus.core.const import (
     CONF_UNIT_ID,
     DOMAIN,
 )
+from custom_components.ha_daikin_altherma4_modbus.entities.climate import (
+    DaikinDHWThermostat,
+    DaikinRoomThermostatMainClimate,
+    DaikinThermostatClimate,
+)
 
 HOST = "192.0.2.70"
 
@@ -163,3 +168,43 @@ async def test_ha_renders_dhw_native_temperatures(hass, enable_custom_integratio
     assert booster.attributes["current_temperature"] == pytest.approx(50.0)
     assert booster.attributes["temperature"] == pytest.approx(55.0)
     assert booster.attributes["hvac_action"] == HVACAction.HEATING
+
+
+async def test_entity_public_api_resolves_native_properties(
+    hass, enable_custom_integrations
+):
+    """Real instance-level API: HA's climate component reads native_*, unit via property.
+
+    Complements the class-member regression guard
+    (``test_climate_regressions.py::test_climate_uses_native_temperature_api``)
+    and the rendered-state check above with the observable property
+    behavior: the public ``native_*`` property API returns the register
+    values, and HA's deprecated legacy aliases still resolve *through*
+    the native API instead of separate attributes.
+    """
+    entry = await _setup_with_deterministic_data(hass)
+    coordinator = entry.runtime_data.coordinator
+
+    def make_entities():
+        return [
+            (DaikinThermostatClimate(coordinator, entry), 21.5, 2.0),
+            (DaikinRoomThermostatMainClimate(coordinator, entry), 21.3, 21.5),
+            (DaikinDHWThermostat(coordinator, entry, dhw_type="manual"), 50.0, 47.0),
+            (
+                DaikinDHWThermostat(coordinator, entry, dhw_type="booster"),
+                50.0,
+                55.0,
+            ),
+        ]
+
+    for entity, current, target in make_entities():
+        # The public property API is what Home Assistant consumes.
+        assert entity.native_temperature_unit == UnitOfTemperature.CELSIUS
+        assert entity.native_current_temperature == pytest.approx(current)
+        assert entity.native_target_temperature == pytest.approx(target)
+
+        # HA 2026.11 keeps legacy names as deprecated aliases serving the
+        # replacement — they must yield the same value via the native API.
+        assert entity.current_temperature == pytest.approx(current)
+        assert entity.target_temperature == pytest.approx(target)
+        assert entity.temperature_unit == UnitOfTemperature.CELSIUS
