@@ -505,7 +505,12 @@ def test_thermostat_native_target_temperature_heating_and_cooling(monkeypatch):
 
 
 def test_climate_uses_native_temperature_api(monkeypatch):
-    """HA 2026.11: entities expose native_* props, no legacy _attr_temperature_unit."""
+    """HA 2026.11: entities expose native_* props, no legacy _attr_temperature_unit.
+
+    This only pins the *configuration*; the behavior of the real climate
+    component (rendered state values, °C handling) is covered by
+    ``tests/integration/test_climate_ha_state.py``.
+    """
     module = _load_climate_module(monkeypatch)
     thermostat = _make_thermostat(module)
     dhw = _make_dhw_thermostat(module)
