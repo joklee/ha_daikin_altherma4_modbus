@@ -211,10 +211,8 @@ async def test_setup_rollback_on_forward_failure(hass, enable_custom_integration
     assert DOMAIN not in hass.data
 
 
-async def test_unload_without_runtime_data_returns_false(
-    hass, enable_custom_integrations
-):
-    """Unload without prior setup fails gracefully."""
+async def test_unload_without_runtime_data_is_noop(hass, enable_custom_integrations):
+    """Unload without prior setup is a graceful no-op."""
     entry = _demo_entry()
     entry.add_to_hass(hass)
     assert await async_unload_entry(hass, entry) is False

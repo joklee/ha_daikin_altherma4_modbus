@@ -58,6 +58,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      # 🧪 Run the pytest env against the integration's minimum HA version.
+      #
+      # pytest-homeassistant-custom-component 0.13.375 still bundles Home
+      # Assistant 2026.10.4; the suite targets HA 2026.11 (manifest min
+      # version), so override Home Assistant and patch the harness for the
+      # HA 2026.11 httpx2 aliasing / logger helpers move.
+      # REMOVE this step once pytest-homeassistant-custom-component ships a
+      # release bundled with Home Assistant 2026.11.
+      - name: Override Home Assistant for the pytest jobs
+        run: |
+          pip install --upgrade "homeassistant>=2026.11.0,<2026.12"
+          python scripts/patch_phacc_ha2026_11.py
+
       # 🔍 Code Quality Checks
       - name: Run Ruff linting
         run: ruff check .

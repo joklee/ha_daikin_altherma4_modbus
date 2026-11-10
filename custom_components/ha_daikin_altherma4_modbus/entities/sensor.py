@@ -23,8 +23,9 @@ from ..core.register_constants import (
 from ..core.register_types import TEXT16
 from ..integration.config_entry_utils import entry_value
 from ..integration.repair import (
+    abnormality_issue_pattern,
     async_create_abnormality_issue,
-    async_delete_abnormality_issue,
+    async_refresh_issue_set,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -252,43 +253,48 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities(entities)
 
     # Set up abnormality monitoring callback
-    _abnormality_state = {"issue_created": False}
-
     def _check_abnormality():
-        """Check input_21 (Unit abnormality) and create/delete repair issue."""
+        """Check input_21 (Unit abnormality) and refresh the repair issue.
+
+        The refresh context runs on every valid status value (0/1/2), not
+        only on transitions: no_error=0 deletes a stale issue even when the
+        integration restarts with the pump already recovered, and values 1
+        (fault) / 2 (warning) recreate the issue, replacing placeholders
+        while a fault persists. The HA 2026.11 refresh API preserves
+        ignored ("mark fixed without action") issues.
+        """
         data = unified_coordinator.data.get("input_21")
         if data is None:
             return
         val = get_register_value(data)
-        if val is None:
+        if val is None or val not in (0, 1, 2):
             return
 
-        # Get abnormality code and sub code for the issue message
-        code_data = unified_coordinator.data.get("input_22")
-        code_val = get_register_value(code_data) if code_data else None
-        sub_code_data = unified_coordinator.data.get("input_23")
-        sub_code_val = get_register_value(sub_code_data) if sub_code_data else None
+        with async_refresh_issue_set(hass, entry, abnormality_issue_pattern(entry)):
+            if val in (1, 2):
+                # fault=1 or warning=2; report the decoded fault code
+                # (issue #79, e.g. "7H-19") alongside the raw registers.
+                from ..core.fault_codes import (
+                    format_abnormality_label,
+                    raw_sub_code,
+                )
 
-        if val in (1, 2) and not _abnormality_state["issue_created"]:
-            # fault=1 or warning=2; report the decoded fault code (issue
-            # #79, e.g. "7H-19") alongside the raw register values.
-            from ..core.fault_codes import (
-                format_abnormality_label,
-                raw_sub_code,
-            )
+                code_data = unified_coordinator.data.get("input_22")
+                code_val = get_register_value(code_data) if code_data else None
+                sub_code_data = unified_coordinator.data.get("input_23")
+                sub_code_val = (
+                    get_register_value(sub_code_data) if sub_code_data else None
+                )
+                code_label = format_abnormality_label(code_val, sub_code_val)
 
-            code_label = format_abnormality_label(code_val, sub_code_val)
-            async_create_abnormality_issue(
-                hass,
-                entry,
-                abnormality_code=code_label,
-                abnormality_sub_code=raw_sub_code(sub_code_val) or 0,
-            )
-            _abnormality_state["issue_created"] = True
-        elif val == 0 and _abnormality_state["issue_created"]:
-            # no_error=0 - delete the issue
-            async_delete_abnormality_issue(hass, entry)
-            _abnormality_state["issue_created"] = False
+                async_create_abnormality_issue(
+                    hass,
+                    entry,
+                    abnormality_code=code_label,
+                    abnormality_sub_code=raw_sub_code(sub_code_val) or 0,
+                )
+            # no_error=0: nothing is recreated, so the refresh deletes the
+            # stale (or left over from a previous run) matching issue.
 
     unified_coordinator.async_add_listener(_check_abnormality)
 

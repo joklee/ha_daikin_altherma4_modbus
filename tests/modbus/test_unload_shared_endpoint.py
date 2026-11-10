@@ -44,6 +44,7 @@ def _load_integration_module(monkeypatch):
 
     exceptions_module = types.ModuleType("homeassistant.exceptions")
     exceptions_module.ConfigEntryNotReady = Exception
+    exceptions_module.ConfigEntryError = Exception
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
 
     update_coordinator_module = types.ModuleType(
@@ -153,7 +154,7 @@ async def test_unload_keeps_shared_endpoint_client(monkeypatch):
         }
     }
     hass.config_entries = SimpleNamespace(
-        async_unload_platforms=AsyncMock(return_value=True),
+        async_unload_platforms_or_raise=AsyncMock(),
         async_entries=lambda domain: [entry_1, entry_2],
     )
 
@@ -195,7 +196,7 @@ async def test_unload_closes_client_when_endpoint_not_shared(monkeypatch):
         }
     }
     hass.config_entries = SimpleNamespace(
-        async_unload_platforms=AsyncMock(return_value=True),
+        async_unload_platforms_or_raise=AsyncMock(),
         async_entries=lambda domain: [],
     )
 

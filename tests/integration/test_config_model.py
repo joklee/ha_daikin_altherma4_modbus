@@ -1,6 +1,7 @@
 import importlib
 import sys
 import types
+from contextlib import nullcontext
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -57,6 +58,7 @@ def _install_common_homeassistant_stubs(monkeypatch) -> None:
 
     exceptions_module = types.ModuleType("homeassistant.exceptions")
     exceptions_module.ConfigEntryNotReady = Exception
+    exceptions_module.ConfigEntryError = Exception
     exceptions_module.HomeAssistantError = type("HomeAssistantError", (Exception,), {})
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
 
@@ -361,8 +363,29 @@ def _load_integration_module(monkeypatch):
 
     exceptions_module = types.ModuleType("homeassistant.exceptions")
     exceptions_module.ConfigEntryNotReady = Exception
+    exceptions_module.ConfigEntryError = Exception
     exceptions_module.HomeAssistantError = type("HomeAssistantError", (Exception,), {})
     monkeypatch.setitem(sys.modules, "homeassistant.exceptions", exceptions_module)
+
+    config_entries_module = types.ModuleType("homeassistant.config_entries")
+
+    class FakeConfigEntries:
+        pass
+
+    config_entries_module.ConfigEntries = FakeConfigEntries
+
+    # The package __init__ re-exports the config flow, whose class body
+    # expects ``config_entries.ConfigFlow`` at import time.
+    def _accept_subclass_kwargs(cls, **kwargs):
+        pass
+
+    config_entries_module.ConfigFlow = type(
+        "ConfigFlow", (), {"__init_subclass__": _accept_subclass_kwargs}
+    )
+    config_entries_module.OptionsFlow = type("OptionsFlow", (), {})
+    monkeypatch.setitem(
+        sys.modules, "homeassistant.config_entries", config_entries_module
+    )
 
     package_name = "custom_components.ha_daikin_altherma4_modbus"
     const_name = f"{package_name}.core.const"
@@ -535,6 +558,16 @@ def _load_integration_module(monkeypatch):
     repair_module.async_delete_connection_issue = lambda hass, entry: None
     repair_module.async_create_abnormality_issue = AsyncMock()
     repair_module.async_delete_abnormality_issue = lambda hass, entry: None
+    repair_module.connection_issue_id = lambda entry: (
+        f"connection_lost_{entry.entry_id}"
+    )
+    repair_module.abnormality_issue_id = lambda entry: (
+        f"device_abnormality_{entry.entry_id}"
+    )
+    repair_module.abnormality_issue_pattern = lambda entry: "device_abnormality"
+    repair_module.async_refresh_issue_set = lambda hass, entry, pattern: nullcontext(
+        False
+    )
     monkeypatch.setitem(sys.modules, repair_name, repair_module)
 
     services_name = f"{package_name}.integration.services"

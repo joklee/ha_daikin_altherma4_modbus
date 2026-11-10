@@ -24,6 +24,9 @@ PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# ---------------------------------------------------------------------------
+# end TEMPORARY 2026.11 shims
+
 # Home Assistant's integration loader
 # (homeassistant.loader._get_custom_components) discovers custom
 # integrations by importing the ``custom_components`` package and scanning

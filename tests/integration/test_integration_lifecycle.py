@@ -3,10 +3,12 @@
 import importlib
 import sys
 import types
+from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from homeassistant.exceptions import ConfigEntryError
 
 
 @pytest.fixture(autouse=True)
@@ -242,6 +244,16 @@ def _load_integration_module(monkeypatch):
     repair_module.async_delete_connection_issue = lambda hass, entry: None
     repair_module.async_create_abnormality_issue = MagicMock()
     repair_module.async_delete_abnormality_issue = lambda hass, entry: None
+    repair_module.connection_issue_id = lambda entry: (
+        f"connection_lost_{entry.entry_id}"
+    )
+    repair_module.abnormality_issue_id = lambda entry: (
+        f"device_abnormality_{entry.entry_id}"
+    )
+    repair_module.abnormality_issue_pattern = lambda entry: "device_abnormality"
+    repair_module.async_refresh_issue_set = lambda hass, entry, pattern: nullcontext(
+        False
+    )
     monkeypatch.setitem(sys.modules, repair_name, repair_module)
 
     # Mock runtime_data module
@@ -277,7 +289,9 @@ async def test_async_setup_entry_success(monkeypatch):
 
     # Create mock hass and entry
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(),
+    )
     hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}
@@ -315,7 +329,9 @@ async def test_async_setup_entry_connection_failure(monkeypatch):
     )
 
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(),
+    )
     hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}
@@ -340,7 +356,9 @@ async def test_async_unload_entry(monkeypatch):
     integration_module = _load_integration_module(monkeypatch)
 
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(),
+    )
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}
@@ -369,8 +387,11 @@ async def test_async_unload_entry_failure(monkeypatch):
     integration_module = _load_integration_module(monkeypatch)
 
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
-    hass.config_entries.async_unload_platforms = AsyncMock(return_value=False)
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(
+            side_effect=ConfigEntryError("unload failed")
+        ),
+    )
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}
 
@@ -386,8 +407,8 @@ async def test_async_unload_entry_failure(monkeypatch):
         manager=mock_manager, coordinator=mock_coordinator
     )
 
-    result = await integration_module.async_unload_entry(hass, entry)
-    assert result is False
+    with pytest.raises(ConfigEntryError):
+        await integration_module.async_unload_entry(hass, entry)
     mock_manager.async_shutdown.assert_not_called()
 
 
@@ -406,7 +427,9 @@ async def test_async_setup_entry_demo_mode(monkeypatch):
     integration_module = _load_integration_module(monkeypatch)
 
     hass = types.SimpleNamespace()
-    hass.config_entries = types.SimpleNamespace()
+    hass.config_entries = types.SimpleNamespace(
+        async_unload_platforms_or_raise=AsyncMock(),
+    )
     hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
     hass.config_entries.async_entries = lambda domain: []
     hass.data = {}

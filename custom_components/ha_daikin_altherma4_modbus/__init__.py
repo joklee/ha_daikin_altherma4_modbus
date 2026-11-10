@@ -24,7 +24,7 @@ from .integration.services import async_cancel_single_heatup, register_services
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_migrate_entry(hass, entry):
+async def async_migrate_entry(hass, entry) -> bool:
     """Migrate a stored config entry to a newer version.
 
     Version 2 introduces the Modbus unit id (``unit_id``) to the entry
@@ -50,6 +50,9 @@ async def async_migrate_entry(hass, entry):
         ):
             updates["unique_id"] = f"{host}:{port}:{data[CONF_UNIT_ID]}"
         hass.config_entries.async_update_entry(entry, **updates)
+
+    # ``True`` is a valid result on every Home Assistant version supported
+    # by this release (2026.11+ also accepts ``None``).
     return True
 
 
@@ -68,7 +71,7 @@ def _has_other_entry_for_endpoint(
     return False
 
 
-async def async_setup_entry(hass, entry):
+async def async_setup_entry(hass, entry) -> bool:
     """Set up config entry and roll back resources on partial failure."""
     host = entry_data_value(entry, "host", "")
     port = entry_data_value(entry, "port", 502)
@@ -160,8 +163,6 @@ async def async_setup_entry(hass, entry):
 
         # Connection is healthy - delete any existing connection repair issue
         async_delete_connection_issue(hass, entry)
-
-        return True
     except Exception as err:
         _LOGGER.error("Failed to set up entry %s: %s", entry.entry_id, err)
 
@@ -194,8 +195,12 @@ async def async_setup_entry(hass, entry):
 
         raise ConfigEntryNotReady(f"Failed to set up entry: {err}") from err
 
+    # ``True`` remains a valid result on Home Assistant 2026.11 (which also
+    # accepts ``None``) and keeps older test runtimes happy.
+    return True
 
-async def async_unload_entry(hass, entry):
+
+async def async_unload_entry(hass, entry) -> bool:
     """Handle config entry unload and close connections before HA restart."""
     _LOGGER.info("Unloading entry %s - closing Modbus connections", entry.entry_id)
 
@@ -212,12 +217,8 @@ async def async_unload_entry(hass, entry):
     # torn-down device after this point.
     await async_cancel_single_heatup(entry.entry_id)
 
-    unload_ok = await hass.config_entries.async_unload_platforms(
-        entry, ["sensor", "binary_sensor", "number", "select", "climate", "switch"]
-    )
-    if not unload_ok:
-        _LOGGER.warning("Failed to unload entry %s", entry.entry_id)
-        return False
+    platforms = ["sensor", "binary_sensor", "number", "select", "climate", "switch"]
+    await hass.config_entries.async_unload_platforms_or_raise(entry, platforms)
 
     if unified_coordinator and hasattr(unified_coordinator, "async_shutdown"):
         try:
@@ -249,4 +250,5 @@ async def async_unload_entry(hass, entry):
         hass.data.pop(DOMAIN, None)
 
     _LOGGER.info("Successfully unloaded entry %s", entry.entry_id)
+
     return True

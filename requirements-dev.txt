@@ -1,15 +1,34 @@
 # Development requirements for Daikin Altherma 4 Modbus integration
 # Install with: pip install -r requirements-dev.txt
+#
+# The suite targets Home Assistant 2026.11 as minimum (see manifest.json).
+# pytest-homeassistant-custom-component 0.13.375 still pins Home Assistant
+# 2026.10.4, so the test environment MUST be overridden afterwards:
+#
+#   pip install -r requirements-dev.txt
+#   pip install --upgrade "homeassistant>=2026.11.0,<2026.12"
+#   python scripts/patch_phacc_ha2026_11.py
+#
+# The CI "pytest" jobs run exactly these three commands (see
+# .github/workflows/ci.yml, "Override Home Assistant for the pytest jobs").
+# Remove the override and the patch script once
+# pytest-homeassistant-custom-component ships a release bundled with Home
+# Assistant 2026.11.
 
-# Home Assistant core (for IDE support and testing).
+# Home Assistant core + the pytest harness (for testing).
 # pytest-homeassistant-custom-component pins a matching homeassistant
-# version as its own dependency; let pip resolve the consistent set.
+# version as its own dependency; let pip resolve the consistent set, then
+# override Home Assistant as described above.
 pytest-homeassistant-custom-component
 
 # Integration dependencies (mirrors manifest.json requirements).
-# pymodbus itself arrives at runtime via the [pymodbus] extra; nothing
-# imports it directly since the Phase 5 cutover removed the legacy client.
-modbus-connection[pymodbus]>=4.10
+# [pymodbus] provides the pymodbus stack, [tmodbus] provides ``tmodbus`` and
+# ``serialx``. The HA ``modbus`` component (2026.10/2026.11) imports
+# ``modbus_connection.tmodbus`` at load time, so the test environment must be
+# able to import ``homeassistant.components.modbus``; without the [tmodbus]
+# extra the guarded imports in ``modbus/connection_manager.py`` degrade to
+# ``None`` and the provider tests cannot exercise the real import path.
+modbus-connection[pymodbus,tmodbus]>=4.10
 
 # Test requirements (from requirements-test.txt)
 pytest>=7.0.0

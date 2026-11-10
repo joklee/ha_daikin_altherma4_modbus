@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock
 import pytest
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.ha_daikin_altherma4_modbus.core.const import (
@@ -135,6 +136,13 @@ def _fault_response():
     return FakeModbusResponse(regs, 21, 67)
 
 
+def _normal_response():
+    """Input block with input_21 reporting no error (0)."""
+    regs = [32767] * 88
+    regs[21] = 0
+    return FakeModbusResponse(regs, 21, 67)
+
+
 @pytest.mark.asyncio
 async def test_ha_renders_no_fault_as_unknown(hass, enable_custom_integrations):
     """Home Assistant shows "unknown" (not unavailable) with no fault.
@@ -180,6 +188,56 @@ async def test_ha_renders_active_fault_as_code(hass, enable_custom_integrations)
     await hass.async_block_till_done()
 
     assert hass.states.get(entity_id).state == "7H-19"
+
+
+@pytest.mark.asyncio
+async def test_stale_issue_cleared_without_transition_on_restart(
+    hass, enable_custom_integrations
+):
+    """A leftover abnormality issue is deleted despite no 1->0 transition.
+
+    Regression scenario for the refresh API: the pump reported a fault, HA
+    shut down, and the fault cleared while HA was offline. On the next
+    start the first update already reports value 0 - the transition-based
+    bookkeeping never ran, so the stale issue had to be cleared here.
+    """
+    entry = _demo_entry()
+    entry.add_to_hass(hass)
+
+    # Seed the issue registry with the issue of a hypothetical previous run.
+    issue_id = f"device_abnormality_{entry.entry_id}"
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        issue_id,
+        is_fixable=False,
+        is_persistent=False,
+        severity=ir.IssueSeverity.ERROR,
+        translation_key="device_abnormality",
+        translation_placeholders={},
+    )
+    registry = ir.async_get(hass)
+    assert (DOMAIN, issue_id) in registry.issues
+
+    assert await hass.config_entries.async_setup(entry.entry_id) is True
+    await hass.async_block_till_done()
+
+    # The seeded issue survives the initial refresh only if no data
+    # arrived; force a read reporting the recovered pump (value 0).
+    coordinator = entry.runtime_data.normal_coordinator
+
+    async def _read_inputs(address, count):
+        if address == 138:
+            return FakeModbusResponse([32766] * 140, address, count)
+        return _normal_response()
+
+    coordinator.data_manager.client.read_input_registers = AsyncMock(
+        side_effect=_read_inputs
+    )
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert (DOMAIN, issue_id) not in registry.issues
 
 
 def test_production_mapping_yields_raw_integer():

@@ -1,7 +1,7 @@
 # Makefile for Daikin Altherma 4 Modbus Integration
 # Provides convenient commands for development, testing, and code quality
 
-.PHONY: help install install-dev test test-unit test-integration test-all test-coverage test-ha lint format security clean docs benchmark hassfest test-platform-modules test-e2e test-slow test-parallel test-fast
+.PHONY: help install install-dev install-test-env test test-unit test-integration test-all test-coverage test-ha lint format security clean docs benchmark hassfest test-platform-modules test-e2e test-slow test-parallel test-fast
 
 # Default target
 help:
@@ -10,6 +10,7 @@ help:
 	@echo "📦 Installation:"
 	@echo "  install        Install production dependencies"
 	@echo "  install-dev    Install development and test dependencies"
+	@echo "  install-test-env Install the test environment targeted at HA 2026.11"
 	@echo ""
 	@echo "🧪 Testing:"
 	@echo "  test          Run all tests with coverage"
@@ -51,6 +52,14 @@ install:
 install-dev:
 	@echo "📦 Installing development dependencies..."
 	pip install -r requirements-test.txt
+	pip install -e .
+
+install-test-env:
+	@echo "📦 Installing the HA 2026.11 test environment..."
+	pip install -r requirements-dev.txt
+	pip install --upgrade "homeassistant>=2026.11.0,<2026.12"
+	@echo "🩹 Patching the pytest harness for HA 2026.11 (httpx2 aliasing, logger helpers)..."
+	python scripts/patch_phacc_ha2026_11.py
 	pip install -e .
 
 # Testing

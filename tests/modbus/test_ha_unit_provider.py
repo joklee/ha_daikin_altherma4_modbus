@@ -54,7 +54,6 @@ async def test_async_get_ha_unit_calls_async_get_unit_with_expected_args(
 
     monkeypatch.setattr(connection_manager, "async_get_unit", fake_get_unit)
     monkeypatch.setattr(connection_manager, "ModbusTcpParams", FakeTcpParams)
-    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", True)
 
     hass = object()
     entry = object()
@@ -84,7 +83,6 @@ async def test_async_get_ha_unit_wraps_unit_and_translates_address(
 
     monkeypatch.setattr(connection_manager, "async_get_unit", fake_get_unit)
     monkeypatch.setattr(connection_manager, "ModbusTcpParams", FakeTcpParams)
-    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", True)
 
     connection.for_unit(UNIT_ID).input[20] = 2500  # Daikin register 21 -> raw 20
 
@@ -97,12 +95,31 @@ async def test_async_get_ha_unit_wraps_unit_and_translates_address(
 async def test_async_get_ha_unit_raises_when_provider_missing(
     monkeypatch,
 ) -> None:
-    """Without HA 2026.9 helpers the provider raises a clear connection error."""
+    """Without the modbus params the provider raises a clear connection error."""
     from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
         ModbusConnectionException,
     )
 
-    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", False)
+    monkeypatch.setattr(connection_manager, "ModbusTcpParams", None)
+
+    try:
+        await async_get_ha_unit(object(), object(), HOST, PORT, UNIT_ID)
+    except ModbusConnectionException:
+        return
+    raise AssertionError("expected ModbusConnectionException")
+
+
+async def test_async_get_ha_unit_raises_when_one_helper_missing(
+    monkeypatch,
+) -> None:
+    """A partially available provider is rejected with the same clear error."""
+    from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
+        ModbusConnectionException,
+    )
+
+    real_params = connection_manager.ModbusTcpParams
+    monkeypatch.setattr(connection_manager, "ModbusTcpParams", real_params)
+    monkeypatch.setattr(connection_manager, "async_get_unit", None)
 
     try:
         await async_get_ha_unit(object(), object(), HOST, PORT, UNIT_ID)
@@ -119,7 +136,7 @@ async def test_async_test_connection_probe_fails_when_provider_missing(
         async_test_connection_with_temporary_unit,
     )
 
-    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", False)
+    monkeypatch.setattr(connection_manager, "ModbusTcpParams", None)
 
     ok, error = await async_test_connection_with_temporary_unit(
         object(), HOST, PORT, UNIT_ID
@@ -144,12 +161,11 @@ async def test_async_test_connection_probe_succeeds_with_temporary_unit(
         assert params.port == PORT
         yield connection.for_unit(unit_id)
 
-    # Force the provider seam: on HA versions without the shared modbus
-    # helpers the probe short-circuits before reaching the temporary unit
-    # (both the flag and ModbusTcpParams are None there).
+    # Keep the module's own ModbusTcpParams: other test modules re-import
+    # this module under stubs, so a fresh function-local import could
+    # resolve to a different module instance.
     from modbus_connection import ModbusTcpParams
 
-    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", True)
     monkeypatch.setattr(connection_manager, "ModbusTcpParams", ModbusTcpParams)
     monkeypatch.setattr(
         connection_manager, "async_get_temporary_unit", fake_temporary_unit
@@ -180,10 +196,9 @@ async def test_async_test_connection_probe_maps_unit_error_to_cannot_connect(
         yield None
 
     # Same provider-seam forcing as above: exercise the unit-read path,
-    # not the provider-missing short-circuit.
+    # not the params-missing short-circuit.
     from modbus_connection import ModbusTcpParams
 
-    monkeypatch.setattr(connection_manager, "_HAS_SHARED_UNIT_PROVIDER", True)
     monkeypatch.setattr(connection_manager, "ModbusTcpParams", ModbusTcpParams)
     monkeypatch.setattr(
         connection_manager, "async_get_temporary_unit", failing_temporary_unit

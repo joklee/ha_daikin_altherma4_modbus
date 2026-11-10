@@ -13,6 +13,13 @@ pytest-mock>=3.10.0
 # version as its own dependency; let pip resolve the consistent set.
 pytest-homeassistant-custom-component
 
+# Integration dependency mirroring manifest.json: the HA ``modbus``
+# component imports ``modbus_connection.tmodbus`` at load time, so the
+# [tmodbus] extra (tmodbus/serialx) must be present alongside [pymodbus];
+# without it the guarded imports in ``modbus/connection_manager.py``
+# degrade to None. See requirements-dev.txt for the HA 2026.11 override.
+modbus-connection[pymodbus,tmodbus]>=4.10
+
 # Coverage reporting
 coverage>=7.0.0
 
