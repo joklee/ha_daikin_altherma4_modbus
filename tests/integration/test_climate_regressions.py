@@ -174,7 +174,7 @@ def _load_climate_module(monkeypatch):
     const_module.HVAC_COOL = 2
     const_module.REGISTER_OFFSET_COOLING = "holding_6"
     const_module.REGISTER_OFFSET_HEATING = "holding_7"
-    const_module.REGISTER_CURRENT_TEMP = "input_37"
+    const_module.REGISTER_CURRENT_TEMP = "input_40"
     const_module.DHW_OFF = 0
     const_module.DHW_ON = 1
     const_module.REGISTER_DHW_SETPOINT = "holding_80"
@@ -220,7 +220,10 @@ def _make_thermostat(module, quiet_raw=0, op_mode_raw=0):
             "holding_9": {"value": quiet_raw},
             "holding_3": {"value": op_mode_raw},
             "holding_4": {"value": 1},
-            "input_37": {"value": 21.5, "scale": 1},
+            # input_40 = Leaving water temperature PHE (Temp16, scaling 0.01):
+            # data manager stores the already-scaled value, keeping the scale
+            # column for downstream special-value (32766/327.66) detection.
+            "input_40": {"value": 21.5, "scale": 0.01},
             "holding_7": {"value": 0, "scale": 1, "min_value": -5, "max_value": 5},
             "discrete_11": {"value": 0},
         },
@@ -470,14 +473,25 @@ def test_room_thermostat_available_and_attributes(monkeypatch):
     assert attrs["space_heating_cooling_on"] is True
 
 
-def test_thermostat_native_current_temperature_scaled_and_unscaled(monkeypatch):
-    """Current temperature honors pre-scaled values and scales raw ones."""
+def test_thermostat_native_current_temperature_temp16_pipeline(monkeypatch):
+    """Current temp is Temp16 (input_40, scaling 0.01), scaled upstream.
+
+    ``get_register_value()`` returns stored values verbatim; scaling happens
+    exactly once, centrally, in ``apply_register_processing()`` via
+    ``data_type.scaling`` before values enter ``coordinator.data``. Entities
+    therefore consume already-scaled values and must not re-scale. The
+    repository's raw Temp16 reading 2150 (hundredths of °C) reaches them as
+    21.5 — proven end to end with the real data manager in
+    ``tests/integration/test_connection_recovery.py``.
+    """
     module = _load_climate_module(monkeypatch)
     thermostat = _make_thermostat(module)
     assert thermostat.native_current_temperature == pytest.approx(21.5)
 
-    thermostat.coordinator.data["input_37"] = {"value": 2150}
-    assert thermostat.native_current_temperature == pytest.approx(2150.0)
+    # Entities must not apply their own scaling: coordinator data is in °C,
+    # so a stored 21.47 is returned unchanged (not 2147 nor 0.21).
+    thermostat.coordinator.data["input_40"] = {"value": 21.47, "scale": 0.01}
+    assert thermostat.native_current_temperature == pytest.approx(21.47)
 
 
 def test_thermostat_native_target_temperature_heating_and_cooling(monkeypatch):
@@ -689,7 +703,7 @@ def test_thermostat_available_requires_core_registers(monkeypatch):
     """Availability tracks the operation-mode and current-temp registers.
 
     Silver ``entity-unavailable``: the stub maps REGISTER_CURRENT_TEMP to
-    ``input_37``, which the fixture seeds, so the thermostat starts
+    ``input_40``, which the fixture seeds, so the thermostat starts
     available and goes unavailable when a core register drops out or
     reports a special (unsupported) value.
     """
@@ -701,7 +715,7 @@ def test_thermostat_available_requires_core_registers(monkeypatch):
     assert thermostat.available is False
 
     thermostat.coordinator.data["holding_3"] = {"value": 0}
-    thermostat.coordinator.data["input_37"] = {"value": 32767}
+    thermostat.coordinator.data["input_40"] = {"value": 32767}
     assert thermostat.available is False
 
 
