@@ -51,6 +51,7 @@ This document describes the available development scripts for the Daikin Altherm
 |--------|-------------|
 | `make install` | Install production dependencies |
 | `make install-dev` | Install development and test dependencies |
+| `make install-test-env` | Install the pytest environment targeted at HA 2026.11 (override + harness patch; see `scripts/patch_phacc_ha2026_11.py`) |
 
 ## Quick Start
 

@@ -85,7 +85,12 @@ def test_issue_ids_and_refresh_pattern(hass):
 
 
 def test_refresh_issue_set_uses_native_api(hass, monkeypatch):
-    """The refresh helper delegates to HA's native refresh API."""
+    """The refresh helper delegates to HA's native refresh API, pattern-only.
+
+    No ``config_entry_id`` goes along: the native API narrows the scope to
+    linked issues and would thus miss the unlinked issues left behind by
+    pre-2026.11 versions during an upgrade restart.
+    """
     entry = _entry(hass)
     calls = []
 
@@ -101,12 +106,7 @@ def test_refresh_issue_set_uses_native_api(hass, monkeypatch):
     with repair.async_refresh_issue_set(hass, entry, "pattern"):
         pass
 
-    assert calls == [
-        (
-            DOMAIN,
-            {"issue_id_pattern": "pattern", "config_entry_id": entry.entry_id},
-        )
-    ]
+    assert calls == [(DOMAIN, {"issue_id_pattern": "pattern"})]
 
 
 def test_create_issue_links_entry(hass, monkeypatch):

@@ -44,12 +44,17 @@ def async_refresh_issue_set(hass, entry, issue_id_pattern: str):
 
     Issues matching the pattern are deleted when they are not recreated
     inside the context.
+
+    The scope is the pattern alone, deliberately without ``config_entry_id``:
+    the real API narrows the candidate set to issues *linked* to the entry,
+    which would exclude the unlinked issues written by pre-2026.11 versions
+    of this integration — exactly the stale issues this refresh clears after
+    an upgrade restart.
     """
     with ir.async_refresh_issues(
         hass,
         DOMAIN,
         issue_id_pattern=issue_id_pattern,
-        config_entry_id=entry.entry_id,
     ):
         yield
 
