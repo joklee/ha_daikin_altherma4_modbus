@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.typing import ConfigType
 
 from ..core.data_types import EntityStatePayload, StateMapping
@@ -114,19 +116,27 @@ def resolve_register_version(coordinator: Any) -> str | None:
 
 
 def device_info_with_register_version(
-    base_device_info: dict | None, register_version: str | None
-) -> dict:
+    base_device_info: DeviceInfo | None, register_version: str | None
+) -> DeviceInfo:
     """Copy base device info with the register-map version as sw_version.
 
     Shows "Register v2/v3" / "Register v4" once detected and
     "Register unbekannt" while the map is still unknown.
+
+    ``DeviceInfo`` is a dataclass as of Home Assistant 2026.11 but a
+    ``TypedDict`` in older releases, so both attribute and item access are
+    supported here.
     """
-    info = dict(base_device_info or {})
-    info["sw_version"] = (
+    info = copy.copy(base_device_info) if base_device_info is not None else DeviceInfo()
+    sw_version = (
         f"Register {register_version}"
         if register_version
         else REGISTER_VERSION_UNKNOWN_LABEL
     )
+    if isinstance(info, dict):
+        info["sw_version"] = sw_version
+    else:
+        info.sw_version = sw_version
     return info
 
 
@@ -140,7 +150,7 @@ class RegisterVersionDeviceInfoMixin:
     """
 
     @property
-    def device_info(self) -> dict:
+    def device_info(self) -> DeviceInfo:
         """Return device info enriched with the register-map version."""
         return device_info_with_register_version(
             getattr(self, "_attr_device_info", None),
