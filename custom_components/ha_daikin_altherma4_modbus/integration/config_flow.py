@@ -27,6 +27,7 @@ from .config_entry_utils import (
     entry_data_value,
     entry_value,
 )
+from .units import is_fahrenheit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -183,8 +184,21 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 2
     MINOR_VERSION = 1
 
+    def _abort_unsupported_temperature_unit(self):
+        """Abort the flow when Home Assistant uses Fahrenheit."""
+        units = getattr(getattr(self.hass, "config", None), "units", None)
+        return self.async_abort(
+            reason="unsupported_temperature_unit",
+            description_placeholders={
+                "temperature_unit": str(getattr(units, "temperature_unit", "°F"))
+            },
+        )
+
     async def async_step_user(self, user_input=None):
         """Handle the user step."""
+        if is_fahrenheit(getattr(self, "hass", None)):
+            return self._abort_unsupported_temperature_unit()
+
         errors = {}
         data_schema = vol.Schema(
             {
@@ -274,6 +288,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         This is triggered when the heat pump is no longer reachable at the
         configured host/port, allowing the user to update the connection details.
         """
+        if is_fahrenheit(getattr(self, "hass", None)):
+            return self._abort_unsupported_temperature_unit()
+
         config_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
@@ -360,6 +377,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         This allows the user to update host/port from the integration
         configuration page without needing a reauth trigger.
         """
+        if is_fahrenheit(getattr(self, "hass", None)):
+            return self._abort_unsupported_temperature_unit()
+
         reconfigure_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )

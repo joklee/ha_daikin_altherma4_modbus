@@ -1,6 +1,6 @@
 import logging
 
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 
 from .config_flow import ConfigFlow as ConfigFlow
 from .core.const import (
@@ -16,10 +16,13 @@ from .integration.config_entry_utils import entry_data_value, entry_value
 from .integration.coordinator_manager import CoordinatorManager, UnifiedCoordinator
 from .integration.repair import (
     async_create_connection_issue,
+    async_create_unsupported_temperature_unit_issue,
     async_delete_connection_issue,
+    async_delete_unsupported_temperature_unit_issue,
 )
 from .integration.runtime_data import RuntimeData
 from .integration.services import async_cancel_single_heatup, register_services
+from .integration.units import is_fahrenheit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +76,24 @@ def _has_other_entry_for_endpoint(
 
 async def async_setup_entry(hass, entry) -> bool:
     """Set up config entry and roll back resources on partial failure."""
+    # The integration writes raw Celsius register values (including
+    # temperature deltas, which Home Assistant cannot convert), so refuse to
+    # start under a Fahrenheit unit system instead of silently writing
+    # mis-scaled values to the heat pump.
+    if is_fahrenheit(hass):
+        async_create_unsupported_temperature_unit_issue(hass, entry)
+        _LOGGER.error(
+            "Cannot set up %s: the integration requires the metric unit "
+            "system (°C), Home Assistant is configured for %s",
+            entry.title,
+            hass.config.units.temperature_unit,
+        )
+        raise ConfigEntryError(
+            "Daikin Altherma 4 requires the metric unit system (°C); "
+            "Fahrenheit is not supported"
+        )
+    async_delete_unsupported_temperature_unit_issue(hass, entry)
+
     host = entry_data_value(entry, "host", "")
     port = entry_data_value(entry, "port", 502)
     scan_interval = entry_value(entry, "scan_interval", NORMAL_SCAN_INTERVAL)

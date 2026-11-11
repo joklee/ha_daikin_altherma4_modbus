@@ -102,7 +102,16 @@ def _load_climate_module(monkeypatch):
         monkeypatch.setitem(sys.modules, stub_name, stub_module)
 
     climate_component_module = types.ModuleType("homeassistant.components.climate")
-    climate_component_module.ClimateEntity = object
+
+    # Behavior-compatible minimal base: entities are tested through the
+    # public property API (native_temperature_unit), so the stub must
+    # resolve it like the real ClimateEntity (from _attr_native_temperature_unit).
+    class ClimateEntity:
+        @property
+        def native_temperature_unit(self):
+            return self._attr_native_temperature_unit
+
+    climate_component_module.ClimateEntity = ClimateEntity
     monkeypatch.setitem(
         sys.modules, "homeassistant.components.climate", climate_component_module
     )
@@ -174,7 +183,7 @@ def _load_climate_module(monkeypatch):
     const_module.HVAC_COOL = 2
     const_module.REGISTER_OFFSET_COOLING = "holding_6"
     const_module.REGISTER_OFFSET_HEATING = "holding_7"
-    const_module.REGISTER_CURRENT_TEMP = "input_37"
+    const_module.REGISTER_CURRENT_TEMP = "input_40"
     const_module.DHW_OFF = 0
     const_module.DHW_ON = 1
     const_module.REGISTER_DHW_SETPOINT = "holding_80"
@@ -220,7 +229,10 @@ def _make_thermostat(module, quiet_raw=0, op_mode_raw=0):
             "holding_9": {"value": quiet_raw},
             "holding_3": {"value": op_mode_raw},
             "holding_4": {"value": 1},
-            "input_37": {"value": 21.5, "scale": 1},
+            # input_40 = Leaving water temperature PHE (Temp16, scaling 0.01):
+            # data manager stores the already-scaled value, keeping the scale
+            # column for downstream special-value (32766/327.66) detection.
+            "input_40": {"value": 21.5, "scale": 0.01},
             "holding_7": {"value": 0, "scale": 1, "min_value": -5, "max_value": 5},
             "discrete_11": {"value": 0},
         },
@@ -282,14 +294,14 @@ def test_room_thermostat_current_and_target_temperature(monkeypatch):
     """Room thermostat reads input_50 and the mode-selected setpoint."""
     module = _load_climate_module(monkeypatch)
     room = _make_room_thermostat(module)
-    assert room.current_temperature == pytest.approx(21.3)
-    assert room.target_temperature == pytest.approx(21.5)
+    assert room.native_current_temperature == pytest.approx(21.3)
+    assert room.native_target_temperature == pytest.approx(21.5)
 
     room.coordinator.data["input_50"] = {"value": 32766}
-    assert room.current_temperature is None
+    assert room.native_current_temperature is None
 
     cool = _make_room_thermostat(module, input_38={"value": 2})
-    assert cool.target_temperature == pytest.approx(23.0)
+    assert cool.native_target_temperature == pytest.approx(23.0)
 
 
 def test_room_thermostat_limits_from_device_and_fallback(monkeypatch):
@@ -470,24 +482,70 @@ def test_room_thermostat_available_and_attributes(monkeypatch):
     assert attrs["space_heating_cooling_on"] is True
 
 
-def test_thermostat_current_temperature_scaled_and_unscaled(monkeypatch):
-    """Current temperature honors pre-scaled values and scales raw ones."""
+def test_thermostat_native_current_temperature_temp16_pipeline(monkeypatch):
+    """Current temp is Temp16 (input_40, scaling 0.01), scaled upstream.
+
+    ``get_register_value()`` returns stored values verbatim; scaling happens
+    exactly once, centrally, in ``apply_register_processing()`` via
+    ``data_type.scaling`` before values enter ``coordinator.data``. Entities
+    therefore consume already-scaled values and must not re-scale. The
+    repository's raw Temp16 reading 2150 (hundredths of °C) reaches them as
+    21.5 — proven end to end with the real data manager in
+    ``tests/integration/test_connection_recovery.py``.
+    """
     module = _load_climate_module(monkeypatch)
     thermostat = _make_thermostat(module)
-    assert thermostat.current_temperature == pytest.approx(21.5)
+    assert thermostat.native_current_temperature == pytest.approx(21.5)
 
-    thermostat.coordinator.data["input_37"] = {"value": 2150}
-    assert thermostat.current_temperature == pytest.approx(2150.0)
+    # Entities must not apply their own scaling: coordinator data is in °C,
+    # so a stored 21.47 is returned unchanged (not 2147 nor 0.21).
+    thermostat.coordinator.data["input_40"] = {"value": 21.47, "scale": 0.01}
+    assert thermostat.native_current_temperature == pytest.approx(21.47)
 
 
-def test_thermostat_target_temperature_heating_and_cooling(monkeypatch):
+def test_thermostat_native_target_temperature_heating_and_cooling(monkeypatch):
     """Target temperature follows the mode-selected offset register."""
     module = _load_climate_module(monkeypatch)
-    assert _make_thermostat(module).target_temperature == pytest.approx(0.0)
+    assert _make_thermostat(module).native_target_temperature == pytest.approx(0.0)
 
     cool = _make_thermostat(module, op_mode_raw=2)
     cool.coordinator.data["holding_6"] = {"value": 200}
-    assert cool.target_temperature == pytest.approx(200.0)
+    assert cool.native_target_temperature == pytest.approx(200.0)
+
+
+def test_climate_uses_native_temperature_api(monkeypatch):
+    """HA 2026.11: entities expose native_* props, no legacy _attr_temperature_unit.
+
+    The member check is the deliberate anti-override guard (HA resolves
+    legacy names through its deprecation aliases; a subclass override
+    would break that). The actual *behavior* is verified on the public
+    property API here and by the real climate component in
+    ``tests/integration/test_climate_ha_state.py``.
+    """
+    module = _load_climate_module(monkeypatch)
+    thermostat = _make_thermostat(module)
+    dhw = _make_dhw_thermostat(module)
+    room = _make_room_thermostat(module)
+
+    for entity in (thermostat, dhw, room):
+        # Public API: what HA's climate component actually reads.
+        assert entity.native_temperature_unit == "°C"
+        assert entity.native_current_temperature is not None
+        assert entity.native_target_temperature is not None
+
+    for cls in (
+        module.DaikinThermostatClimate,
+        module.DaikinDHWThermostat,
+        module.DaikinRoomThermostatMainClimate,
+    ):
+        assert "native_current_temperature" in cls.__dict__
+        assert "native_target_temperature" in cls.__dict__
+        assert "current_temperature" not in cls.__dict__
+        assert "target_temperature" not in cls.__dict__
+
+    assert not hasattr(thermostat, "_attr_temperature_unit")
+    assert not hasattr(dhw, "_attr_temperature_unit")
+    assert not hasattr(room, "_attr_temperature_unit")
 
 
 def test_thermostat_fan_and_hvac_modes(monkeypatch):
@@ -599,8 +657,8 @@ async def test_dhw_thermostat_modes_and_temps(monkeypatch):
     dhw = _make_dhw_thermostat(module)
     assert dhw.hvac_mode == "heat"
     assert dhw.hvac_action == "heating"
-    assert dhw.current_temperature == pytest.approx(50.0)
-    assert dhw.target_temperature == pytest.approx(45)
+    assert dhw.native_current_temperature == pytest.approx(50.0)
+    assert dhw.native_target_temperature == pytest.approx(45)
     assert dhw.available is True
 
     dhw.coordinator.data["coil_1"] = {"value": 0}
@@ -664,7 +722,7 @@ def test_thermostat_available_requires_core_registers(monkeypatch):
     """Availability tracks the operation-mode and current-temp registers.
 
     Silver ``entity-unavailable``: the stub maps REGISTER_CURRENT_TEMP to
-    ``input_37``, which the fixture seeds, so the thermostat starts
+    ``input_40``, which the fixture seeds, so the thermostat starts
     available and goes unavailable when a core register drops out or
     reports a special (unsupported) value.
     """
@@ -676,7 +734,7 @@ def test_thermostat_available_requires_core_registers(monkeypatch):
     assert thermostat.available is False
 
     thermostat.coordinator.data["holding_3"] = {"value": 0}
-    thermostat.coordinator.data["input_37"] = {"value": 32767}
+    thermostat.coordinator.data["input_40"] = {"value": 32767}
     assert thermostat.available is False
 
 

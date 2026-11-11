@@ -793,7 +793,7 @@ def _delta_t_sensor(sensor_module, data):
         coordinator=coordinator,
         entry=SimpleNamespace(data={}, options={}),
         unique_id="delta_t",
-        unit="K",
+        unit="°C",
         device_class=None,
     )
 

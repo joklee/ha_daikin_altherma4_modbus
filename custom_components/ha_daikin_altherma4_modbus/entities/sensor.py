@@ -450,7 +450,7 @@ def calculate_thermal_heat_output(coordinator):
     """Berechnet die thermische Leistung in W, oder None wenn Daten fehlen.
 
     Fehlende Register (unavailable) dürfen nie als 0 in die Berechnung
-    einfließen: Eine echte 0 L/min bzw. 0 K ist eine gültige Messung,
+    einfließen: Eine echte 0 L/min bzw. 0 °C ist eine gültige Messung,
     fehlende Daten müssen dagegen unknown liefern.
     """
     from ..core.const import (
@@ -490,7 +490,7 @@ def calculate_thermal_heat_output(coordinator):
         flow * abs(delta_t) * 70
     )  # Berechnung thermische Leistung in W
     _LOGGER.debug(f"flow: {flow} L/min")
-    _LOGGER.debug(f"delta_t: {delta_t} K")
+    _LOGGER.debug(f"delta_t: {delta_t} °C")
     _LOGGER.debug(f"thermal_heat_output: {thermal_heat_output} W")
     return round(thermal_heat_output, 2)
 
@@ -790,7 +790,7 @@ class DeltaTSensor(RegisterVersionDeviceInfoMixin, CoordinatorEntity, SensorEnti
         return_temp = get_register_value(return_temp_data)  # °C
 
         if flow_temp is None or return_temp is None:
-            # Fehlende Messwerte dürfen kein Delta-T von 0 K vortäuschen.
+            # Fehlende Messwerte dürfen kein Delta-T von 0 °C vortäuschen.
             _LOGGER.debug(
                 "Delta-T unavailable: flow_temp=%s return_temp=%s",
                 flow_temp,

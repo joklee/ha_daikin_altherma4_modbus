@@ -556,6 +556,12 @@ def _load_integration_module(monkeypatch):
     repair_module = types.ModuleType(repair_name)
     repair_module.async_create_connection_issue = AsyncMock()
     repair_module.async_delete_connection_issue = lambda hass, entry: None
+    repair_module.async_create_unsupported_temperature_unit_issue = lambda hass, entry: (
+        None
+    )
+    repair_module.async_delete_unsupported_temperature_unit_issue = lambda hass, entry: (
+        None
+    )
     repair_module.async_create_abnormality_issue = AsyncMock()
     repair_module.async_delete_abnormality_issue = lambda hass, entry: None
     repair_module.connection_issue_id = lambda entry: (

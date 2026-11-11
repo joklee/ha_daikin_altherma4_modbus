@@ -8,6 +8,7 @@ from unittest import mock
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.ha_daikin_altherma4_modbus.core.const import (
@@ -52,6 +53,22 @@ async def test_config_flow_success(hass, enable_custom_integrations):
         "electric_power_sensor": "sensor.power",
         "demo_mode": True,
     }
+
+
+@pytest.mark.asyncio
+async def test_config_flow_aborts_under_fahrenheit(hass, enable_custom_integrations):
+    """The flow refuses to create an entry while Home Assistant uses °F."""
+    hass.config.units = US_CUSTOMARY_SYSTEM
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_USER},
+    )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "unsupported_temperature_unit"
+    assert result["description_placeholders"] == {"temperature_unit": "°F"}
+    assert hass.config_entries.flow.async_progress() == []
 
 
 @pytest.mark.asyncio

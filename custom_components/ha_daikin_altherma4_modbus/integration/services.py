@@ -587,7 +587,7 @@ if HAS_HA:
             lambda: writer.write_holding_register("holding_54", register_value),
         )
         _LOGGER.debug(
-            "Set heating offset to %s K (value: %s) for entry %s",
+            "Set heating offset to %s °C (value: %s) for entry %s",
             offset,
             register_value,
             config_entry_id,
@@ -610,7 +610,7 @@ if HAS_HA:
             lambda: writer.write_holding_register("holding_55", register_value),
         )
         _LOGGER.debug(
-            "Set cooling offset to %s K (value: %s) for entry %s",
+            "Set cooling offset to %s °C (value: %s) for entry %s",
             offset,
             register_value,
             config_entry_id,

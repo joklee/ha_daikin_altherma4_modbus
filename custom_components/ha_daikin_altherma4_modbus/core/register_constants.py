@@ -2,6 +2,7 @@
 
 try:
     from homeassistant.components.binary_sensor import BinarySensorDeviceClass
+    from homeassistant.components.number import NumberDeviceClass
     from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
     from homeassistant.const import EntityCategory
 except ImportError:  # pragma: no cover - fallback only without Home Assistant
@@ -11,6 +12,10 @@ except ImportError:  # pragma: no cover - fallback only without Home Assistant
     class BinarySensorDeviceClass(StrEnum):
         RUNNING = "running"
         PROBLEM = "problem"
+
+    class NumberDeviceClass(StrEnum):
+        TEMPERATURE = "temperature"
+        TEMPERATURE_DELTA = "temperature_delta"
 
     class SensorDeviceClass:
         TEMPERATURE = "temperature"
@@ -832,7 +837,13 @@ HOLDING_REGISTERS = [
         input_type="holding",
         register_name="holding_54",
         data_type=INT16,
+        # A setpoint *offset* is a temperature difference, not an absolute
+        # temperature: declare it as TEMPERATURE_DELTA so Home Assistant uses
+        # the delta converter (a 2 °C difference -> 3.6 °F) instead of the
+        # absolute one (2 °C -> 35.6 °F). The register value itself is a plain
+        # int in °C.
         unit="°C",
+        device_class=NumberDeviceClass.TEMPERATURE_DELTA,
         min_value=-10,
         max_value=10,
         step=1,
@@ -845,6 +856,7 @@ HOLDING_REGISTERS = [
         register_name="holding_55",
         data_type=INT16,
         unit="°C",
+        device_class=NumberDeviceClass.TEMPERATURE_DELTA,
         min_value=-10,
         max_value=10,
         step=1,
@@ -906,7 +918,9 @@ HOLDING_REGISTERS = [
         input_type="holding",
         register_name="holding_66",
         data_type=INT16,
+        # Temperature difference, see holding_54.
         unit="°C",
+        device_class=NumberDeviceClass.TEMPERATURE_DELTA,
         min_value=-10,
         max_value=10,
         step=1,
@@ -919,6 +933,7 @@ HOLDING_REGISTERS = [
         register_name="holding_67",
         data_type=INT16,
         unit="°C",
+        device_class=NumberDeviceClass.TEMPERATURE_DELTA,
         min_value=-10,
         max_value=10,
         step=1,
@@ -1428,7 +1443,7 @@ CALCULATED_SENSORS = [
         register_name="delta_t",
         data_type=INT16,
         calc_type="delta_t",
-        unit="K",
+        unit="°C",
         device_class=None,
         translation_key="delta_t",
     ),
