@@ -102,6 +102,7 @@ def _load_climate_module(monkeypatch):
         monkeypatch.setitem(sys.modules, stub_name, stub_module)
 
     climate_component_module = types.ModuleType("homeassistant.components.climate")
+
     # Behavior-compatible minimal base: entities are tested through the
     # public property API (native_temperature_unit), so the stub must
     # resolve it like the real ClimateEntity (from _attr_native_temperature_unit).
