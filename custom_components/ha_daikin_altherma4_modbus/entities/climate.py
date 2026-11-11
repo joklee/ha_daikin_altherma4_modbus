@@ -410,7 +410,6 @@ class DaikinThermostatClimate(
                 "quiet_mode": quiet_mode,
                 "offset": None,
                 "calculated_setpoint": None,
-                "current_temperature": self.native_current_temperature,
             }
         offset = offset_data_info["offset"]
         op_mode_raw = offset_data_info["op_mode_raw"]
@@ -428,7 +427,6 @@ class DaikinThermostatClimate(
             "quiet_mode": quiet_mode,
             "offset": round(offset, 2),
             "calculated_setpoint": round(calculated_setpoint, 2),
-            "current_temperature": current_temp,
             "register_config": {
                 "address": REGISTER_OFFSET_HEATING
                 if op_mode_raw != HVAC_COOL
