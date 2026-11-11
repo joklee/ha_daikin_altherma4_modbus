@@ -156,6 +156,12 @@ def _load_config_flow_module(monkeypatch):
     config_entry_utils_module.entry_data_value = entry_value
     monkeypatch.setitem(sys.modules, config_entry_utils_name, config_entry_utils_module)
 
+    # Mock units module (config_flow aborts on a Fahrenheit unit system).
+    units_name = f"{package_name}.integration.units"
+    units_module = types.ModuleType(units_name)
+    units_module.is_fahrenheit = lambda hass: False
+    monkeypatch.setitem(sys.modules, units_name, units_module)
+
     # Create the actual config_flow module by loading the real file
     config_flow_path = (
         Path(__file__).resolve().parents[2]
@@ -177,6 +183,10 @@ def _load_config_flow_module(monkeypatch):
     content = content.replace(
         "from .config_entry_utils import (",
         f"from {config_entry_utils_name} import (",
+    )
+    content = content.replace(
+        "from .units import is_fahrenheit",
+        f"from {units_name} import is_fahrenheit",
     )
     content = content.replace(
         "from ..modbus.modbus_client import RealModbusTcpClient",

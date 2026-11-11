@@ -70,6 +70,9 @@
     },
     "error": {
       "invalid_unit_id": "Unit-ID moet tussen 1 en 247 liggen."
+    },
+    "abort": {
+      "unsupported_temperature_unit": "De Daikin Altherma 4-integratie vereist het metrische eenheidssysteem (°C). Home Assistant is momenteel ingesteld op {temperature_unit}. Wijzig het eenheidssysteem naar metrisch en probeer het opnieuw."
     }
   },
   "options": {
@@ -805,6 +808,10 @@
     "device_abnormality": {
       "title": "Daikin Altherma 4 meldt een afwijking",
       "description": "Uw Daikin Altherma 4 warmtepomp ({entry_name}) meldt een afwijking.\n\nAfwijkingscode: {abnormality_code}\nSubcode: {abnormality_sub_code}\n\nRaadpleeg de documentatie van het apparaat of neem contact op met Daikin support voor details over deze foutcode."
+    },
+    "unsupported_temperature_unit": {
+      "title": "Niet-ondersteunde temperatuureenheid: Fahrenheit",
+      "description": "De Daikin Altherma 4-integratie vereist het metrische eenheidssysteem en ondersteunt Fahrenheit niet.\n\nHome Assistant is momenteel ingesteld op {temperature_unit}, daarom is de integratie voor {entry_name} niet gestart. De Modbus-registers van de warmtepomp zijn in Celsius gedefinieerd en de integratie schrijft onbewerkte registerwaarden, die niet betrouwbaar kunnen worden omgerekend.\n\nWijzig het eenheidssysteem onder Instellingen → Systeem → Algemeen naar metrisch (°C) en herlaad de integratie daarna."
     }
   },
   "selector": {

@@ -242,6 +242,10 @@ def _load_integration_module(monkeypatch):
     # Production defines these as sync functions called without await.
     repair_module.async_create_connection_issue = MagicMock()
     repair_module.async_delete_connection_issue = lambda hass, entry: None
+    repair_module.async_create_unsupported_temperature_unit_issue = MagicMock()
+    repair_module.async_delete_unsupported_temperature_unit_issue = lambda hass, entry: (
+        None
+    )
     repair_module.async_create_abnormality_issue = MagicMock()
     repair_module.async_delete_abnormality_issue = lambda hass, entry: None
     repair_module.connection_issue_id = lambda entry: (

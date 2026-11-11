@@ -70,6 +70,9 @@
     },
     "error": {
       "invalid_unit_id": "Unit ID must be between 1 and 247."
+    },
+    "abort": {
+      "unsupported_temperature_unit": "The Daikin Altherma 4 integration requires the metric unit system (°C). Home Assistant is currently configured for {temperature_unit}. Change the unit system to metric and try again."
     }
   },
   "options": {
@@ -805,6 +808,10 @@
     "device_abnormality": {
       "title": "Daikin Altherma 4 reports abnormality",
       "description": "Your Daikin Altherma 4 heat pump ({entry_name}) is reporting an abnormality.\n\nAbnormality code: {abnormality_code}\nSub code: {abnormality_sub_code}\n\nPlease check the device documentation or contact Daikin support for details on this error code."
+    },
+    "unsupported_temperature_unit": {
+      "title": "Unsupported temperature unit: Fahrenheit",
+      "description": "The Daikin Altherma 4 integration requires the metric unit system and does not support Fahrenheit.\n\nHome Assistant is currently configured for {temperature_unit}, so the integration was not started for {entry_name}. The heat pump's Modbus registers are defined in Celsius and the integration writes raw register values, which cannot be converted reliably.\n\nChange the unit system under Settings → System → General to metric (°C), then reload the integration."
     }
   },
   "selector": {

@@ -70,6 +70,9 @@
     },
     "error": {
       "invalid_unit_id": "Die Unit-ID muss zwischen 1 und 247 liegen."
+    },
+    "abort": {
+      "unsupported_temperature_unit": "Die Daikin Altherma 4 Integration setzt das metrische Einheitensystem (°C) voraus. Home Assistant ist derzeit auf {temperature_unit} eingestellt. Stelle das Einheitensystem auf metrisch um und versuche es erneut."
     }
   },
   "options": {
@@ -789,6 +792,10 @@
     "device_abnormality": {
       "title": "Daikin Altherma 4 meldet einen Fehler",
       "description": "Ihre Daikin Altherma 4 Wärmepumpe ({entry_name}) meldet einen Fehler.\n\nFehlercode: {abnormality_code}\nUntercode: {abnormality_sub_code}\n\nBitte überprüfen Sie die Gerätedokumentation oder kontaktieren Sie den Daikin-Support für Details zu diesem Fehlercode."
+    },
+    "unsupported_temperature_unit": {
+      "title": "Nicht unterstützte Temperatureinheit: Fahrenheit",
+      "description": "Die Daikin Altherma 4 Integration setzt das metrische Einheitensystem voraus und unterstützt Fahrenheit nicht.\n\nHome Assistant ist derzeit auf {temperature_unit} eingestellt, daher wurde die Integration für {entry_name} nicht gestartet. Die Modbus-Register der Wärmepumpe sind in Celsius definiert und die Integration schreibt Rohwerte in die Register, die nicht zuverlässig umgerechnet werden können.\n\nStelle das Einheitensystem unter Einstellungen → System → Allgemein auf metrisch (°C) um und lade die Integration anschließend neu."
     }
   },
   "selector": {

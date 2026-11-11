@@ -7,6 +7,10 @@ This file lets the *real* Home Assistant climate component add the real
 entities to the state machine (demo-mode entry, no HA stubs) and checks
 the resulting rendered state values: if an implementation used the wrong
 API or unit, the attributes would be missing or mis-converted here.
+
+Fahrenheit is deliberately not exercised here: the integration blocks setup
+under a Fahrenheit unit system (see ``tests/ha/test_setup_failure_paths.py``),
+so every loaded entity always renders Celsius.
 """
 
 from unittest.mock import MagicMock
@@ -136,9 +140,7 @@ async def test_ha_renders_room_thermostat_native_temperatures(
     """Room thermostat limits and setpoints render through the state machine."""
     await _setup_with_deterministic_data(hass)
 
-    state = hass.states.get(
-        _entity_id(hass, f"{DOMAIN}_room_thermostat_main_climate")
-    )
+    state = hass.states.get(_entity_id(hass, f"{DOMAIN}_room_thermostat_main_climate"))
     assert state.state == "heat"
 
     attrs = state.attributes

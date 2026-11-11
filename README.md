@@ -46,6 +46,7 @@
 4. **Network cable (RJ45)** connected between your heat pump and network
 5. **Modbus TCP enabled** on your heat pump (see activation instructions below)
 6. **Home Assistant 2026.11 or higher** (the integration is installed through the built-in **Marketplace** and uses HA's shared `modbus` component)
+7. **Metric unit system (°C)** — the integration writes raw Celsius register values and does not support Fahrenheit. Setup is blocked with a repair issue while Home Assistant is configured for °F.
 
 ---
 

@@ -14,6 +14,7 @@ _LOGGER = logging.getLogger(__name__)
 # Issue IDs
 ISSUE_CONNECTION_LOST = "connection_lost"
 ISSUE_DEVICE_ABNORMALITY = "device_abnormality"
+ISSUE_UNSUPPORTED_TEMPERATURE_UNIT = "unsupported_temperature_unit"
 
 
 def connection_issue_id(entry) -> str:
@@ -24,6 +25,11 @@ def connection_issue_id(entry) -> str:
 def abnormality_issue_id(entry) -> str:
     """Return the abnormality issue id for a config entry."""
     return f"{ISSUE_DEVICE_ABNORMALITY}_{entry.entry_id}"
+
+
+def unsupported_temperature_unit_issue_id(entry) -> str:
+    """Return the unsupported-unit issue id for a config entry."""
+    return f"{ISSUE_UNSUPPORTED_TEMPERATURE_UNIT}_{entry.entry_id}"
 
 
 def abnormality_issue_pattern(entry) -> str:
@@ -93,6 +99,40 @@ def async_delete_connection_issue(hass, entry) -> None:
         entry: Config entry
     """
     ir.async_delete_issue(hass, DOMAIN, connection_issue_id(entry))
+
+
+def async_create_unsupported_temperature_unit_issue(hass, entry) -> None:
+    """Create a repair issue when Home Assistant uses Fahrenheit.
+
+    The integration is blocked in that case (setup raises
+    ``ConfigEntryError``), so the issue explains why no entities exist and
+    what the user has to change.
+    """
+    issue_id = unsupported_temperature_unit_issue_id(entry)
+    _create_issue(
+        hass,
+        entry,
+        issue_id,
+        is_fixable=False,
+        is_persistent=False,
+        severity=IssueSeverity.ERROR,
+        translation_key=ISSUE_UNSUPPORTED_TEMPERATURE_UNIT,
+        translation_placeholders={
+            "entry_id": entry.entry_id,
+            "entry_name": getattr(entry, "title", None) or entry.entry_id,
+            "temperature_unit": str(hass.config.units.temperature_unit),
+        },
+    )
+    _LOGGER.error(
+        "Created unsupported temperature unit issue %s: %s",
+        issue_id,
+        hass.config.units.temperature_unit,
+    )
+
+
+def async_delete_unsupported_temperature_unit_issue(hass, entry) -> None:
+    """Delete the unsupported-unit repair issue after a metric setup."""
+    ir.async_delete_issue(hass, DOMAIN, unsupported_temperature_unit_issue_id(entry))
 
 
 def async_create_abnormality_issue(

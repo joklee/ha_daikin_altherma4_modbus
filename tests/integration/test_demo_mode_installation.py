@@ -278,6 +278,14 @@ async def test_demo_mode_installation(monkeypatch):
     from unittest.mock import MagicMock
 
     monkeypatch.setattr(integration, "async_delete_connection_issue", MagicMock())
+    monkeypatch.setattr(
+        integration,
+        "async_create_unsupported_temperature_unit_issue",
+        MagicMock(),
+    )
+    monkeypatch.setattr(
+        integration, "async_delete_unsupported_temperature_unit_issue", MagicMock()
+    )
 
     hass = SimpleNamespace(
         data={},
@@ -339,6 +347,14 @@ async def test_demo_mode_skips_connection_test(monkeypatch):
     from unittest.mock import MagicMock
 
     monkeypatch.setattr(integration, "async_delete_connection_issue", MagicMock())
+    monkeypatch.setattr(
+        integration,
+        "async_create_unsupported_temperature_unit_issue",
+        MagicMock(),
+    )
+    monkeypatch.setattr(
+        integration, "async_delete_unsupported_temperature_unit_issue", MagicMock()
+    )
 
     hass = SimpleNamespace(
         data={},
