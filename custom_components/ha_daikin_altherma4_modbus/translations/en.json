@@ -966,7 +966,7 @@
         },
         "hysteresis": {
           "name": "Hysteresis",
-          "description": "Finish below target by this amount in K (0-5, default 0.5)."
+          "description": "Finish below target by this amount in °C (0-5, default 0.5)."
         }
       }
     },
@@ -986,7 +986,7 @@
     },
     "set_heating_offset": {
       "name": "Set heating offset",
-      "description": "Set the weather-dependent heating offset in K (-10 to +10).",
+      "description": "Set the weather-dependent heating offset in °C (-10 to +10).",
       "fields": {
         "config_entry_id": {
           "name": "Config entry",
@@ -994,13 +994,13 @@
         },
         "offset": {
           "name": "Offset",
-          "description": "Heating offset in K (-10 to +10)."
+          "description": "Heating offset in °C (-10 to +10)."
         }
       }
     },
     "set_cooling_offset": {
       "name": "Set cooling offset",
-      "description": "Set the weather-dependent cooling offset in K (-10 to +10).",
+      "description": "Set the weather-dependent cooling offset in °C (-10 to +10).",
       "fields": {
         "config_entry_id": {
           "name": "Config entry",
@@ -1008,7 +1008,7 @@
         },
         "offset": {
           "name": "Offset",
-          "description": "Cooling offset in K (-10 to +10)."
+          "description": "Cooling offset in °C (-10 to +10)."
         }
       }
     },

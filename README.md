@@ -351,17 +351,24 @@ All binary sensors have the **Diagnostic** category.
 | DHW reheat setpoint | 10 | °C | 30 | 85 | – |
 | DHW boost setpoint (Powerful) | 14 | °C | 30 | 85 | Powerful |
 | DHW Single Heat-up Setpoint (Manual) | 16 | °C | 30 | 85 | Manual |
-| Main LWT Heating offset | 54 | °C | -10 | +10 | Weather-dependent |
-| Main LWT Cooling offset | 55 | °C | -10 | +10 | Weather-dependent |
+| Main LWT Heating offset | 54 | °C | -10 | +10 | Weather-dependent (temperature delta) |
+| Main LWT Cooling offset | 55 | °C | -10 | +10 | Weather-dependent (temperature delta) |
 | Imposed power limit | 58 | kW | 0 | 20 | – |
 | Add Heating setpoint | 63 | °C | 3 | 85 | – |
 | Add Cooling setpoint | 64 | °C | 3 | 85 | – |
-| Add LWT Heating offset | 66 | °C | -10 | +10 | Weather-dependent |
-| Add LWT Cooling offset | 67 | °C | -10 | +10 | Weather-dependent |
+| Add LWT Heating offset | 66 | °C | -10 | +10 | Weather-dependent (temperature delta) |
+| Add LWT Cooling offset | 67 | °C | -10 | +10 | Weather-dependent (temperature delta) |
 | Room Heating setpoint Main (Fine) | 76 | °C | 12 | 30 | Temp16 |
 | Room Cooling setpoint Main (Fine) | 77 | °C | 12 | 35 | Temp16 |
 | Room Heating setpoint Add (Fine) | 78 | °C | 12 | 30 | Temp16 |
 | Room Cooling setpoint Add (Fine) | 79 | °C | 12 | 35 | Temp16 |
+
+The four LWT setpoint offsets (54/55/66/67) are exposed as
+`NumberDeviceClass.TEMPERATURE_DELTA` in °C: `2` means a difference of
+2 °C, not an absolute temperature of 2 °C. Home Assistant therefore never
+applies the absolute temperature conversion to them (which would turn 2 into
+35.6 °F); if you explicitly select °F as the entity unit it uses the delta
+conversion instead (2 °C ↔ 3.6 °F).
 
 ### Select Entities
 
@@ -396,7 +403,7 @@ thermostats use their own DHW registers instead.
 |--------|------|-------------|------------|-------------|
 | Thermal Heat Output | W | power | measurement | `Flow rate × |ΔT| × 70` |
 | Coefficient of Performance | CoP | – | – | `Heat output / Electric power` |
-| Delta-T | K | – | measurement | `Leaving water − Return water` |
+| Delta-T | °C | – | measurement | `Leaving water − Return water` |
 | Last Compressor Run | – | timestamp | – | Timestamp of last compressor start |
 | Last Defrost | – | timestamp | – | Timestamp of last defrost cycle |
 | Last Booster Heater | – | timestamp | – | Timestamp of last auxiliary heater activation |
@@ -454,10 +461,10 @@ The integration provides the following Home Assistant services.
 | `set_quiet_mode` | Set quiet/night mode | `quiet_mode` | `off`, `on (automatic)`, `on (manual)` |
 | `set_dhw_booster_mode` | DHW booster (Powerful) | `booster_mode` | `true`, `false` |
 | `set_dhw_single_heatup` | DHW one-time heat-up | `single_heatup`, `setpoint` | `true`, `false`; 30-85°C (optional) |
-| `start_dhw_single_heatup` | DHW one-time heat-up to target with timeout (background run, fires `..._dhw_single_heatup_finished`) | `target_temperature`, `timeout`, `hysteresis` | 30-85°C; 1 min-6 h (default 2 h); 0-5 K (default 0.5) |
+| `start_dhw_single_heatup` | DHW one-time heat-up to target with timeout (background run, fires `..._dhw_single_heatup_finished`) | `target_temperature`, `timeout`, `hysteresis` | 30-85°C; 1 min-6 h (default 2 h); 0-5 °C (default 0.5) |
 | `set_power_limit` | Imposed power limit | `power_limit` | 0-20 kW |
-| `set_heating_offset` | Weather-dependent heating offset | `offset` | -10 to +10 K |
-| `set_cooling_offset` | Weather-dependent cooling offset | `offset` | -10 to +10 K |
+| `set_heating_offset` | Weather-dependent heating offset | `offset` | -10 to +10 °C |
+| `set_cooling_offset` | Weather-dependent cooling offset | `offset` | -10 to +10 °C |
 | `set_room_heating_setpoint` | Room thermostat heating setpoint | `setpoint` | 12-30°C |
 | `set_room_cooling_setpoint` | Room thermostat cooling setpoint | `setpoint` | 12-35°C |
 | `set_additional_zone_setpoint` | Additional zone setpoint | `setpoint` | 3-85°C |

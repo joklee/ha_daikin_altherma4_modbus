@@ -61,6 +61,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 enum_map,
                 entity_category,
                 translation_key=translation_key,
+                device_class=getattr(item, "device_class", None),
             )
         )
 
@@ -85,6 +86,7 @@ class DaikinNumber(RegisterVersionDeviceInfoMixin, CoordinatorEntity, NumberEnti
         enum_map=None,
         entity_category=None,
         translation_key=None,
+        device_class=None,
     ):
         super().__init__(coordinator)
 
@@ -99,6 +101,7 @@ class DaikinNumber(RegisterVersionDeviceInfoMixin, CoordinatorEntity, NumberEnti
         self._attr_native_min_value = min_v
         self._attr_native_max_value = max_v
         self._attr_native_step = step
+        self._attr_device_class = device_class
         self._attr_entity_category = entity_category
         self._attr_device_info = HOLDING_DEVICE_INFO
         self._attr_translation_key = translation_key

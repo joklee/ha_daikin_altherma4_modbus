@@ -950,7 +950,7 @@
         },
         "hysteresis": {
           "name": "Hysterese",
-          "description": "Um diesen Betrag in K unter dem Ziel beenden (0–5, Standard 0,5)."
+          "description": "Um diesen Betrag in °C unter dem Ziel beenden (0–5, Standard 0,5)."
         }
       }
     },
@@ -970,7 +970,7 @@
     },
     "set_heating_offset": {
       "name": "Heizungsverschiebung setzen",
-      "description": "Witterungsgeführte Heizungsverschiebung in K setzen (-10 bis +10).",
+      "description": "Witterungsgeführte Heizungsverschiebung in °C setzen (-10 bis +10).",
       "fields": {
         "config_entry_id": {
           "name": "Konfigurationseintrag",
@@ -978,13 +978,13 @@
         },
         "offset": {
           "name": "Verschiebung",
-          "description": "Heizungsverschiebung in K (-10 bis +10)."
+          "description": "Heizungsverschiebung in °C (-10 bis +10)."
         }
       }
     },
     "set_cooling_offset": {
       "name": "Kühlungsverschiebung setzen",
-      "description": "Witterungsgeführte Kühlungsverschiebung in K setzen (-10 bis +10).",
+      "description": "Witterungsgeführte Kühlungsverschiebung in °C setzen (-10 bis +10).",
       "fields": {
         "config_entry_id": {
           "name": "Konfigurationseintrag",
@@ -992,7 +992,7 @@
         },
         "offset": {
           "name": "Verschiebung",
-          "description": "Kühlungsverschiebung in K (-10 bis +10)."
+          "description": "Kühlungsverschiebung in °C (-10 bis +10)."
         }
       }
     },

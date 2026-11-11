@@ -966,7 +966,7 @@
         },
         "hysteresis": {
           "name": "Hysterese",
-          "description": "Eindig dit aantal K onder het doel (0-5, standaard 0,5)."
+          "description": "Eindig dit aantal °C onder het doel (0-5, standaard 0,5)."
         }
       }
     },
@@ -986,7 +986,7 @@
     },
     "set_heating_offset": {
       "name": "Verwarmingsoffset instellen",
-      "description": "Stel de weersafhankelijke verwarmingsoffset in K in (-10 tot +10).",
+      "description": "Stel de weersafhankelijke verwarmingsoffset in °C in (-10 tot +10).",
       "fields": {
         "config_entry_id": {
           "name": "Configuratie-item",
@@ -994,13 +994,13 @@
         },
         "offset": {
           "name": "Offset",
-          "description": "Verwarmingsoffset in K (-10 tot +10)."
+          "description": "Verwarmingsoffset in °C (-10 tot +10)."
         }
       }
     },
     "set_cooling_offset": {
       "name": "Koelingsoffset instellen",
-      "description": "Stel de weersafhankelijke koelingsoffset in K in (-10 tot +10).",
+      "description": "Stel de weersafhankelijke koelingsoffset in °C in (-10 tot +10).",
       "fields": {
         "config_entry_id": {
           "name": "Configuratie-item",
@@ -1008,7 +1008,7 @@
         },
         "offset": {
           "name": "Offset",
-          "description": "Koelingsoffset in K (-10 tot +10)."
+          "description": "Koelingsoffset in °C (-10 tot +10)."
         }
       }
     },

@@ -48,6 +48,12 @@ def _load_number_module(monkeypatch):
     # Mock homeassistant components
     number_component = types.ModuleType("homeassistant.components.number")
     number_component.NumberEntity = type("NumberEntity", (), {})
+
+    class NumberDeviceClass:
+        TEMPERATURE = "temperature"
+        TEMPERATURE_DELTA = "temperature_delta"
+
+    number_component.NumberDeviceClass = NumberDeviceClass
     monkeypatch.setitem(
         sys.modules, "homeassistant.components.number", number_component
     )
@@ -624,6 +630,12 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
     # Mock homeassistant components
     number_component = types.ModuleType("homeassistant.components.number")
     number_component.NumberEntity = type("NumberEntity", (), {})
+
+    class NumberDeviceClass:
+        TEMPERATURE = "temperature"
+        TEMPERATURE_DELTA = "temperature_delta"
+
+    number_component.NumberDeviceClass = NumberDeviceClass
     monkeypatch.setitem(
         sys.modules, "homeassistant.components.number", number_component
     )
