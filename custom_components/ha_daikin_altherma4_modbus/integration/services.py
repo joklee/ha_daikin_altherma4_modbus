@@ -73,6 +73,19 @@ EVENT_DHW_SINGLE_HEATUP_FINISHED = (
 # write ever targets a torn-down device.
 _SINGLE_HEATUP_TASKS: dict = {}
 
+# Per-entry locks serializing start/cancel of single heat-up runs so the
+# "already running" check and task registration are atomic.
+_SINGLE_HEATUP_LOCKS: dict = {}
+
+
+def _single_heatup_lock(config_entry_id: str) -> asyncio.Lock:
+    """Return the per-entry lock for single heat-up start/cancel."""
+    lock = _SINGLE_HEATUP_LOCKS.get(config_entry_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _SINGLE_HEATUP_LOCKS[config_entry_id] = lock
+    return lock
+
 # Operation mode mapping for service calls (lowercase keys for service API)
 OPERATION_MODE_MAP = {
     "off": HVAC_OFF,
@@ -897,61 +910,62 @@ if HAS_HA:
         manager = runtime_data.manager
         writer = runtime_data.coordinator.data_manager
 
-        running = _SINGLE_HEATUP_TASKS.get(config_entry_id)
-        if running is not None and not running.done():
-            raise ServiceValidationError(
-                translation_domain=DOMAIN,
-                translation_key="single_heatup_already_running",
-                translation_placeholders={"config_entry_id": config_entry_id},
-            )
+        async with _single_heatup_lock(config_entry_id):
+            running = _SINGLE_HEATUP_TASKS.get(config_entry_id)
+            if running is not None and not running.done():
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="single_heatup_already_running",
+                    translation_placeholders={"config_entry_id": config_entry_id},
+                )
 
-        dhw_coil_address = _get_coil_address(REGISTER_DHW_HVAC_MODE)
-        dhw_state = _dhw_enabled(manager)
-        restore_dhw_off = dhw_state is False
-        if restore_dhw_off:
+            dhw_coil_address = _get_coil_address(REGISTER_DHW_HVAC_MODE)
+            dhw_state = _dhw_enabled(manager)
+            restore_dhw_off = dhw_state is False
+            if restore_dhw_off:
+                await _guarded_write(
+                    REGISTER_DHW_HVAC_MODE,
+                    lambda: writer.write_coil_register(dhw_coil_address, True),
+                )
+                _LOGGER.debug(
+                    "Enabled DHW for single heat-up for entry %s",
+                    config_entry_id,
+                )
+            elif dhw_state is None:
+                _LOGGER.debug(
+                    "DHW state unknown for entry %s, leaving it untouched",
+                    config_entry_id,
+                )
+
+            register_value = int(target / 0.01)
             await _guarded_write(
-                REGISTER_DHW_HVAC_MODE,
-                lambda: writer.write_coil_register(dhw_coil_address, True),
+                "holding_16",
+                lambda: writer.write_holding_register("holding_16", register_value),
             )
-            _LOGGER.debug(
-                "Enabled DHW for single heat-up for entry %s",
-                config_entry_id,
-            )
-        elif dhw_state is None:
-            _LOGGER.debug(
-                "DHW state unknown for entry %s, leaving it untouched",
-                config_entry_id,
+            await _guarded_write(
+                "holding_15",
+                lambda: writer.write_holding_register("holding_15", 1),
             )
 
-        register_value = int(target / 0.01)
-        await _guarded_write(
-            "holding_16",
-            lambda: writer.write_holding_register("holding_16", register_value),
-        )
-        await _guarded_write(
-            "holding_15",
-            lambda: writer.write_holding_register("holding_15", 1),
-        )
-
-        task = hass.async_create_task(
-            _run_dhw_single_heatup(
-                hass,
-                config_entry_id,
-                manager,
-                writer,
-                target,
-                timeout_s,
-                hysteresis,
-                restore_dhw_off,
-                dhw_coil_address,
-            ),
-            name=f"{DOMAIN}_dhw_single_heatup_{config_entry_id}",
-        )
-        _SINGLE_HEATUP_TASKS[config_entry_id] = task
-        if task.done():
-            # Eager task already finalized before registration (stop
-            # written, event fired); drop the stale handle.
-            _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
+            task = hass.async_create_task(
+                _run_dhw_single_heatup(
+                    hass,
+                    config_entry_id,
+                    manager,
+                    writer,
+                    target,
+                    timeout_s,
+                    hysteresis,
+                    restore_dhw_off,
+                    dhw_coil_address,
+                ),
+                name=f"{DOMAIN}_dhw_single_heatup_{config_entry_id}",
+            )
+            _SINGLE_HEATUP_TASKS[config_entry_id] = task
+            if task.done():
+                # Eager task already finalized before registration (stop
+                # written, event fired); drop the stale handle.
+                _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
         _LOGGER.debug(
             "Started DHW single heat-up to %s°C for entry %s (timeout %ss)",
             target,
@@ -961,20 +975,21 @@ if HAS_HA:
 
     async def async_cancel_single_heatup(config_entry_id: str) -> None:
         """Cancel a running DHW single heat-up, if any (used on unload)."""
-        task = _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
-        if task is None or task.done():
-            return
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
-        except Exception as err:
-            _LOGGER.debug(
-                "DHW single heat-up task for entry %s ended with: %s",
-                config_entry_id,
-                err,
-            )
+        async with _single_heatup_lock(config_entry_id):
+            task = _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
+            if task is None or task.done():
+                return
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            except Exception as err:
+                _LOGGER.debug(
+                    "DHW single heat-up task for entry %s ended with: %s",
+                    config_entry_id,
+                    err,
+                )
 
 else:  # pragma: no cover - dummies only without Home Assistant
     # Dummy functions for testing imports
