@@ -125,7 +125,8 @@ async def test_input_blocks_invalid_address_and_generic_error():
             )
         )
     )
-    assert await repo.read_input_blocks() == []
+    with pytest.raises(ModbusReadException):
+        await repo.read_input_blocks()
 
     repo, _ = _repository(
         _client(
@@ -142,7 +143,8 @@ async def test_input_blocks_error_result_object():
     repo, _ = _repository(
         _client(read_input_registers=AsyncMock(return_value=_ErrorResponse()))
     )
-    assert await repo.read_input_blocks() == []
+    with pytest.raises(ModbusReadException):
+        await repo.read_input_blocks()
 
 
 async def test_discrete_without_client():

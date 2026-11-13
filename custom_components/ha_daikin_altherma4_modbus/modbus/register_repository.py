@@ -436,31 +436,27 @@ class ModbusRegisterRepository:
         transient link loss recovers on the next poll cycle.
         """
         for start, count in _INPUT_FALLBACK_BLOCKS:
+            end = start + count - 1
             try:
                 result = await client.read_input_registers(start, count)
             except ModbusInvalidAddressException as err:
-                _LOGGER.warning(
-                    "Input fallback block %s-%s refused (illegal data address): %s",
-                    start,
-                    start + count - 1,
-                    err,
-                )
-                continue
+                raise ModbusReadException(
+                    f"Required input register block {start}-{end} refused "
+                    f"(illegal data address): {err}"
+                ) from err
             except _READ_EXCEPTIONS:
                 raise
             classification = _classify_error_result(self._session, result)
             if classification is None:
-                blocks.append((result, start, start + count - 1, start))
+                blocks.append((result, start, end, start))
             elif classification in ("illegal_address", "illegal_function"):
-                _LOGGER.warning(
-                    "Input fallback block %s-%s rejected by device (%s)",
-                    start,
-                    start + count - 1,
-                    classification,
+                raise ModbusReadException(
+                    f"Required input register block {start}-{end} refused "
+                    f"({classification}): {result}"
                 )
             else:
                 raise ModbusReadException(
-                    f"Invalid response reading input fallback block {start}-{start + count - 1}: {result}"
+                    f"Invalid response reading input fallback block {start}-{end}: {result}"
                 )
 
     async def read_discrete_inputs(self) -> Any | None:

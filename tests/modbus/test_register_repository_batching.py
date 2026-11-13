@@ -374,8 +374,8 @@ async def test_input_registers_fall_back_to_splits_on_failure(
     assert session.reconnect_count == 0, desc
 
 
-async def test_input_registers_partial_fallback_keeps_reachable_data() -> None:
-    """A refused first split must not discard the second split's data."""
+async def test_input_registers_required_split_refusal_propagates() -> None:
+    """A refused required split fails the poll even if the other works."""
     repository, client, _session = _repository(
         [
             ModbusInvalidAddressException("range rejected"),
@@ -384,21 +384,22 @@ async def test_input_registers_partial_fallback_keeps_reachable_data() -> None:
         ]
     )
 
-    blocks = await repository.read_input_blocks()
+    with pytest.raises(ModbusReadException):
+        await repository.read_input_blocks()
 
-    assert client.calls == [(21, 67), *_INPUT_FALLBACK_CALLS]
-    assert _block_metadata(blocks) == ((54, 87, 54),)
+    # First required split refused -> second split is never attempted.
+    assert client.calls == [(21, 67), (21, 33)]
 
 
-async def test_input_registers_total_failure_returns_no_blocks() -> None:
-    """When batch and both splits are refused, no fabricated data is returned."""
+async def test_input_registers_total_failure_propagates() -> None:
+    """When batch and both splits are refused, the poll fails loudly."""
     boom = ModbusInvalidAddressException("range rejected")
     repository, client, _session = _repository([boom, boom, boom])
 
-    blocks = await repository.read_input_blocks()
+    with pytest.raises(ModbusReadException):
+        await repository.read_input_blocks()
 
-    assert client.calls == [(21, 67), *_INPUT_FALLBACK_CALLS]
-    assert blocks == []
+    assert client.calls == [(21, 67), (21, 33)]
 
 
 async def test_input_registers_communication_failure_propagates() -> None:
