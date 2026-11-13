@@ -113,7 +113,8 @@ def test_signed_conversion_and_scaling_helpers():
 
 async def test_input_blocks_without_client():
     repo, _ = _repository(None)
-    assert await repo.read_input_blocks() == []
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_input_blocks()
 
 
 async def test_input_blocks_invalid_address_and_generic_error():
@@ -146,7 +147,8 @@ async def test_input_blocks_error_result_object():
 
 async def test_discrete_without_client():
     repo, _ = _repository(None)
-    assert await repo.read_discrete_inputs() is None
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_discrete_inputs()
 
 
 @pytest.mark.parametrize("code", ["exception_code=2", "exception_code=1"])
@@ -220,7 +222,8 @@ async def test_discrete_retry_error_result_returns_none():
 
 async def test_coils_without_client_error_result_and_invalid_address():
     repo, _ = _repository(None)
-    assert await repo.read_coils() is None
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_coils()
 
     repo, _ = _repository(
         _client(read_coils=AsyncMock(return_value=_ErrorResponse("other")))
@@ -263,7 +266,8 @@ async def test_coils_retry_success_and_failure():
 
 async def test_holding_blocks_without_client():
     repo, _ = _repository(None)
-    assert await repo.read_holding_blocks() == []
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_holding_blocks()
 
 
 async def test_holding_blocks_fallback_on_error_result():
@@ -297,12 +301,10 @@ async def test_holding_blocks_fallback_merges_chunks():
     ]
 
 
-async def test_holding_block_client_none_and_optional_skip():
+async def test_holding_block_client_none_raises():
     repo = ModbusRegisterRepository(SimpleNamespace(client=None))
-    assert (
+    with pytest.raises(ModbusConnectionException):
         await repo._read_holding_register_block(1, 25, 1, 25, 1, "Block 1", False)
-        is None
-    )
 
 
 async def test_holding_retry_without_client():

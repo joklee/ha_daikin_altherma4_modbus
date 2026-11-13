@@ -337,8 +337,9 @@ class ModbusRegisterRepository:
         """Read configured input-register blocks."""
         client = self._session.client
         if client is None:
-            _LOGGER.error("Modbus client is None, cannot read input registers")
-            return []
+            raise ModbusConnectionException(
+                "Modbus client is None, cannot read input registers"
+            )
 
         blocks: list[tuple[Any, int, int, int]] = []
 
@@ -475,8 +476,9 @@ class ModbusRegisterRepository:
         """
         client = self._session.client
         if client is None:
-            _LOGGER.error("Modbus client is None, cannot read discrete inputs")
-            return None
+            raise ModbusConnectionException(
+                "Modbus client is None, cannot read discrete inputs"
+            )
 
         try:
             read_start = time.time()
@@ -519,8 +521,9 @@ class ModbusRegisterRepository:
         """Read coils with one reconnect retry."""
         client = self._session.client
         if client is None:
-            _LOGGER.error("Modbus client is None, cannot read coils")
-            return None
+            raise ModbusConnectionException(
+                "Modbus client is None, cannot read coils"
+            )
 
         try:
             read_start = time.time()
@@ -550,8 +553,9 @@ class ModbusRegisterRepository:
         """Read configured holding-register blocks."""
         client = self._session.client
         if client is None:
-            _LOGGER.error("Modbus client is None, cannot read holding registers")
-            return []
+            raise ModbusConnectionException(
+                "Modbus client is None, cannot read holding registers"
+            )
 
         data_blocks: list[tuple[Any, int, int, int]] = []
 
@@ -922,7 +926,9 @@ class ModbusRegisterRepository:
         """Read one holding-register block with reconnect retry."""
         client = self._session.client
         if client is None:
-            return None
+            raise ModbusConnectionException(
+                f"Cannot read holding register {block_name}: no Modbus client"
+            )
 
         try:
             block_start = time.time()
