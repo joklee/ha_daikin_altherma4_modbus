@@ -12,6 +12,7 @@ from ..common import (
     is_entity_available,
     is_unavailable_value,
     safe_write_register,
+    scaled_value_to_register,
 )
 from ..core.const import DOMAIN
 from ..core.register_constants import HOLDING_DEVICE_INFO, HOLDING_REGISTERS
@@ -166,7 +167,7 @@ class DaikinNumber(RegisterVersionDeviceInfoMixin, CoordinatorEntity, NumberEnti
     async def async_set_native_value(self, value):
         # Use pre-computed scale from __init__
         scale = self._scale
-        raw = int(value / scale)
+        raw = scaled_value_to_register(value, scale)
 
         # Get register configuration for range clamping
         register_config = get_register_config(self._register_name)

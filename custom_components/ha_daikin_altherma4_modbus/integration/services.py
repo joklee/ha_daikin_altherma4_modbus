@@ -20,6 +20,7 @@ from ..common.helpers import (
     get_register_scale,
     get_register_value,
     is_unavailable_value,
+    scaled_value_to_register,
 )
 from ..core.const import (
     DOMAIN,
@@ -543,7 +544,7 @@ if HAS_HA:
 
         if setpoint is not None:
             # Convert setpoint to register value (scale by 0.01)
-            register_value = int(setpoint / 0.01)
+            register_value = scaled_value_to_register(setpoint, 0.01)
             await _guarded_write(
                 "holding_16",
                 lambda: writer.write_holding_register("holding_16", register_value),
@@ -589,7 +590,7 @@ if HAS_HA:
         writer = runtime_data.coordinator.data_manager
 
         # Convert power limit to register value (scale by 0.001)
-        register_value = int(power_limit / 0.001)
+        register_value = scaled_value_to_register(power_limit, 0.001)
         await _guarded_write(
             "holding_58",
             lambda: writer.write_holding_register("holding_58", register_value),
@@ -612,7 +613,7 @@ if HAS_HA:
         writer = runtime_data.coordinator.data_manager
 
         # Convert offset to register value (scale by 0.01)
-        register_value = int(offset / 0.01)
+        register_value = scaled_value_to_register(offset, 0.01)
         await _guarded_write(
             "holding_54",
             lambda: writer.write_holding_register("holding_54", register_value),
@@ -635,7 +636,7 @@ if HAS_HA:
         writer = runtime_data.coordinator.data_manager
 
         # Convert offset to register value (scale by 0.01)
-        register_value = int(offset / 0.01)
+        register_value = scaled_value_to_register(offset, 0.01)
         await _guarded_write(
             "holding_55",
             lambda: writer.write_holding_register("holding_55", register_value),
@@ -658,7 +659,7 @@ if HAS_HA:
         writer = runtime_data.coordinator.data_manager
 
         # Convert setpoint to register value (scale by 0.01)
-        register_value = int(setpoint / 0.01)
+        register_value = scaled_value_to_register(setpoint, 0.01)
         await _guarded_write(
             "holding_6",
             lambda: writer.write_holding_register("holding_6", register_value),
@@ -681,7 +682,7 @@ if HAS_HA:
         writer = runtime_data.coordinator.data_manager
 
         # Convert setpoint to register value (scale by 0.01)
-        register_value = int(setpoint / 0.01)
+        register_value = scaled_value_to_register(setpoint, 0.01)
         await _guarded_write(
             "holding_7",
             lambda: writer.write_holding_register("holding_7", register_value),
@@ -704,7 +705,7 @@ if HAS_HA:
         writer = runtime_data.coordinator.data_manager
 
         # Convert setpoint to register value (scale by 0.01)
-        register_value = int(setpoint / 0.01)
+        register_value = scaled_value_to_register(setpoint, 0.01)
         await _guarded_write(
             "holding_63",
             lambda: writer.write_holding_register("holding_63", register_value),
@@ -782,7 +783,7 @@ if HAS_HA:
             scale = 1.0
         if scale == 0:
             scale = 1.0
-        return int(round(value / scale))
+        return round(value / scale)
 
     async def _restore_dhw_heatup_setpoint(
         config_entry_id, writer, previous_setpoint
@@ -938,7 +939,7 @@ if HAS_HA:
                 )
 
             previous_setpoint = _dhw_heatup_setpoint(manager)
-            register_value = int(target / 0.01)
+            register_value = scaled_value_to_register(target, 0.01)
             setpoint_written = False
             try:
                 await _guarded_write(

@@ -95,6 +95,9 @@ def _load_number_module(monkeypatch):
 
     common_module.is_unavailable_value = _is_unavailable
     common_module.safe_write_register = AsyncMock()
+    common_module.scaled_value_to_register = lambda value, scale: round(
+        value / scale if scale else value
+    )
     common_module.to_signed_16bit = lambda x: x if x < 32768 else x - 65536
     common_module.to_unsigned_16bit = lambda x: x if x >= 0 else x + 65536
 
@@ -704,6 +707,9 @@ async def test_daikin_number_async_set_native_value_modbus_error(monkeypatch, ca
             return True
 
     common_module.is_unavailable_value = _is_unavailable
+    common_module.scaled_value_to_register = lambda value, scale: round(
+        value / scale if scale else value
+    )
     common_module.to_signed_16bit = lambda x: x if x < 32768 else x - 65536
     common_module.to_unsigned_16bit = lambda x: x if x >= 0 else x + 65536
 
