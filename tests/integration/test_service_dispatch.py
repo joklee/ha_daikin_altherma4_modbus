@@ -211,7 +211,12 @@ async def test_dispatch_start_dhw_single_heatup_via_hass(
         write_coil_register=AsyncMock(return_value=True),
     )
     entry.runtime_data.coordinator.data_manager = writer
-    manager.get_all_data = MagicMock(return_value={"input_43": {"value": 30.0}})
+    manager.get_all_data = MagicMock(
+        return_value={
+            "input_43": {"value": 30.0},
+            "coil_1": {"value": 1},
+        }
+    )
 
     await hass.services.async_call(
         DOMAIN,

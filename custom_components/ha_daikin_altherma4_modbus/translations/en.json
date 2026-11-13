@@ -787,6 +787,9 @@
     "single_heatup_already_running": {
       "message": "DHW single heat-up is already running for entry {config_entry_id}."
     },
+    "single_heatup_dhw_state_unknown": {
+      "message": "DHW state is unknown for entry {config_entry_id}; single heat-up not started."
+    },
     "write_failed": {
       "message": "Failed to {operation_name} {register_type} {register_name}: {error}"
     },

@@ -771,6 +771,9 @@
     "single_heatup_already_running": {
       "message": "WW-Einmalaufheizung läuft bereits für Eintrag {config_entry_id}."
     },
+    "single_heatup_dhw_state_unknown": {
+      "message": "WW-Status für Eintrag {config_entry_id} unbekannt; Einmalaufheizung nicht gestartet."
+    },
     "write_failed": {
       "message": "Fehler beim {operation_name} von {register_type} {register_name}: {error}"
     },

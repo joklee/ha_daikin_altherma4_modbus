@@ -933,9 +933,10 @@ if HAS_HA:
                     config_entry_id,
                 )
             elif dhw_state is None:
-                _LOGGER.debug(
-                    "DHW state unknown for entry %s, leaving it untouched",
-                    config_entry_id,
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="single_heatup_dhw_state_unknown",
+                    translation_placeholders={"config_entry_id": config_entry_id},
                 )
 
             previous_setpoint = _dhw_heatup_setpoint(manager)

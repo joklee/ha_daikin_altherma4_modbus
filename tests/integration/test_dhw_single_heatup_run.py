@@ -70,7 +70,12 @@ def _stub_io(entry, temp):
     )
     entry.runtime_data.coordinator.data_manager = writer
     manager = entry.runtime_data.manager
-    manager.get_all_data = MagicMock(return_value={"input_43": {"value": temp}})
+    manager.get_all_data = MagicMock(
+        return_value={
+            "input_43": {"value": temp},
+            "coil_1": {"value": 1},
+        }
+    )
     return writer, manager
 
 
@@ -254,7 +259,7 @@ async def test_run_without_temperature_reading_waits_for_timeout(
     monkeypatch.setattr(services_module, "_DHW_RUN_STATUS_POLL_INTERVAL", 0.05)
     entry = await _setup_demo(hass)
     writer, manager = _stub_io(entry, temp=None)
-    manager.get_all_data = MagicMock(return_value={})
+    manager.get_all_data = MagicMock(return_value={"coil_1": {"value": 1}})
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
 
@@ -324,24 +329,24 @@ async def test_start_leaves_dhw_on_when_already_on(hass, enable_custom_integrati
     assert events[0].data["outcome"] == "reached"
 
 
-async def test_start_leaves_dhw_untouched_when_state_unknown(
+async def test_start_rejected_when_dhw_state_unknown(
     hass, enable_custom_integrations
 ):
-    """Unknown DHW state: service proceeds without flipping user config."""
+    """Unknown DHW state: start aborts with ServiceValidationError, no writes."""
     entry = await _setup_demo(hass)
-    writer, _ = _stub_io(entry, temp=47.8)
+    writer, manager = _stub_io(entry, temp=47.8)
+    manager.get_all_data = MagicMock(
+        return_value={"input_43": {"value": 47.8}}  # no coil_1 -> unknown
+    )
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
 
-    await async_start_dhw_single_heatup(
-        _call(hass, entry.entry_id, target_temperature=48.0, hysteresis=0.5)
-    )
-    task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
-    if task is not None:
-        await asyncio.wait_for(task, timeout=10)
-    await hass.async_block_till_done()
+    with pytest.raises(ServiceValidationError):
+        await async_start_dhw_single_heatup(
+            _call(hass, entry.entry_id, target_temperature=48.0, hysteresis=0.5)
+        )
 
     writer.write_coil_register.assert_not_called()
-    writer.write_holding_register.assert_any_call("holding_15", 0)
-    assert len(events) == 1
-    assert events[0].data["outcome"] == "reached"
+    writer.write_holding_register.assert_not_called()
+    assert entry.entry_id not in _SINGLE_HEATUP_TASKS
+    assert events == []
