@@ -937,15 +937,46 @@ if HAS_HA:
                     config_entry_id,
                 )
 
+            previous_setpoint = _dhw_heatup_setpoint(manager)
             register_value = int(target / 0.01)
-            await _guarded_write(
-                "holding_16",
-                lambda: writer.write_holding_register("holding_16", register_value),
-            )
-            await _guarded_write(
-                "holding_15",
-                lambda: writer.write_holding_register("holding_15", 1),
-            )
+            setpoint_written = False
+            try:
+                await _guarded_write(
+                    "holding_16",
+                    lambda: writer.write_holding_register(
+                        "holding_16", register_value
+                    ),
+                )
+                setpoint_written = True
+                await _guarded_write(
+                    "holding_15",
+                    lambda: writer.write_holding_register("holding_15", 1),
+                )
+            except Exception:
+                # Roll back every change already applied so a failed start
+                # leaves the device in its previous state.
+                if setpoint_written:
+                    await _restore_dhw_heatup_setpoint(
+                        config_entry_id, writer, previous_setpoint
+                    )
+                if restore_dhw_off:
+                    try:
+                        await writer.write_coil_register(
+                            dhw_coil_address, False
+                        )
+                        _LOGGER.debug(
+                            "Restored DHW off state after failed single "
+                            "heat-up start for entry %s",
+                            config_entry_id,
+                        )
+                    except Exception as restore_err:
+                        _LOGGER.error(
+                            "DHW single heat-up start failed for entry %s "
+                            "and restoring the DHW off state also failed: %s",
+                            config_entry_id,
+                            restore_err,
+                        )
+                raise
 
             task = hass.async_create_task(
                 _run_dhw_single_heatup(
