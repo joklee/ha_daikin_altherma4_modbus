@@ -350,3 +350,33 @@ async def test_start_rejected_when_dhw_state_unknown(
     writer.write_holding_register.assert_not_called()
     assert entry.entry_id not in _SINGLE_HEATUP_TASKS
     assert events == []
+
+
+async def test_run_restore_failure_flagged_in_event(
+    hass, enable_custom_integrations
+):
+    """Failed final restore sets restore_failed in the finish event."""
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=47.8)
+
+    async def flaky_write(register_name, value):
+        if register_name == "holding_15" and value == 0:
+            raise OSError("dead gateway")
+        return True
+
+    writer.write_holding_register = AsyncMock(side_effect=flaky_write)
+    entry.runtime_data.coordinator.data_manager = writer
+    events = []
+    hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
+
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0, hysteresis=0.5)
+    )
+    task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
+    if task is not None:
+        await asyncio.wait_for(task, timeout=10)
+    await hass.async_block_till_done()
+
+    assert len(events) == 1
+    assert events[0].data["outcome"] == "reached"
+    assert events[0].data["restore_failed"] is True

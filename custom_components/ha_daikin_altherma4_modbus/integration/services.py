@@ -849,10 +849,12 @@ if HAS_HA:
             outcome = "cancelled"
             raise
         finally:
+            restore_failed = False
             try:
                 await writer.write_holding_register("holding_15", 0)
             except Exception as err:
-                _LOGGER.debug(
+                restore_failed = True
+                _LOGGER.error(
                     "Could not clear DHW heat-up request for entry %s: %s",
                     config_entry_id,
                     err,
@@ -861,8 +863,9 @@ if HAS_HA:
                 try:
                     await writer.write_coil_register(dhw_coil_address, False)
                 except Exception as err:
-                    _LOGGER.debug(
-                        "Could not restore DHW state for entry %s: %s",
+                    restore_failed = True
+                    _LOGGER.error(
+                        "Could not restore DHW off state for entry %s: %s",
                         config_entry_id,
                         err,
                     )
@@ -874,15 +877,27 @@ if HAS_HA:
                     "outcome": outcome,
                     "target_temperature": target,
                     "current_temperature": current,
+                    "restore_failed": restore_failed,
                 },
             )
-            _LOGGER.info(
-                "DHW single heat-up for entry %s finished: %s (target %s°C, now %s°C)",
-                config_entry_id,
-                outcome,
-                target,
-                current,
-            )
+            if restore_failed:
+                _LOGGER.error(
+                    "DHW single heat-up for entry %s finished: %s but the "
+                    "final restore failed - device state may be inconsistent "
+                    "(target %s°C, now %s°C)",
+                    config_entry_id,
+                    outcome,
+                    target,
+                    current,
+                )
+            else:
+                _LOGGER.info(
+                    "DHW single heat-up for entry %s finished: %s (target %s°C, now %s°C)",
+                    config_entry_id,
+                    outcome,
+                    target,
+                    current,
+                )
 
     async def async_start_dhw_single_heatup(call) -> None:
         """Heat DHW once to a target temperature with timeout (issue #21).
