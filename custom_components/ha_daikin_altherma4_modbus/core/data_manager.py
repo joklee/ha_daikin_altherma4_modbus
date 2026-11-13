@@ -77,19 +77,59 @@ class ModbusDataManager:
         return {}
 
     def _update_coordinator_data(self, register_name: str, value: Any) -> None:
-        """Update coordinator data after successful write operation."""
-        if self.coordinator and register_name in self.coordinator.data:
-            self.coordinator.data.get(register_name, {})["value"] = value
-            self.coordinator.data.get(register_name, {})["last_updated"] = time.time()
-            if hasattr(self.coordinator, "async_set_updated_data"):
-                try:
-                    self.coordinator.async_set_updated_data(
-                        self.coordinator.data.copy()
-                    )
-                except Exception as err:
-                    _LOGGER.warning(
-                        "Failed to notify coordinator of data change: %s", err
-                    )
+        """Update coordinator data after a device-confirmed write.
+
+        Stores the value in the same scaled form as polled data so entities
+        see a consistent state until the post-write refresh read-back
+        confirms (or corrects) it. Never called for unconfirmed writes:
+        callers only invoke this when the Modbus response indicated success.
+        """
+        coordinator = self.coordinator
+        if coordinator is None or register_name not in coordinator.data:
+            return
+        payload = coordinator.data.get(register_name)
+        if payload is None:
+            return
+
+        # Normalize bool coil writes to the 0/1 ints produced by polling.
+        if isinstance(value, bool):
+            value = int(value)
+
+        # Apply the register's scaling so the stored value matches the
+        # format produced by ModbusMappingTransform (e.g. TEMP16 -> °C).
+        register_config = next(
+            (
+                r
+                for r in (*HOLDING_REGISTERS, *COIL_REGISTERS)
+                if getattr(r, "register_name", None) == register_name
+            ),
+            None,
+        )
+        scale = 1
+        data_type = getattr(register_config, "data_type", None)
+        if data_type is not None:
+            scale = getattr(data_type, "scaling", 1) or 1
+        try:
+            scale = float(scale)
+        except (TypeError, ValueError):
+            scale = 1.0
+        stored_value = round(float(value) * scale, 2) if scale != 1 else value
+
+        now = time.time()
+        if isinstance(payload, dict):
+            payload["value"] = stored_value
+            payload["last_updated"] = now
+        else:
+            payload.value = stored_value
+            payload.last_updated = now
+
+        if hasattr(coordinator, "async_set_updated_data"):
+            try:
+                coordinator.async_set_updated_data(coordinator.data.copy())
+            except Exception as err:
+                _LOGGER.warning(
+                    "Failed to notify coordinator of data change: %s", err
+                )
 
     async def fetch_input_registers_data(self) -> StateData:
         """Fetch only input registers."""

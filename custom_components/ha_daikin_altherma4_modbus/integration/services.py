@@ -763,9 +763,9 @@ if HAS_HA:
         """Return the raw holding_16 register value, or None when unknown."""
         try:
             data = manager.get_all_data()
+            register_data = data.get("holding_16")
         except Exception:  # pragma: no cover - defensive
             return None
-        register_data = data.get("holding_16")
         raw = get_register_value(register_data)
         if raw is None or is_unavailable_value(raw):
             return None

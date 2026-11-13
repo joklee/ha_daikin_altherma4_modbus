@@ -177,10 +177,13 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         self.entry = entry
         self.unit_id = unit_id
 
-        # Data manager for coil/holding registers
+        # Data manager for coil/holding registers. All writes are routed
+        # here via UnifiedWriteProxy, so it gets a coordinator reference to
+        # update coordinator.data after device-confirmed writes.
         self.data_manager = ModbusDataManager(
             host, port, demo_mode, hass, entry, unit_id
         )
+        self.data_manager.coordinator = self
 
         self.data = {}
         self._connection_issue_created = False
