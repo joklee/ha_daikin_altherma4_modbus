@@ -267,13 +267,13 @@ async def test_holding_blocks_without_client():
 
 
 async def test_holding_blocks_fallback_on_error_result():
-    """Error-result batch falls back to chunked blocks."""
+    """Error-result batch falls back; a refused required chunk propagates."""
     client = _client(read_holding_registers=AsyncMock(return_value=_ErrorResponse()))
     repo, _ = _repository(client)
-    blocks = await repo.read_holding_blocks()
-    # Fallback chunks return the same error object per chunk -> skipped.
-    assert blocks == []
-    assert client.read_holding_registers.await_count == 1 + 3
+    with pytest.raises(ModbusReadException):
+        await repo.read_holding_blocks()
+    # Big read + first required chunk (1-25) refused -> poll fails.
+    assert client.read_holding_registers.await_count == 1 + 1
 
 
 async def test_holding_blocks_fallback_merges_chunks():
@@ -324,7 +324,8 @@ async def test_holding_retry_error_result_optional_and_required():
     erroneous = _client(read_holding_registers=AsyncMock(return_value=_ErrorResponse()))
     repo, _ = _repository(failing, reconnect_client=erroneous)
     assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", True) is None
-    assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False) is None
+    with pytest.raises(ModbusReadException):
+        await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False)
 
 
 async def test_holding_retry_invalid_address_and_generic_error():
@@ -335,7 +336,9 @@ async def test_holding_retry_invalid_address_and_generic_error():
         )
     )
     repo, _ = _repository(client, reconnect_client=bad)
-    assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False) is None
+    with pytest.raises(ModbusReadException):
+        await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False)
+    assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", True) is None
 
     dead = _client(read_holding_registers=AsyncMock(side_effect=OSError("down")))
     repo, _ = _repository(client, reconnect_client=dead)

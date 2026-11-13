@@ -264,30 +264,27 @@ async def test_optional_chunk_exception_retries_once_and_recovers() -> None:
     assert session.reconnect_count == 1
 
 
-async def test_non_optional_chunk_protocol_error_keeps_remaining_chunks() -> None:
-    """Protocol errors fail silently per block; later chunks still arrive."""
+async def test_required_chunk_protocol_error_propagates() -> None:
+    """A refused required block fails the poll; later chunks are not read."""
     chunks = (_chunk(100, 25), _chunk(300, 25), _chunk(600, 30))
     repository, client, session = _repository(
         [
             _ErrorResponse(),  # big read refused
-            _ErrorResponse(),  # block 1 refused (no retry for errors)
+            _ErrorResponse(),  # block 1 (required) refused
             chunks[1],
             chunks[2],
         ]
     )
 
-    blocks = await repository.read_holding_blocks()
+    with pytest.raises(ModbusReadException):
+        await repository.read_holding_blocks()
 
-    assert client.calls == [_BIG_READ, *_FALLBACK_BLOCKS]
-    assert _flat_registers(blocks) == [
-        *chunks[1].registers,
-        *chunks[2].registers,
-    ]
+    assert client.calls == [_BIG_READ, (1, 25)]
     assert session.reconnect_count == 0
 
 
-async def test_non_optional_exception_retries_once_chain_continues() -> None:
-    """Block-1 exception retries exactly once; remaining chain still runs."""
+async def test_required_chunk_retry_refusal_propagates() -> None:
+    """Block-1 exception retries once; a refused retry fails the poll."""
     chunks = (_chunk(300, 25), _chunk(600, 30))
     repository, client, session = _repository(
         [
@@ -299,15 +296,14 @@ async def test_non_optional_exception_retries_once_chain_continues() -> None:
         ]
     )
 
-    blocks = await repository.read_holding_blocks()
+    with pytest.raises(ModbusReadException):
+        await repository.read_holding_blocks()
 
     assert client.calls == [
         _BIG_READ,
         (1, 25),
         (1, 25),
-        *_FALLBACK_BLOCKS[1:],
     ]
-    assert _flat_registers(blocks) == [*chunks[0].registers, *chunks[1].registers]
     assert session.reconnect_count == 1
 
 

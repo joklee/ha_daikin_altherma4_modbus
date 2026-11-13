@@ -628,7 +628,7 @@ class ModbusRegisterRepository:
                 start + count - 1,
                 start,
                 f"Block {index}",
-                index == len(_HOLDING_FALLBACK_BLOCKS) - 1,
+                index == len(_HOLDING_FALLBACK_BLOCKS),
             )
             for index, (start, count) in enumerate(_HOLDING_FALLBACK_BLOCKS, start=1)
         ]
@@ -934,6 +934,11 @@ class ModbusRegisterRepository:
                 time.time() - block_start,
             )
         except ModbusInvalidAddressException as err:
+            if not is_optional:
+                raise ModbusReadException(
+                    f"Required holding register {block_name} "
+                    f"(addresses {min_address}-{max_address}) refused: {err}"
+                ) from err
             _LOGGER.warning(
                 "Device does not support holding register %s (addresses %s-%s): %s",
                 block_name,
@@ -971,9 +976,12 @@ class ModbusRegisterRepository:
                     "Skipping holding register %s - device may not support these address ranges",
                     block_name,
                 )
-            else:
-                _LOGGER.error("Holding Register %s read failed: %s", block_name, result)
-            return None
+                return None
+            raise ModbusReadException(
+                f"Required holding register {block_name} "
+                f"(addresses {min_address}-{max_address}) refused "
+                f"({classification}): {result}"
+            )
 
         raise ModbusReadException(
             f"Invalid response reading holding register {block_name}: {result}"
@@ -1019,19 +1027,23 @@ class ModbusRegisterRepository:
                         block_name,
                         classification,
                     )
-                else:
-                    _LOGGER.warning(
-                        "Holding Register %s retry refused (%s): %s",
-                        block_name,
-                        classification,
-                        retry_result,
-                    )
-                return None
+                    return None
+                raise ModbusReadException(
+                    f"Required holding register {block_name} "
+                    f"(addresses {min_address}-{max_address}) refused "
+                    f"after reconnect ({classification}): {retry_result}"
+                )
 
             raise ModbusReadException(
                 f"Invalid response retrying holding register {block_name}: {retry_result}"
             )
         except ModbusInvalidAddressException as retry_err:
+            if not is_optional:
+                raise ModbusReadException(
+                    f"Required holding register {block_name} "
+                    f"(addresses {min_address}-{max_address}) refused "
+                    f"after reconnect: {retry_err}"
+                ) from retry_err
             _LOGGER.warning(
                 "Holding Register %s retry refused (illegal data address): %s",
                 block_name,
