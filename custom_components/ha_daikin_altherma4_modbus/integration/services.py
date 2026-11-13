@@ -16,7 +16,11 @@ except ImportError:
     # Fallback for testing when homeassistant is not available
     HAS_HA = False
 
-from ..common.helpers import get_register_value
+from ..common.helpers import (
+    get_register_scale,
+    get_register_value,
+    is_unavailable_value,
+)
 from ..core.const import (
     DOMAIN,
     HVAC_COOL,
@@ -518,14 +522,11 @@ if HAS_HA:
 
         entry = _get_entry_and_validate(hass, config_entry_id)
         runtime_data = entry.runtime_data
+        manager = runtime_data.manager
         writer = runtime_data.coordinator.data_manager
 
-        await _guarded_write(
-            "holding_15",
-            lambda: writer.write_holding_register(
-                "holding_15", 1 if single_heatup else 0
-            ),
-        )
+        previous_setpoint = _dhw_heatup_setpoint(manager)
+        setpoint_written = False
 
         if setpoint is not None:
             # Convert setpoint to register value (scale by 0.01)
@@ -534,6 +535,23 @@ if HAS_HA:
                 "holding_16",
                 lambda: writer.write_holding_register("holding_16", register_value),
             )
+            setpoint_written = True
+
+        try:
+            await _guarded_write(
+                "holding_15",
+                lambda: writer.write_holding_register(
+                    "holding_15", 1 if single_heatup else 0
+                ),
+            )
+        except Exception:
+            if setpoint_written:
+                await _restore_dhw_heatup_setpoint(
+                    config_entry_id, writer, previous_setpoint
+                )
+            raise
+
+        if setpoint is not None:
             _LOGGER.debug(
                 "Set DHW single heat-up to %s with setpoint %s°C for entry %s",
                 single_heatup,
@@ -727,6 +745,58 @@ if HAS_HA:
         if raw == 0:
             return False
         return None
+
+    def _dhw_heatup_setpoint(manager) -> int | None:
+        """Return the raw holding_16 register value, or None when unknown."""
+        try:
+            data = manager.get_all_data()
+        except Exception:  # pragma: no cover - defensive
+            return None
+        register_data = data.get("holding_16")
+        raw = get_register_value(register_data)
+        if raw is None or is_unavailable_value(raw):
+            return None
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            return None
+        # Coordinator data is stored scaled (e.g. °C); convert back to the
+        # raw register value expected by write_holding_register.
+        scale = get_register_scale(register_data)
+        try:
+            scale = float(scale) if scale else 1.0
+        except (TypeError, ValueError):
+            scale = 1.0
+        if scale == 0:
+            scale = 1.0
+        return int(round(value / scale))
+
+    async def _restore_dhw_heatup_setpoint(
+        config_entry_id, writer, previous_setpoint
+    ) -> None:
+        """Restore the previous holding_16 value after a failed activation."""
+        if previous_setpoint is None:
+            _LOGGER.warning(
+                "DHW single heat-up activation failed for entry %s and the "
+                "previous setpoint is unknown; holding_16 was left modified",
+                config_entry_id,
+            )
+            return
+        try:
+            await writer.write_holding_register(
+                "holding_16", previous_setpoint
+            )
+            _LOGGER.debug(
+                "Restored DHW single heat-up setpoint to %s for entry %s",
+                previous_setpoint,
+                config_entry_id,
+            )
+        except Exception as err:
+            _LOGGER.warning(
+                "Could not restore DHW single heat-up setpoint for entry %s: %s",
+                config_entry_id,
+                err,
+            )
 
     async def _run_dhw_single_heatup(
         hass,
