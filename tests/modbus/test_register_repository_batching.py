@@ -15,13 +15,14 @@ delegates error detection to the real ``ModbusTransportSession`` helper):
 
 Protected contracts:
 * the optimized single read is attempted first;
-* on failure the three chunked reads use the exact documented addresses;
+* on illegal-address/illegal-function refusal the three chunked reads use
+  the exact documented addresses;
 * values of every successful chunk survive once (no loss, no duplicates);
 * a failed chunk never aborts the remaining fallback chain;
 * protocol-error chunks fail without retry, exception chunks retry once
   after a reconnection attempt;
-* a total communication failure degrades in a controlled way
-  (empty result instead of fabricated data);
+* communication/timeout/invalid-response failures propagate so the
+  coordinator reports UpdateFailed instead of fabricating empty data;
 * input registers are read as ONE batch (21, 67) with a chunked fallback
   ((21, 33), (54, 34)) mirroring the pre-optimization split.
 """
@@ -31,6 +32,7 @@ from __future__ import annotations
 import pytest
 
 from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
+    ModbusInvalidAddressException,
     ModbusReadException,
 )
 from custom_components.ha_daikin_altherma4_modbus.modbus.register_repository import (
@@ -58,8 +60,14 @@ class _OkResponse:
 class _ErrorResponse:
     """Protocol-level error response (device refuses the read)."""
 
+    def __init__(self, text: str = "exception_code=2") -> None:
+        self._text = text
+
     def isError(self) -> bool:
         return True
+
+    def __str__(self) -> str:
+        return f"ModbusError({self._text})"
 
 
 class _ScriptedClient:
@@ -159,11 +167,14 @@ async def test_optimized_read_succeeds_without_fallback() -> None:
 # --------------------------------------------------------------------------
 
 
-async def test_big_read_exception_runs_complete_fallback_chain() -> None:
-    """Large-read exception falls back to all three documented blocks."""
+async def test_big_read_invalid_address_runs_complete_fallback_chain() -> None:
+    """A refused large read falls back to all three documented blocks."""
     chunks = (_chunk(100, 25), _chunk(300, 25), _chunk(600, 30))
     repository, client, session = _repository(
-        [ModbusReadException("simulated device timeout"), *chunks]
+        [
+            ModbusInvalidAddressException("range rejected"),
+            *chunks,
+        ]
     )
 
     blocks = await repository.read_holding_blocks()
@@ -175,6 +186,19 @@ async def test_big_read_exception_runs_complete_fallback_chain() -> None:
         *chunks[2].registers,
     ]
     assert _block_metadata(blocks) == _FALLBACK_METADATA
+    assert session.reconnect_count == 0
+
+
+async def test_big_read_generic_exception_propagates() -> None:
+    """Timeout/connection/read errors must not be hidden by fallback chunks."""
+    repository, client, session = _repository(
+        [ModbusReadException("simulated device timeout")]
+    )
+
+    with pytest.raises(ModbusReadException):
+        await repository.read_holding_blocks()
+
+    assert client.calls == [_BIG_READ]
     assert session.reconnect_count == 0
 
 
@@ -200,7 +224,7 @@ async def test_optional_chunk_protocol_error_is_skipped_without_retry() -> None:
     chunks = (_chunk(100, 25), _chunk(300, 25))
     repository, client, session = _repository(
         [
-            ModbusReadException("big read failed"),
+            _ErrorResponse(),  # big read refused (illegal address)
             *chunks,
             _ErrorResponse(),
         ]
@@ -218,7 +242,7 @@ async def test_optional_chunk_exception_retries_once_and_recovers() -> None:
     chunks = (_chunk(100, 25), _chunk(300, 25), _chunk(600, 30))
     repository, client, session = _repository(
         [
-            ModbusReadException("big read failed"),
+            _ErrorResponse(),  # big read refused (illegal address)
             *chunks[:2],
             ModbusReadException("transient failure"),
             chunks[2],
@@ -292,23 +316,19 @@ async def test_non_optional_exception_retries_once_chain_continues() -> None:
 # --------------------------------------------------------------------------
 
 
-async def test_total_communication_failure_degrades_controlled() -> None:
-    """When nothing can be read, no fabricated data is ever returned."""
+async def test_total_communication_failure_propagates() -> None:
+    """A dead device surfaces as an exception, never as fabricated data."""
     boom = ModbusReadException("device offline")
-    repository, client, session = _repository(
-        [boom]  # optimized read
-        + [boom, boom] * 3  # each fallback block: initial + retry
-    )
+    repository, client, session = _repository([boom])
 
-    blocks = await repository.read_holding_blocks()
+    with pytest.raises(ModbusReadException):
+        await repository.read_holding_blocks()
 
-    expected_calls: list[tuple[int, int]] = [_BIG_READ]
-    for address, count in _FALLBACK_BLOCKS:
-        expected_calls.append((address, count))
-        expected_calls.append((address, count))
-    assert client.calls == expected_calls
-    assert blocks == []
-    assert session.reconnect_count == 3
+    # The optimized read fails with a communication error: no fallback
+    # chain is attempted because the device is unreachable, not refusing
+    # the address range.
+    assert client.calls == [_BIG_READ]
+    assert session.reconnect_count == 0
 
 
 # --------------------------------------------------------------------------
@@ -337,7 +357,7 @@ _INPUT_FALLBACK_METADATA = ((21, 53, 21), (54, 87, 54))
     ("outcome", "desc"),
     [
         (_ErrorResponse(), "protocol-error"),
-        (ModbusReadException("timeout"), "exception"),
+        (ModbusInvalidAddressException("range rejected"), "exception"),
     ],
 )
 async def test_input_registers_fall_back_to_splits_on_failure(
@@ -359,11 +379,11 @@ async def test_input_registers_fall_back_to_splits_on_failure(
 
 
 async def test_input_registers_partial_fallback_keeps_reachable_data() -> None:
-    """A failed first split must not discard the second split's data."""
+    """A refused first split must not discard the second split's data."""
     repository, client, _session = _repository(
         [
-            ModbusReadException("timeout"),
-            ModbusReadException("split down"),
+            ModbusInvalidAddressException("range rejected"),
+            ModbusInvalidAddressException("split refused"),
             _chunk(300, 34),
         ]
     )
@@ -375,11 +395,22 @@ async def test_input_registers_partial_fallback_keeps_reachable_data() -> None:
 
 
 async def test_input_registers_total_failure_returns_no_blocks() -> None:
-    """When batch and both splits fail, no fabricated data is returned."""
-    boom = ModbusReadException("device offline")
+    """When batch and both splits are refused, no fabricated data is returned."""
+    boom = ModbusInvalidAddressException("range rejected")
     repository, client, _session = _repository([boom, boom, boom])
 
     blocks = await repository.read_input_blocks()
 
     assert client.calls == [(21, 67), *_INPUT_FALLBACK_CALLS]
     assert blocks == []
+
+
+async def test_input_registers_communication_failure_propagates() -> None:
+    """Timeout/connection errors surface instead of empty fallback results."""
+    boom = ModbusReadException("device offline")
+    repository, client, _session = _repository([boom])
+
+    with pytest.raises(ModbusReadException):
+        await repository.read_input_blocks()
+
+    assert client.calls == [(21, 67)]

@@ -165,6 +165,25 @@ def _is_error_result(session: ModbusTransportSession, result: Any) -> bool:
     return bool(ModbusTransportSession.is_modbus_error(result))
 
 
+def _classify_error_result(session: ModbusTransportSession, result: Any) -> str | None:
+    """Classify a legacy error response object.
+
+    Returns ``"illegal_address"`` for exception code 2, ``"illegal_function"``
+    for exception code 1, ``"other"`` for any other device error, and ``None``
+    when the result is not an error response. Only ``illegal_address`` and
+    ``illegal_function`` justify skipping a register range; ``other`` must be
+    treated as a communication/read failure.
+    """
+    if not _is_error_result(session, result):
+        return None
+    text = str(result).lower()
+    if "exception_code=2" in text or "illegal data address" in text:
+        return "illegal_address"
+    if "exception_code=1" in text or "illegal function" in text:
+        return "illegal_function"
+    return "other"
+
+
 class ModbusRegisterRepository:
     """Reads and writes Modbus registers for configured blocks."""
 
@@ -340,22 +359,32 @@ class ModbusRegisterRepository:
                 time.time() - block_start,
             )
 
-            if not _is_error_result(self._session, result):
+            classification = _classify_error_result(self._session, result)
+            if classification is None:
                 blocks.append((result, min_address, max_address, offset))
                 _LOGGER.debug(
                     "✅ Batch optimization successful: 67 registers in 1 read"
                 )
-            else:
-                _LOGGER.warning("Optimized Input Register Block read failed")
+            elif classification in ("illegal_address", "illegal_function"):
+                _LOGGER.warning(
+                    "Optimized Input Register Block not supported by device "
+                    "(%s), falling back to smaller ranges",
+                    classification,
+                )
                 await self._fallback_input_blocks(client, blocks)
+            else:
+                raise ModbusReadException(
+                    f"Invalid response reading input registers 21-87: {result}"
+                )
         except ModbusInvalidAddressException as err:
             _LOGGER.warning(
                 "Optimized Input Register Block not supported by device: %s", err
             )
             await self._fallback_input_blocks(client, blocks)
-        except _READ_EXCEPTIONS as err:
-            _LOGGER.warning("Could not read optimized Input Register Block: %s", err)
-            await self._fallback_input_blocks(client, blocks)
+        except _READ_EXCEPTIONS:
+            # Communication/timeout/device errors must surface as UpdateFailed,
+            # not be hidden by an empty fallback result.
+            raise
 
         # v4-only input registers 138/139 (time until model restart +
         # active operation state): only polled once the probe proved them
@@ -369,10 +398,20 @@ class ModbusRegisterRepository:
                     "v4 Input Register Block (138-139) read in %.3fs",
                     time.time() - v4_start_time,
                 )
-                if not _is_error_result(self._session, v4_result):
+                classification = _classify_error_result(self._session, v4_result)
+                if classification is None:
                     blocks.append((v4_result, 138, 139, 138))
+                elif classification in ("illegal_address", "illegal_function"):
+                    _LOGGER.warning(
+                        "v4 Input Register Block (138-139) refused "
+                        "(%s), narrowing map",
+                        classification,
+                    )
+                    self._supports_input_138_139 = False
                 else:
-                    _LOGGER.warning("v4 Input Register Block (138-139) read failed")
+                    raise ModbusReadException(
+                        f"Invalid response reading v4 input registers 138-139: {v4_result}"
+                    )
             except ModbusInvalidAddressException as err:
                 _LOGGER.warning(
                     "v4 Input Register Block (138-139) refused "
@@ -380,10 +419,8 @@ class ModbusRegisterRepository:
                     err,
                 )
                 self._supports_input_138_139 = False
-            except _READ_EXCEPTIONS as err:
-                _LOGGER.warning(
-                    "Could not read v4 Input Register Block (138-139): %s", err
-                )
+            except _READ_EXCEPTIONS:
+                raise
 
         return blocks
 
@@ -400,22 +437,30 @@ class ModbusRegisterRepository:
         for start, count in _INPUT_FALLBACK_BLOCKS:
             try:
                 result = await client.read_input_registers(start, count)
-            except _READ_EXCEPTIONS as err:
+            except ModbusInvalidAddressException as err:
                 _LOGGER.warning(
-                    "Input fallback block %s-%s failed: %s",
+                    "Input fallback block %s-%s refused (illegal data address): %s",
                     start,
                     start + count - 1,
                     err,
                 )
                 continue
-            if _is_error_result(self._session, result):
+            except _READ_EXCEPTIONS:
+                raise
+            classification = _classify_error_result(self._session, result)
+            if classification is None:
+                blocks.append((result, start, start + count - 1, start))
+            elif classification in ("illegal_address", "illegal_function"):
                 _LOGGER.warning(
-                    "Input fallback block %s-%s rejected by device",
+                    "Input fallback block %s-%s rejected by device (%s)",
                     start,
                     start + count - 1,
+                    classification,
                 )
-                continue
-            blocks.append((result, start, start + count - 1, start))
+            else:
+                raise ModbusReadException(
+                    f"Invalid response reading input fallback block {start}-{start + count - 1}: {result}"
+                )
 
     async def read_discrete_inputs(self) -> Any | None:
         """Read discrete inputs with one reconnect retry.
@@ -442,12 +487,6 @@ class ModbusRegisterRepository:
                 count,
                 time.time() - read_start,
             )
-
-            if not _is_error_result(self._session, result):
-                return result
-
-            self._log_unsupported_register_type(result, "discrete inputs")
-            return None
         except ModbusInvalidAddressException as err:
             if count > _DISCRETE_BATCH_V4[1]:
                 _LOGGER.info(
@@ -466,6 +505,16 @@ class ModbusRegisterRepository:
             _LOGGER.warning("Could not read Discrete Inputs: %s", err)
             return await self._retry_read_discrete_inputs()
 
+        classification = _classify_error_result(self._session, result)
+        if classification is None:
+            return result
+        if classification in ("illegal_address", "illegal_function"):
+            self._log_unsupported_register_type(result, "discrete inputs")
+            return None
+        raise ModbusReadException(
+            f"Invalid response reading discrete inputs: {result}"
+        )
+
     async def read_coils(self) -> Any | None:
         """Read coils with one reconnect retry."""
         client = self._session.client
@@ -479,11 +528,15 @@ class ModbusRegisterRepository:
             result = await client.read_coils(start_address, count)
             _LOGGER.debug("Coils (20 bits) read in %.3fs", time.time() - read_start)
 
-            if not _is_error_result(self._session, result):
+            classification = _classify_error_result(self._session, result)
+            if classification is None:
                 return result
-
-            self._log_unsupported_register_type(result, "coils")
-            return None
+            if classification in ("illegal_address", "illegal_function"):
+                self._log_unsupported_register_type(result, "coils")
+                return None
+            raise ModbusReadException(f"Invalid response reading coils: {result}")
+        except ModbusReadException:
+            raise
         except ModbusInvalidAddressException as err:
             _LOGGER.warning(
                 "Device does not support coils (illegal data address): %s", err
@@ -518,7 +571,8 @@ class ModbusRegisterRepository:
                 time.time() - block_start,
             )
 
-            if not _is_error_result(self._session, result):
+            classification = _classify_error_result(self._session, result)
+            if classification is None:
                 data_blocks.append((result, 1, end_address, 1))
                 if end_address == _HOLDING_BATCH_V4[0] + _HOLDING_BATCH_V4[1] - 1:
                     self._supports_holding_81 = True
@@ -526,13 +580,18 @@ class ModbusRegisterRepository:
                     "✅ Batch optimization successful: %d registers in 1 read",
                     count,
                 )
-            else:
+            elif classification in ("illegal_address", "illegal_function"):
                 _LOGGER.warning(
-                    "Device does not support full holding register range (1-%d)",
+                    "Device does not support full holding register range (1-%d) "
+                    "(%s)",
                     end_address,
+                    classification,
                 )
-                # Fallback: Try individual blocks if full range fails
                 await self._fallback_holding_blocks(data_blocks)
+            else:
+                raise ModbusReadException(
+                    f"Invalid response reading holding registers 1-{end_address}: {result}"
+                )
         except ModbusInvalidAddressException as err:
             if count > _HOLDING_BATCH[1] and self._supports_holding_81 is not False:
                 _LOGGER.info(
@@ -548,12 +607,9 @@ class ModbusRegisterRepository:
                 end_address,
                 err,
             )
-            # Fallback: Try individual blocks on illegal address
             await self._fallback_holding_blocks(data_blocks)
-        except _READ_EXCEPTIONS as err:
-            _LOGGER.warning("Could not read optimized Holding Register Block: %s", err)
-            # Fallback: Try individual blocks on error
-            await self._fallback_holding_blocks(data_blocks)
+        except _READ_EXCEPTIONS:
+            raise
 
         return data_blocks
 
@@ -797,27 +853,32 @@ class ModbusRegisterRepository:
             )
             client = await self._session.reconnect_with_new_client()
             if client is None:
-                return None
+                raise ModbusConnectionException(
+                    "Cannot retry discrete inputs: no Modbus client after reconnect"
+                )
 
             start_address, count = self._discrete_batch()
             result = await client.read_discrete_inputs(start_address, count)
-            if not _is_error_result(self._session, result):
+            classification = _classify_error_result(self._session, result)
+            if classification is None:
                 _LOGGER.info("Successfully retried discrete inputs after reconnection")
                 return result
-
-            _LOGGER.warning(
-                "Discrete inputs retry also failed - device may not support this register type: %s",
-                result,
+            if classification in ("illegal_address", "illegal_function"):
+                _LOGGER.warning(
+                    "Discrete inputs retry refused (%s) - device may not support this register type",
+                    classification,
+                )
+                return None
+            raise ModbusReadException(
+                f"Invalid response retrying discrete inputs: {result}"
             )
-            return None
         except ModbusInvalidAddressException as retry_err:
             _LOGGER.warning(
                 "Discrete inputs retry refused (illegal data address): %s", retry_err
             )
             return None
-        except _READ_EXCEPTIONS as retry_err:
-            _LOGGER.warning("Retry attempt for discrete inputs failed: %s", retry_err)
-            return None
+        except _READ_EXCEPTIONS:
+            raise
 
     async def _retry_read_coils(self) -> Any | None:
         """Reconnect and retry coils once."""
@@ -825,25 +886,28 @@ class ModbusRegisterRepository:
             _LOGGER.info("Attempting to re-establish connection and retry coils")
             client = await self._session.reconnect_with_new_client()
             if client is None:
-                return None
+                raise ModbusConnectionException(
+                    "Cannot retry coils: no Modbus client after reconnect"
+                )
 
             start_address, count = _COILS_BATCH
             result = await client.read_coils(start_address, count)
-            if not _is_error_result(self._session, result):
+            classification = _classify_error_result(self._session, result)
+            if classification is None:
                 _LOGGER.info("Successfully retried coils after reconnection")
                 return result
-
-            _LOGGER.warning(
-                "Coils retry also failed - device may not support this register type: %s",
-                result,
-            )
-            return None
+            if classification in ("illegal_address", "illegal_function"):
+                _LOGGER.warning(
+                    "Coils retry refused (%s) - device may not support this register type",
+                    classification,
+                )
+                return None
+            raise ModbusReadException(f"Invalid response retrying coils: {result}")
         except ModbusInvalidAddressException as retry_err:
             _LOGGER.warning("Coils retry refused (illegal data address): %s", retry_err)
             return None
-        except _READ_EXCEPTIONS as retry_err:
-            _LOGGER.warning("Retry attempt for coils failed: %s", retry_err)
-            return None
+        except _READ_EXCEPTIONS:
+            raise
 
     async def _read_holding_register_block(
         self,
@@ -869,25 +933,6 @@ class ModbusRegisterRepository:
                 count,
                 time.time() - block_start,
             )
-
-            if not _is_error_result(self._session, result):
-                return result
-
-            if is_optional:
-                _LOGGER.warning(
-                    "Device does not support holding register %s (addresses %s-%s): %s",
-                    block_name,
-                    min_address,
-                    max_address,
-                    result,
-                )
-                _LOGGER.info(
-                    "Skipping holding register %s - device may not support these address ranges",
-                    block_name,
-                )
-            else:
-                _LOGGER.error("Holding Register %s read failed: %s", block_name, result)
-            return None
         except ModbusInvalidAddressException as err:
             _LOGGER.warning(
                 "Device does not support holding register %s (addresses %s-%s): %s",
@@ -909,6 +954,31 @@ class ModbusRegisterRepository:
                 is_optional,
             )
 
+        classification = _classify_error_result(self._session, result)
+        if classification is None:
+            return result
+
+        if classification in ("illegal_address", "illegal_function"):
+            if is_optional:
+                _LOGGER.warning(
+                    "Device does not support holding register %s (addresses %s-%s): %s",
+                    block_name,
+                    min_address,
+                    max_address,
+                    result,
+                )
+                _LOGGER.info(
+                    "Skipping holding register %s - device may not support these address ranges",
+                    block_name,
+                )
+            else:
+                _LOGGER.error("Holding Register %s read failed: %s", block_name, result)
+            return None
+
+        raise ModbusReadException(
+            f"Invalid response reading holding register {block_name}: {result}"
+        )
+
     async def _retry_holding_block(
         self,
         start_address: int,
@@ -929,29 +999,38 @@ class ModbusRegisterRepository:
             )
             client = await self._session.reconnect_with_new_client()
             if client is None:
-                return None
+                raise ModbusConnectionException(
+                    f"Cannot retry holding register {block_name}: no Modbus client after reconnect"
+                )
 
             retry_result = await client.read_holding_registers(start_address, count)
-            if not _is_error_result(self._session, retry_result):
+            classification = _classify_error_result(self._session, retry_result)
+            if classification is None:
                 _LOGGER.info(
                     "Successfully retried holding register %s after reconnection",
                     block_name,
                 )
                 return retry_result
 
-            if is_optional:
-                _LOGGER.warning(
-                    "Holding Register %s retry also failed - device may not support these addresses: %s",
-                    block_name,
-                    retry_result,
-                )
-            else:
-                _LOGGER.warning(
-                    "Holding Register %s retry also failed: %s",
-                    block_name,
-                    retry_result,
-                )
-            return None
+            if classification in ("illegal_address", "illegal_function"):
+                if is_optional:
+                    _LOGGER.warning(
+                        "Holding Register %s retry refused (%s) - device may not support these addresses",
+                        block_name,
+                        classification,
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Holding Register %s retry refused (%s): %s",
+                        block_name,
+                        classification,
+                        retry_result,
+                    )
+                return None
+
+            raise ModbusReadException(
+                f"Invalid response retrying holding register {block_name}: {retry_result}"
+            )
         except ModbusInvalidAddressException as retry_err:
             _LOGGER.warning(
                 "Holding Register %s retry refused (illegal data address): %s",
@@ -959,13 +1038,8 @@ class ModbusRegisterRepository:
                 retry_err,
             )
             return None
-        except _READ_EXCEPTIONS as retry_err:
-            _LOGGER.warning(
-                "Retry attempt for Holding Register %s failed: %s",
-                block_name,
-                retry_err,
-            )
-            return None
+        except _READ_EXCEPTIONS:
+            raise
 
     @staticmethod
     def _log_unsupported_register_type(result: Any, register_type: str) -> None:

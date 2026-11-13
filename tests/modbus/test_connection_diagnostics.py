@@ -30,6 +30,9 @@ from modbus_connection.exceptions import (
 )
 from modbus_connection.mock import MockModbusConnection
 
+from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
+    ModbusConnectionException,
+)
 from custom_components.ha_daikin_altherma4_modbus.entities import (
     binary_sensor as binary_platform,
 )
@@ -575,12 +578,16 @@ async def test_total_outage_degrades_and_recovers() -> None:
     connection, repository, client = _live_repository()
     connection.for_unit(1).fail_requests(ModbusConnectionError("dead gateway"))
 
-    assert await repository.read_input_blocks() == []
-    assert await repository.read_discrete_inputs() is None
-    # One facade call per attempted read: input full batch + 2 fallback
-    # splits, then discrete (whose retry never reaches the facade because
-    # reconnect raises first).
-    assert client.error_counts["read_connection"] == 4
+    # Communication errors propagate so the coordinator reports UpdateFailed
+    # instead of silently treating the poll as successful with missing data.
+    with pytest.raises(ModbusConnectionException):
+        await repository.read_input_blocks()
+    with pytest.raises(ModbusConnectionException):
+        await repository.read_discrete_inputs()
+    # One facade call per attempted read: input full batch (no fallback on
+    # connection errors), then discrete (whose retry never reaches the
+    # facade because reconnect raises first).
+    assert client.error_counts["read_connection"] == 2
     assert client.last_read_at is None
 
     connection.for_unit(1).fail_requests(None)
