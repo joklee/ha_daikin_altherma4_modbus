@@ -20,6 +20,28 @@ from .register_constants import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def _canonical_register_name(register_name: str | int, prefix: str) -> str:
+    """Return the canonical register name for a name or numeric address.
+
+    Write callers historically passed either the canonical name
+    (``"coil_1"``) or the bare Modbus address (``1``). Coordinator data is
+    keyed by canonical names, so numeric input must be normalized before
+    both the write and the cache update - not only immediately before the
+    Modbus call. Invalid values are rejected here instead of surfacing as
+    a missing cache entry after a successful write.
+    """
+    if isinstance(register_name, bool):
+        raise TypeError(f"Invalid register name: {register_name!r}")
+    if isinstance(register_name, int):
+        return f"{prefix}_{register_name}"
+    if isinstance(register_name, str):
+        name = register_name.strip()
+        if name.isdigit():
+            return f"{prefix}_{int(name)}"
+        return name
+    raise TypeError(f"Invalid register name: {register_name!r}")
+
+
 @dataclass
 class ModbusDataManager:
     """Compatibility facade orchestrating the three data layers."""
@@ -372,15 +394,17 @@ class ModbusDataManager:
         _LOGGER.debug("Holding Registers fully read in %.3fs", time.time() - start_time)
         return data
 
-    async def write_holding_register(self, register_name: str, value: int) -> Any:
-        """Write to a holding register by register name."""
+    async def write_holding_register(self, register_name: str | int, value: int) -> Any:
+        """Write to a holding register by canonical name or numeric address."""
+        register_name = _canonical_register_name(register_name, "holding")
         result = await self._repository.write_holding_register(register_name, value)
         if result is not None:
             self._update_coordinator_data(register_name, value)
         return result
 
-    async def write_coil_register(self, register_name: str, value: bool) -> Any:
-        """Write to a coil register by register name."""
+    async def write_coil_register(self, register_name: str | int, value: bool) -> Any:
+        """Write to a coil register by canonical name or numeric address."""
+        register_name = _canonical_register_name(register_name, "coil")
         result = await self._repository.write_coil_register(register_name, value)
         if result is not None:
             self._update_coordinator_data(register_name, value)

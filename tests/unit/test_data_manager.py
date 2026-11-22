@@ -146,6 +146,38 @@ async def test_writes_update_coordinator_data():
     assert await manager.write_coil_register("coil_1", True) is True
 
 
+@pytest.mark.parametrize("register_name", [1, "1"])
+async def test_numeric_coil_write_updates_canonical_cache(register_name):
+    """A numeric coil address is written and cached under its canonical name."""
+    manager = _manager()
+    manager._repository = _repository()
+    manager.coordinator = SimpleNamespace(
+        data={"coil_1": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_coil_register(register_name, True) is True
+
+    manager._repository.write_coil_register.assert_awaited_once_with("coil_1", True)
+    assert manager.coordinator.data["coil_1"]["value"] == 1
+
+
+@pytest.mark.parametrize("register_name", [15, "15"])
+async def test_numeric_holding_write_updates_canonical_cache(register_name):
+    """A numeric holding address is written and cached under its canonical name."""
+    manager = _manager()
+    manager._repository = _repository()
+    manager.coordinator = SimpleNamespace(
+        data={"holding_15": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_holding_register(register_name, 1) is True
+
+    manager._repository.write_holding_register.assert_awaited_once_with("holding_15", 1)
+    assert manager.coordinator.data["holding_15"]["value"] == 1
+
+
 async def test_writes_without_result_skip_coordinator_update():
     manager = _manager()
     manager._repository = _repository(

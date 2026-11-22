@@ -46,7 +46,7 @@ from ..core.const import (
     SERVICE_SET_SMART_GRID_MODE,
     SERVICE_START_DHW_SINGLE_HEATUP,
 )
-from ..core.register_constants import COIL_REGISTERS, HOLDING_REGISTERS
+from ..core.register_constants import HOLDING_REGISTERS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -287,23 +287,6 @@ def get_operation_mode_map():
     return OPERATION_MODE_MAP.copy()
 
 
-def _get_coil_address(register_name: str) -> int:
-    """Get the coil address from register name."""
-    for coil in COIL_REGISTERS:
-        if coil.register_name == register_name:
-            return coil.address
-    if HAS_HA:
-        raise HomeAssistantError(
-            translation_domain=DOMAIN,
-            translation_key="unsupported_option",
-            translation_placeholders={
-                "option": "coil",
-                "register_name": register_name,
-            },
-        )
-    raise ValueError(f"Coil register {register_name} not found")
-
-
 if HAS_HA:
 
     async def _guarded_write(register_name, write_call):
@@ -385,10 +368,9 @@ if HAS_HA:
         runtime_data = entry.runtime_data
         writer = runtime_data.coordinator.data_manager
 
-        coil_address = _get_coil_address(REGISTER_DHW_HVAC_MODE)
         await _guarded_write(
             REGISTER_DHW_HVAC_MODE,
-            lambda: writer.write_coil_register(coil_address, state),
+            lambda: writer.write_coil_register(REGISTER_DHW_HVAC_MODE, state),
         )
         _LOGGER.debug(
             "Set DHW state to %s for entry %s",
@@ -407,9 +389,8 @@ if HAS_HA:
         writer = runtime_data.coordinator.data_manager
 
         # Main zone is coil_2
-        coil_address = _get_coil_address("coil_2")
         await _guarded_write(
-            "coil_2", lambda: writer.write_coil_register(coil_address, state)
+            "coil_2", lambda: writer.write_coil_register("coil_2", state)
         )
         _LOGGER.debug(
             "Set main zone state to %s for entry %s",
@@ -428,9 +409,8 @@ if HAS_HA:
         writer = runtime_data.coordinator.data_manager
 
         # Additional zone is coil_3
-        coil_address = _get_coil_address("coil_3")
         await _guarded_write(
-            "coil_3", lambda: writer.write_coil_register(coil_address, state)
+            "coil_3", lambda: writer.write_coil_register("coil_3", state)
         )
         _LOGGER.debug(
             "Set additional zone state to %s for entry %s",
@@ -821,7 +801,7 @@ if HAS_HA:
         timeout_s,
         hysteresis,
         restore_dhw_off,
-        dhw_coil_address,
+        dhw_coil_name,
     ) -> None:
         """Background run: heat DHW once until target, timeout or cancel.
 
@@ -861,7 +841,7 @@ if HAS_HA:
                 )
             if restore_dhw_off:
                 try:
-                    await writer.write_coil_register(dhw_coil_address, False)
+                    await writer.write_coil_register(dhw_coil_name, False)
                 except Exception as err:
                     restore_failed = True
                     _LOGGER.error(
@@ -935,13 +915,13 @@ if HAS_HA:
                     translation_placeholders={"config_entry_id": config_entry_id},
                 )
 
-            dhw_coil_address = _get_coil_address(REGISTER_DHW_HVAC_MODE)
+            dhw_coil_name = REGISTER_DHW_HVAC_MODE
             dhw_state = _dhw_enabled(manager)
             restore_dhw_off = dhw_state is False
             if restore_dhw_off:
                 await _guarded_write(
                     REGISTER_DHW_HVAC_MODE,
-                    lambda: writer.write_coil_register(dhw_coil_address, True),
+                    lambda: writer.write_coil_register(dhw_coil_name, True),
                 )
                 _LOGGER.debug(
                     "Enabled DHW for single heat-up for entry %s",
@@ -979,7 +959,7 @@ if HAS_HA:
                 if restore_dhw_off:
                     try:
                         await writer.write_coil_register(
-                            dhw_coil_address, False
+                            dhw_coil_name, False
                         )
                         _LOGGER.debug(
                             "Restored DHW off state after failed single "
@@ -1005,7 +985,7 @@ if HAS_HA:
                     timeout_s,
                     hysteresis,
                     restore_dhw_off,
-                    dhw_coil_address,
+                    dhw_coil_name,
                 ),
                 name=f"{DOMAIN}_dhw_single_heatup_{config_entry_id}",
             )

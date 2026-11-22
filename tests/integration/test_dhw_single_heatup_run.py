@@ -298,8 +298,8 @@ async def test_start_enables_dhw_when_off_and_restores_after_reached(
         await asyncio.wait_for(task, timeout=10)
     await hass.async_block_till_done()
 
-    writer.write_coil_register.assert_any_call(1, True)
-    writer.write_coil_register.assert_any_call(1, False)
+    writer.write_coil_register.assert_any_call("coil_1", True)
+    writer.write_coil_register.assert_any_call("coil_1", False)
     writer.write_holding_register.assert_any_call("holding_15", 0)
     assert len(events) == 1
     assert events[0].data["outcome"] == "reached"
