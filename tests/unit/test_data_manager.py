@@ -39,6 +39,8 @@ def _repository(**overrides):
         "read_holding_blocks": AsyncMock(return_value=[([0] * 80, 1, 80, 1)]),
         "write_holding_register": AsyncMock(return_value=True),
         "write_coil_register": AsyncMock(return_value=True),
+        "read_holding_register": AsyncMock(return_value=1),
+        "read_coil_register": AsyncMock(return_value=True),
         "read_raw_snapshot": AsyncMock(return_value=({"input": {}}, {})),
     }
     defaults.update(overrides)
@@ -176,6 +178,57 @@ async def test_numeric_holding_write_updates_canonical_cache(register_name):
 
     manager._repository.write_holding_register.assert_awaited_once_with("holding_15", 1)
     assert manager.coordinator.data["holding_15"]["value"] == 1
+
+
+async def test_write_caches_read_back_not_requested_value():
+    """The cache reflects the device read-back, not the requested value."""
+    manager = _manager()
+    manager._repository = _repository(
+        read_holding_register=AsyncMock(return_value=7),
+    )
+    manager.coordinator = SimpleNamespace(
+        data={"holding_3": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_holding_register("holding_3", 1) is True
+
+    manager._repository.read_holding_register.assert_awaited_once_with("holding_3")
+    assert manager.coordinator.data["holding_3"]["value"] == 7
+
+
+async def test_signed_holding_read_back_is_converted_and_scaled():
+    """Raw two's-complement read-backs become signed, scaled values."""
+    manager = _manager()
+    manager._repository = _repository(
+        read_holding_register=AsyncMock(return_value=65531),
+    )
+    manager.coordinator = SimpleNamespace(
+        data={"holding_54": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_holding_register("holding_54", -5) is True
+    assert manager.coordinator.data["holding_54"]["value"] == -5
+
+
+async def test_read_back_failure_leaves_cache_unchanged():
+    """A failed read-back is not replaced by the optimistic write value."""
+    manager = _manager()
+    manager._repository = _repository(
+        read_holding_register=AsyncMock(
+            side_effect=ModbusReadException("read-back failed")
+        ),
+    )
+    manager.coordinator = SimpleNamespace(
+        data={"holding_3": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_holding_register("holding_3", 1) is True
+
+    assert manager.coordinator.data["holding_3"]["value"] == 0
+    manager.coordinator.async_set_updated_data.assert_not_called()
 
 
 async def test_writes_without_result_skip_coordinator_update():

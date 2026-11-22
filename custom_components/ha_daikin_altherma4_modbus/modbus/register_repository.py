@@ -732,6 +732,68 @@ class ModbusRegisterRepository:
 
         return snapshot, failed
 
+    async def read_holding_register(self, register_name: str) -> int | None:
+        """Read back one holding register by register name."""
+        client = await self._session.ensure_connection()
+        if client is None:
+            raise ModbusConnectionException(
+                f"Cannot read holding register {register_name} - "
+                "Modbus connection unavailable"
+            )
+
+        try:
+            address = int(register_name.split("_")[1])
+        except (ValueError, IndexError):
+            error_msg = f"Invalid address name format: {register_name}"
+            _LOGGER.error(error_msg)
+            raise ValueError(error_msg)
+
+        address = _validate_modbus_address(
+            address, f"holding register address {register_name}", strict=True
+        )
+
+        result = await client.read_holding_registers(address, 1)
+        if _is_error_result(self._session, result):
+            raise ModbusReadException(
+                f"Failed to read back register {register_name} "
+                f"(address {address}): {result}"
+            )
+        return _raw_registers(result, address - 1).get(address - 1)
+
+    async def read_coil_register(self, register_name: str | int) -> bool | None:
+        """Read back one coil by register name or numeric address."""
+        client = await self._session.ensure_connection()
+        if client is None:
+            raise ModbusConnectionException(
+                f"Cannot read coil {register_name} - Modbus connection unavailable"
+            )
+
+        if isinstance(register_name, str) and register_name.startswith("coil_"):
+            try:
+                address = int(register_name.split("_")[1])
+            except (ValueError, IndexError):
+                error_msg = f"Invalid address name format: {register_name}"
+                _LOGGER.error(error_msg)
+                raise ValueError(error_msg)
+        elif isinstance(register_name, int):
+            address = register_name
+        else:
+            error_msg = f"Invalid address format: {register_name}"
+            _LOGGER.error(error_msg)
+            raise ValueError(error_msg)
+
+        address = _validate_modbus_address(
+            address, f"coil address {register_name}", strict=True
+        )
+
+        result = await client.read_coils(address, 1)
+        if _is_error_result(self._session, result):
+            raise ModbusReadException(
+                f"Failed to read back coil {register_name} "
+                f"(address {address}): {result}"
+            )
+        return _raw_bits(result, address - 1).get(address - 1)
+
     async def write_holding_register(self, register_name: str, value: int) -> Any:
         """Write a holding register by register name."""
         client = await self._session.ensure_connection()

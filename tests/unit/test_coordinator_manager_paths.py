@@ -35,6 +35,7 @@ def _manager(normal=None, slow=None):
         "normal": manager.normal_coordinator,
         "slow": manager.slow_coordinator,
     }
+    manager.io_lock = asyncio.Lock()
     manager.get_all_data = MagicMock(return_value={"a": 1})
     return manager
 
@@ -146,6 +147,90 @@ async def test_write_proxy_fires_event_only_on_result():
 
     assert await proxy.write_coil_register("coil_1", True) is True
     assert hass.bus.async_fire.call_count == 2
+
+
+async def test_write_proxy_waits_for_shared_io_lock():
+    """A write cannot start while a poll holds the shared I/O lock."""
+    lock = asyncio.Lock()
+    write = AsyncMock(return_value=True)
+    normal = _coordinator()
+    normal.hass = SimpleNamespace(bus=SimpleNamespace(async_fire=MagicMock()))
+    slow = _coordinator()
+    slow.data_manager = SimpleNamespace(
+        write_holding_register=write,
+        write_coil_register=write,
+    )
+    proxy = UnifiedWriteProxy(normal, slow, lock)
+
+    await lock.acquire()
+    task = asyncio.create_task(proxy.write_holding_register("holding_3", 1))
+    await asyncio.sleep(0)
+    write.assert_not_awaited()
+
+    lock.release()
+    assert await task is True
+    write.assert_awaited_once_with("holding_3", 1)
+
+
+def test_manager_creates_one_shared_io_lock(monkeypatch):
+    """Both coordinators receive the same integration-wide I/O lock."""
+    from custom_components.ha_daikin_altherma4_modbus.integration import (
+        coordinator_manager as manager_module,
+    )
+
+    locks = []
+
+    class FakeCoordinator:
+        def __init__(self, *args, io_lock=None, **kwargs):
+            self.io_lock = io_lock
+            locks.append(io_lock)
+
+    monkeypatch.setattr(
+        manager_module, "DaikinAlthermaNormalCoordinator", FakeCoordinator
+    )
+    monkeypatch.setattr(
+        manager_module, "DaikinAlthermaSlowCoordinator", FakeCoordinator
+    )
+
+    manager = CoordinatorManager(SimpleNamespace(), "host", 502)
+
+    assert manager.io_lock is not None
+    assert manager.normal_coordinator.io_lock is manager.io_lock
+    assert manager.slow_coordinator.io_lock is manager.io_lock
+    assert locks == [manager.io_lock, manager.io_lock]
+
+
+async def test_normal_poll_holds_shared_io_lock():
+    """A coordinator poll holds the shared lock across all its reads."""
+    from custom_components.ha_daikin_altherma4_modbus.integration.coordinator import (
+        DaikinAlthermaNormalCoordinator,
+    )
+
+    lock = asyncio.Lock()
+    coordinator = DaikinAlthermaNormalCoordinator.__new__(
+        DaikinAlthermaNormalCoordinator
+    )
+    coordinator.io_lock = lock
+    coordinator.data = {}
+    coordinator._consecutive_failures = 0
+    coordinator._unavailable_logged = False
+    coordinator._connection_issue_created = False
+
+    async def fetch_input():
+        assert lock.locked()
+        return {"input_40": 1}
+
+    async def fetch_discrete():
+        assert lock.locked()
+        return {}
+
+    coordinator.data_manager = SimpleNamespace(
+        fetch_input_registers_data=fetch_input,
+        fetch_discrete_inputs_data=fetch_discrete,
+    )
+
+    assert await coordinator._async_update_data() == {"input_40": 1}
+    assert not lock.locked()
 
 
 def _unified(manager=None):

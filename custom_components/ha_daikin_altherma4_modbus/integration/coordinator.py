@@ -53,6 +53,7 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         demo_mode: bool = False,
         entry=None,
         unit_id: int | None = None,
+        io_lock: asyncio.Lock | None = None,
     ):
         # Add jitter to scan interval
         update_interval = add_jitter(scan_interval, DEFAULT_JITTER)
@@ -71,6 +72,9 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         self.demo_mode = demo_mode
         self.entry = entry
         self.unit_id = unit_id
+        # Shared with the sibling coordinator and the write proxy: every
+        # Modbus request of this integration runs under this one lock.
+        self.io_lock = io_lock if io_lock is not None else asyncio.Lock()
 
         # Data manager for input/discrete registers
         self.data_manager = ModbusDataManager(
@@ -103,9 +107,12 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         """Coordinate input and discrete input data fetching."""
         _LOGGER.debug("NormalCoordinator _async_update_data called")
         try:
-            # Refresh input and discrete input data only
-            input_data = await self.data_manager.fetch_input_registers_data()
-            discrete_data = await self.data_manager.fetch_discrete_inputs_data()
+            # Refresh input and discrete input data only. The shared lock
+            # keeps the complete poll atomic with respect to writes and the
+            # sibling coordinator.
+            async with self.io_lock:
+                input_data = await self.data_manager.fetch_input_registers_data()
+                discrete_data = await self.data_manager.fetch_discrete_inputs_data()
 
             # Combine data
             self.data = {**input_data, **discrete_data}
@@ -158,6 +165,7 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         demo_mode: bool = False,
         entry=None,
         unit_id: int | None = None,
+        io_lock: asyncio.Lock | None = None,
     ):
         # Add jitter to scan interval
         update_interval = add_jitter(scan_interval, DEFAULT_JITTER)
@@ -176,6 +184,9 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         self.demo_mode = demo_mode
         self.entry = entry
         self.unit_id = unit_id
+        # Shared with the sibling coordinator and the write proxy: every
+        # Modbus request of this integration runs under this one lock.
+        self.io_lock = io_lock if io_lock is not None else asyncio.Lock()
 
         # Data manager for coil/holding registers. All writes are routed
         # here via UnifiedWriteProxy, so it gets a coordinator reference to
@@ -207,9 +218,12 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("SlowCoordinator _async_update_data called")
         try:
             _LOGGER.debug("Updating slow data")
-            # Refresh coil and holding register data only
-            coil_data = await self.data_manager.refresh_coils()
-            holding_data = await self.data_manager.refresh_holding_registers()
+            # Refresh coil and holding register data only. The shared lock
+            # keeps the complete poll atomic with respect to writes and the
+            # sibling coordinator.
+            async with self.io_lock:
+                coil_data = await self.data_manager.refresh_coils()
+                holding_data = await self.data_manager.refresh_holding_registers()
 
             # Combine data
             self.data = {**coil_data, **holding_data}

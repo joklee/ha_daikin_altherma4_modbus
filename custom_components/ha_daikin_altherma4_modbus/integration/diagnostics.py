@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
@@ -73,24 +74,29 @@ async def async_get_config_entry_diagnostics(
     }
     failed: dict[str, str] = {}
     register_version: str | None = None
+    io_lock = getattr(manager, "io_lock", None)
+    io_guard = io_lock if io_lock is not None else nullcontext()
     for coordinator in manager.coordinators.values():
         data_manager = getattr(coordinator, "data_manager", None)
         read_raw_snapshot = getattr(data_manager, "read_raw_snapshot", None)
         if not callable(read_raw_snapshot):
             continue
         detect_register_version = getattr(data_manager, "detect_register_version", None)
-        if callable(detect_register_version) and register_version is None:
+        async with io_guard:
+            if callable(detect_register_version) and register_version is None:
+                try:
+                    register_version = await detect_register_version()
+                except Exception as err:
+                    failed.setdefault(
+                        "register_version", f"{type(err).__name__}: {err}"
+                    )
+            if register_version is None:
+                register_version = getattr(data_manager, "register_version", None)
             try:
-                register_version = await detect_register_version()
+                space_map, space_failed = await read_raw_snapshot()
             except Exception as err:
-                failed.setdefault("register_version", f"{type(err).__name__}: {err}")
-        if register_version is None:
-            register_version = getattr(data_manager, "register_version", None)
-        try:
-            space_map, space_failed = await read_raw_snapshot()
-        except Exception as err:
-            failed.setdefault("snapshot", f"{type(err).__name__}: {err}")
-            continue
+                failed.setdefault("snapshot", f"{type(err).__name__}: {err}")
+                continue
         for space, values in space_map.items():
             registers.setdefault(space, {}).update(values)
         for space, error in space_failed.items():

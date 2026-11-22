@@ -35,12 +35,31 @@ class CoordinatorManager:
         self.entry = entry
         self.unit_id = unit_id
 
+        # One I/O lock for the whole integration. Both coordinators and the
+        # write proxy share it so polling and writes never overlap on the
+        # physical Modbus connection.
+        self.io_lock = asyncio.Lock()
+
         # Create coordinators
         self.normal_coordinator = DaikinAlthermaNormalCoordinator(
-            hass, host, port, normal_interval, demo_mode, entry, unit_id
+            hass,
+            host,
+            port,
+            normal_interval,
+            demo_mode,
+            entry,
+            unit_id,
+            io_lock=self.io_lock,
         )
         self.slow_coordinator = DaikinAlthermaSlowCoordinator(
-            hass, host, port, slow_interval, demo_mode, entry, unit_id
+            hass,
+            host,
+            port,
+            slow_interval,
+            demo_mode,
+            entry,
+            unit_id,
+            io_lock=self.io_lock,
         )
 
         self.coordinators = {
@@ -229,9 +248,12 @@ class CoordinatorManager:
         """Refresh the Modbus connection by reconnecting all coordinators."""
         _LOGGER.debug("Refreshing Modbus connection for all coordinators")
         try:
-            # Refresh both coordinators' connections
-            await self.normal_coordinator.data_manager.refresh_connection()
-            await self.slow_coordinator.data_manager.refresh_connection()
+            # Reconnect under the shared I/O lock so no poll or write can
+            # race the reconnect. Refresh requests are scheduled only after
+            # the lock is released (the coordinators acquire it themselves).
+            async with self.io_lock:
+                await self.normal_coordinator.data_manager.refresh_connection()
+                await self.slow_coordinator.data_manager.refresh_connection()
 
             # Trigger data refresh after reconnection
             await self.async_request_refresh_all()
@@ -249,9 +271,11 @@ class UnifiedWriteProxy:
         self,
         normal_coordinator: DaikinAlthermaNormalCoordinator,
         slow_coordinator: DaikinAlthermaSlowCoordinator,
+        io_lock: asyncio.Lock | None = None,
     ):
         self._normal_coordinator = normal_coordinator
         self._slow_coordinator = slow_coordinator
+        self._io_lock = io_lock if io_lock is not None else asyncio.Lock()
 
     @property
     def register_version(self) -> str | None:
@@ -281,18 +305,20 @@ class UnifiedWriteProxy:
 
     async def write_holding_register(self, register_name: str, value: int) -> Any:
         """Write a holding register and fire domain event."""
-        result = await self._slow_coordinator.data_manager.write_holding_register(
-            register_name, value
-        )
+        async with self._io_lock:
+            result = await self._slow_coordinator.data_manager.write_holding_register(
+                register_name, value
+            )
         if result is not None:
             await self._async_fire_write_event(register_name, value)
         return result
 
     async def write_coil_register(self, register_name: str, value: bool) -> Any:
         """Write a coil register and refresh coordinators."""
-        result = await self._slow_coordinator.data_manager.write_coil_register(
-            register_name, value
-        )
+        async with self._io_lock:
+            result = await self._slow_coordinator.data_manager.write_coil_register(
+                register_name, value
+            )
         if result is not None:
             await self._async_fire_write_event(register_name, value)
         return result
@@ -317,7 +343,9 @@ class UnifiedCoordinator(DataUpdateCoordinator):
         self.manager = manager
         self.normal_coordinator = normal_coordinator
         self.slow_coordinator = slow_coordinator
-        self.data_manager = UnifiedWriteProxy(normal_coordinator, slow_coordinator)
+        self.data_manager = UnifiedWriteProxy(
+            normal_coordinator, slow_coordinator, manager.io_lock
+        )
         self._unsubscribers: list = []
         self._refresh_tasks: set[asyncio.Task[Any]] = set()
 

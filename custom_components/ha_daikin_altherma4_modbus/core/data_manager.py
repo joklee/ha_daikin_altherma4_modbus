@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..common.helpers import to_signed_16bit
 from ..modbus.register_repository import ModbusRegisterRepository
 from ..modbus.transport_session import ModbusTransportSession
 from .data_types import StateData
@@ -99,12 +100,14 @@ class ModbusDataManager:
         return {}
 
     def _update_coordinator_data(self, register_name: str, value: Any) -> None:
-        """Update coordinator data after a device-confirmed write.
+        """Update coordinator data from a post-write register read-back.
 
-        Stores the value in the same scaled form as polled data so entities
-        see a consistent state until the post-write refresh read-back
-        confirms (or corrects) it. Never called for unconfirmed writes:
-        callers only invoke this when the Modbus response indicated success.
+        Stores the value in the same scaled form as polled data. Callers
+        pass the value actually read from the device after the write, never
+        the requested value: an acknowledged write alone is not treated as
+        a confirmed device state. If the read-back fails, the cache is left
+        untouched and the regular post-write refresh is the only source of
+        truth.
         """
         coordinator = self.coordinator
         if coordinator is None or register_name not in coordinator.data:
@@ -113,7 +116,7 @@ class ModbusDataManager:
         if payload is None:
             return
 
-        # Normalize bool coil writes to the 0/1 ints produced by polling.
+        # Normalize bool coil read-backs to the 0/1 ints produced by polling.
         if isinstance(value, bool):
             value = int(value)
 
@@ -127,8 +130,17 @@ class ModbusDataManager:
             ),
             None,
         )
-        scale = 1
         data_type = getattr(register_config, "data_type", None)
+        # Read-backs are raw unsigned 16-bit values; signed registers must be
+        # converted before scaling (e.g. 65531 -> -5 -> -5.00 °C).
+        if (
+            data_type is not None
+            and getattr(data_type, "signed", False)
+            and isinstance(value, int)
+        ):
+            value = to_signed_16bit(value)
+
+        scale = 1
         if data_type is not None:
             scale = getattr(data_type, "scaling", 1) or 1
         try:
@@ -394,20 +406,42 @@ class ModbusDataManager:
         _LOGGER.debug("Holding Registers fully read in %.3fs", time.time() - start_time)
         return data
 
+    async def _read_back_register(self, register_name: str, reader_name: str) -> Any:
+        """Read a register back after a write, returning None on failure."""
+        reader = getattr(self._repository, reader_name, None)
+        if not callable(reader):
+            return None
+        try:
+            return await reader(register_name)
+        except Exception as err:
+            _LOGGER.warning(
+                "Could not read back %s after write; leaving cached state "
+                "unchanged until the next poll: %s",
+                register_name,
+                err,
+            )
+            return None
+
     async def write_holding_register(self, register_name: str | int, value: int) -> Any:
-        """Write to a holding register by canonical name or numeric address."""
+        """Write to a holding register and cache the device read-back."""
         register_name = _canonical_register_name(register_name, "holding")
         result = await self._repository.write_holding_register(register_name, value)
         if result is not None:
-            self._update_coordinator_data(register_name, value)
+            actual = await self._read_back_register(
+                register_name, "read_holding_register"
+            )
+            if actual is not None:
+                self._update_coordinator_data(register_name, actual)
         return result
 
     async def write_coil_register(self, register_name: str | int, value: bool) -> Any:
-        """Write to a coil register by canonical name or numeric address."""
+        """Write to a coil register and cache the device read-back."""
         register_name = _canonical_register_name(register_name, "coil")
         result = await self._repository.write_coil_register(register_name, value)
         if result is not None:
-            self._update_coordinator_data(register_name, value)
+            actual = await self._read_back_register(register_name, "read_coil_register")
+            if actual is not None:
+                self._update_coordinator_data(register_name, actual)
         return result
 
     async def refresh_connection(self) -> None:

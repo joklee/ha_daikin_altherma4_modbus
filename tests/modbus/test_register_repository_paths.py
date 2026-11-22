@@ -426,6 +426,47 @@ async def test_write_coil_paths():
         await repo.write_coil_register("coil_1", True)
 
 
+async def test_read_back_holding_and_coil_paths():
+    client = _client(
+        read_holding_registers=AsyncMock(return_value=[123]),
+        read_coils=AsyncMock(side_effect=[[True], [False]]),
+    )
+    repo, _ = _repository(client)
+
+    assert await repo.read_holding_register("holding_15") == 123
+    client.read_holding_registers.assert_awaited_once_with(15, 1)
+
+    assert await repo.read_coil_register("coil_1") is True
+    assert await repo.read_coil_register(2) is False
+
+    repo, _ = _repository(None)
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_holding_register("holding_15")
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_coil_register("coil_1")
+
+    client = _client()
+    repo, _ = _repository(client)
+    with pytest.raises(ValueError):
+        await repo.read_holding_register("holding")
+    with pytest.raises(ValueError):
+        await repo.read_coil_register("coil_x")
+    with pytest.raises(ValueError):
+        await repo.read_coil_register(2.5)
+
+    repo, _ = _repository(
+        _client(read_holding_registers=AsyncMock(return_value=_ErrorResponse()))
+    )
+    with pytest.raises(ModbusReadException):
+        await repo.read_holding_register("holding_15")
+
+    repo, _ = _repository(
+        _client(read_coils=AsyncMock(return_value=_ErrorResponse()))
+    )
+    with pytest.raises(ModbusReadException):
+        await repo.read_coil_register("coil_1")
+
+
 async def test_snapshot_without_client_and_with_space_failure():
     repo, _ = _repository(None)
     snapshot, failed = await repo.read_raw_snapshot()
