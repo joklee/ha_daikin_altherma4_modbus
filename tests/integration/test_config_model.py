@@ -585,7 +585,11 @@ def _load_integration_module(monkeypatch):
     async def _noop_cancel_single_heatup(config_entry_id):
         return None
 
+    async def _noop_recover_dhw_single_heatup(hass, entry):
+        return None
+
     services_module.async_cancel_single_heatup = _noop_cancel_single_heatup
+    services_module.async_recover_dhw_single_heatup = _noop_recover_dhw_single_heatup
     monkeypatch.setitem(sys.modules, services_name, services_module)
 
     return importlib.import_module(package_name), FakeCoordinatorManager

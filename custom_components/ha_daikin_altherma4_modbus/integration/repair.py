@@ -15,6 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 ISSUE_CONNECTION_LOST = "connection_lost"
 ISSUE_DEVICE_ABNORMALITY = "device_abnormality"
 ISSUE_UNSUPPORTED_TEMPERATURE_UNIT = "unsupported_temperature_unit"
+ISSUE_DHW_HEATUP_RESTORE_FAILED = "dhw_single_heatup_restore_failed"
 
 
 def connection_issue_id(entry) -> str:
@@ -30,6 +31,11 @@ def abnormality_issue_id(entry) -> str:
 def unsupported_temperature_unit_issue_id(entry) -> str:
     """Return the unsupported-unit issue id for a config entry."""
     return f"{ISSUE_UNSUPPORTED_TEMPERATURE_UNIT}_{entry.entry_id}"
+
+
+def dhw_heatup_restore_issue_id(entry) -> str:
+    """Return the DHW heat-up restore issue id for a config entry."""
+    return f"{ISSUE_DHW_HEATUP_RESTORE_FAILED}_{entry.entry_id}"
 
 
 def abnormality_issue_pattern(entry) -> str:
@@ -178,3 +184,28 @@ def async_delete_abnormality_issue(hass, entry) -> None:
         entry: Config entry
     """
     ir.async_delete_issue(hass, DOMAIN, abnormality_issue_id(entry))
+
+
+def async_create_dhw_heatup_restore_issue(hass, entry, reason: str) -> None:
+    """Create a repair issue when a DHW heat-up state could not be restored."""
+    issue_id = dhw_heatup_restore_issue_id(entry)
+    _create_issue(
+        hass,
+        entry,
+        issue_id,
+        is_fixable=False,
+        is_persistent=False,
+        severity=IssueSeverity.WARNING,
+        translation_key=ISSUE_DHW_HEATUP_RESTORE_FAILED,
+        translation_placeholders={
+            "entry_id": entry.entry_id,
+            "entry_name": getattr(entry, "title", None) or entry.entry_id,
+            "reason": reason,
+        },
+    )
+    _LOGGER.error("Created DHW heat-up restore issue %s: %s", issue_id, reason)
+
+
+def async_delete_dhw_heatup_restore_issue(hass, entry) -> None:
+    """Delete the DHW heat-up restore issue after a successful restore."""
+    ir.async_delete_issue(hass, DOMAIN, dhw_heatup_restore_issue_id(entry))

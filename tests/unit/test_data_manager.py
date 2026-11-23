@@ -180,6 +180,20 @@ async def test_numeric_holding_write_updates_canonical_cache(register_name):
     assert manager.coordinator.data["holding_15"]["value"] == 1
 
 
+async def test_read_register_methods_delegate_to_repository():
+    """Public single-register reads canonicalize names and use the repository."""
+    manager = _manager()
+    manager._repository = _repository(
+        read_holding_register=AsyncMock(return_value=123),
+        read_coil_register=AsyncMock(return_value=True),
+    )
+
+    assert await manager.read_holding_register(16) == 123
+    manager._repository.read_holding_register.assert_awaited_once_with("holding_16")
+    assert await manager.read_coil_register(1) is True
+    manager._repository.read_coil_register.assert_awaited_once_with("coil_1")
+
+
 async def test_write_caches_read_back_not_requested_value():
     """The cache reflects the device read-back, not the requested value."""
     manager = _manager()

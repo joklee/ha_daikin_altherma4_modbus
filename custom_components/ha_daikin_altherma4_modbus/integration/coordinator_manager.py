@@ -303,6 +303,20 @@ class UnifiedWriteProxy:
             f"{DOMAIN}_register_written", event_data
         )
 
+    async def read_holding_register(self, register_name: str) -> int | None:
+        """Read one holding register directly, serialized with writes."""
+        async with self._io_lock:
+            return await self._slow_coordinator.data_manager.read_holding_register(
+                register_name
+            )
+
+    async def read_coil_register(self, register_name: str) -> bool | None:
+        """Read one coil directly, serialized with writes."""
+        async with self._io_lock:
+            return await self._slow_coordinator.data_manager.read_coil_register(
+                register_name
+            )
+
     async def write_holding_register(self, register_name: str, value: int) -> Any:
         """Write a holding register and fire domain event."""
         async with self._io_lock:

@@ -215,6 +215,7 @@ async def test_dispatch_start_dhw_single_heatup_via_hass(
         return_value={
             "input_43": {"value": 30.0},
             "coil_1": {"value": 1},
+            "holding_16": {"value": 48.0},
         }
     )
 

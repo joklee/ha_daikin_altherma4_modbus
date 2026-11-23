@@ -149,6 +149,32 @@ async def test_write_proxy_fires_event_only_on_result():
     assert hass.bus.async_fire.call_count == 2
 
 
+async def test_write_proxy_reads_under_shared_io_lock():
+    """Direct reads use the same lock as writes and delegate to slow data."""
+    lock = asyncio.Lock()
+    read_holding = AsyncMock(return_value=4800)
+    read_coil = AsyncMock(return_value=True)
+    normal = _coordinator()
+    slow = _coordinator()
+    slow.data_manager = SimpleNamespace(
+        read_holding_register=read_holding,
+        read_coil_register=read_coil,
+    )
+    proxy = UnifiedWriteProxy(normal, slow, lock)
+
+    assert await proxy.read_holding_register("holding_16") == 4800
+    read_holding.assert_awaited_once_with("holding_16")
+    assert await proxy.read_coil_register("coil_1") is True
+    read_coil.assert_awaited_once_with("coil_1")
+
+    await lock.acquire()
+    task = asyncio.create_task(proxy.read_holding_register("holding_16"))
+    await asyncio.sleep(0)
+    assert read_holding.await_count == 1
+    lock.release()
+    assert await task == 4800
+
+
 async def test_write_proxy_waits_for_shared_io_lock():
     """A write cannot start while a poll holds the shared I/O lock."""
     lock = asyncio.Lock()

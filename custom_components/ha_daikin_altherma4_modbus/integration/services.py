@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from datetime import timedelta
 
 try:
@@ -10,6 +11,7 @@ try:
     from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
     from homeassistant.helpers import config_validation as cv
     from homeassistant.helpers.service import async_register_admin_service
+    from homeassistant.helpers.storage import Store
 
     HAS_HA = True
 except ImportError:
@@ -47,6 +49,10 @@ from ..core.const import (
     SERVICE_START_DHW_SINGLE_HEATUP,
 )
 from ..core.register_constants import HOLDING_REGISTERS
+from .repair import (
+    async_create_dhw_heatup_restore_issue,
+    async_delete_dhw_heatup_restore_issue,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,6 +76,15 @@ EVENT_DHW_SINGLE_HEATUP_FINISHED = (
     "ha_daikin_altherma4_modbus_dhw_single_heatup_finished"
 )
 
+# Maximum accepted age of the DHW temperature reading used to decide whether
+# the heat-up target was reached. Older data is ignored until a fresh poll
+# arrives, so a stale cache can never end a run prematurely.
+_DHW_MAX_DATA_AGE = 300.0
+
+# Persistent recovery state version and storage key prefix.
+_DHW_STATE_VERSION = 1
+_DHW_STATE_KEY_PREFIX = f"{DOMAIN}.dhw_single_heatup"
+
 # Running single heat-up runs by config entry id. Cancelled on unload so no
 # write ever targets a torn-down device.
 _SINGLE_HEATUP_TASKS: dict = {}
@@ -86,6 +101,7 @@ def _single_heatup_lock(config_entry_id: str) -> asyncio.Lock:
         lock = asyncio.Lock()
         _SINGLE_HEATUP_LOCKS[config_entry_id] = lock
     return lock
+
 
 # Operation mode mapping for service calls (lowercase keys for service API)
 OPERATION_MODE_MAP = {
@@ -329,6 +345,180 @@ if HAS_HA:
             )
         return entry
 
+    # ------------------------------------------------------------------
+    # DHW single heat-up helpers: freshness, direct reads, persistence
+    # ------------------------------------------------------------------
+
+    def _dhw_state_store(hass, config_entry_id: str) -> Store:
+        """Return the persistent store for a single heat-up run."""
+        return Store(
+            hass,
+            _DHW_STATE_VERSION,
+            f"{_DHW_STATE_KEY_PREFIX}.{config_entry_id}",
+        )
+
+    async def _async_load_dhw_state(hass, config_entry_id: str) -> dict | None:
+        """Load persisted single heat-up recovery state, if any."""
+        try:
+            data = await _dhw_state_store(hass, config_entry_id).async_load()
+        except Exception as err:
+            _LOGGER.warning(
+                "Could not load DHW single heat-up recovery state for entry %s: %s",
+                config_entry_id,
+                err,
+            )
+            return None
+        return data if isinstance(data, dict) else None
+
+    async def _async_save_dhw_state(hass, config_entry_id: str, state: dict) -> None:
+        """Persist single heat-up recovery state before changing the device."""
+        await _dhw_state_store(hass, config_entry_id).async_save(state)
+
+    async def _async_clear_dhw_state(hass, config_entry_id: str) -> None:
+        """Remove persisted single heat-up recovery state."""
+        try:
+            await _dhw_state_store(hass, config_entry_id).async_remove()
+        except Exception as err:
+            _LOGGER.warning(
+                "Could not clear DHW single heat-up recovery state for entry %s: %s",
+                config_entry_id,
+                err,
+            )
+
+    def _dhw_temperature_age(manager) -> float | None:
+        """Return the age of the last successful normal poll in seconds."""
+        normal = getattr(manager, "normal_coordinator", None)
+        last = getattr(normal, "last_successful_poll", None) if normal else None
+        if last is None:
+            return None
+        return max(0.0, time.monotonic() - last)
+
+    def _dhw_temperature_is_fresh(manager) -> bool:
+        """Whether cached DHW temperature data is recent enough to trust."""
+        normal = getattr(manager, "normal_coordinator", None)
+        if normal is None or getattr(normal, "last_update_success", False) is not True:
+            return False
+        age = _dhw_temperature_age(manager)
+        return age is not None and age <= _DHW_MAX_DATA_AGE
+
+    async def _resolve_dhw_enabled(manager, writer) -> bool | None:
+        """Return the current DHW state, preferring a direct device read."""
+        reader = getattr(writer, "read_coil_register", None)
+        if callable(reader):
+            try:
+                raw = await reader(REGISTER_DHW_HVAC_MODE)
+            except Exception as err:
+                _LOGGER.debug(
+                    "Direct DHW state read failed; falling back to cached "
+                    "coordinator data: %s",
+                    err,
+                )
+            else:
+                if raw is not None:
+                    return bool(raw)
+        return _dhw_enabled(manager)
+
+    async def _resolve_dhw_heatup_setpoint(manager, writer) -> int | None:
+        """Return the raw holding_16 value, preferring a direct device read."""
+        reader = getattr(writer, "read_holding_register", None)
+        if callable(reader):
+            try:
+                raw = await reader("holding_16")
+            except Exception as err:
+                _LOGGER.debug(
+                    "Direct DHW setpoint read failed; falling back to cached "
+                    "coordinator data: %s",
+                    err,
+                )
+            else:
+                if raw is not None:
+                    try:
+                        return int(raw)
+                    except (TypeError, ValueError):
+                        pass
+        return _dhw_heatup_setpoint(manager)
+
+    def _dhw_heatup_request_active(manager) -> int | None:
+        """Return the cached holding_15 value, or None when unknown."""
+        try:
+            data = manager.get_all_data()
+        except Exception:  # pragma: no cover - defensive
+            return None
+        raw = get_register_value(data.get("holding_15"))
+        if raw is None or is_unavailable_value(raw):
+            return None
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
+
+    async def _restore_dhw_heatup_state(
+        hass,
+        entry,
+        writer,
+        *,
+        previous_setpoint: int | None,
+        restore_setpoint: bool,
+        restore_dhw_off: bool,
+        dhw_coil_name: str = REGISTER_DHW_HVAC_MODE,
+    ) -> list[str]:
+        """Restore the pre-run device state and report failed steps.
+
+        Always clears the heat-up request. Optionally restores the previous
+        setpoint and the DHW off state. A repair issue is created when any
+        step fails and deleted after a complete restore.
+        """
+        config_entry_id = entry.entry_id
+        failures: list[str] = []
+
+        try:
+            await writer.write_holding_register("holding_15", 0)
+        except Exception as err:
+            failures.append(f"clear heat-up request: {err}")
+            _LOGGER.error(
+                "Could not clear DHW heat-up request for entry %s: %s",
+                config_entry_id,
+                err,
+            )
+
+        if restore_setpoint:
+            if previous_setpoint is None:
+                failures.append("previous setpoint unknown")
+            else:
+                try:
+                    await writer.write_holding_register("holding_16", previous_setpoint)
+                    _LOGGER.debug(
+                        "Restored DHW single heat-up setpoint to %s for entry %s",
+                        previous_setpoint,
+                        config_entry_id,
+                    )
+                except Exception as err:
+                    failures.append(f"restore setpoint: {err}")
+                    _LOGGER.error(
+                        "Could not restore DHW single heat-up setpoint for "
+                        "entry %s: %s",
+                        config_entry_id,
+                        err,
+                    )
+
+        if restore_dhw_off:
+            try:
+                await writer.write_coil_register(dhw_coil_name, False)
+                _LOGGER.debug("Restored DHW off state for entry %s", config_entry_id)
+            except Exception as err:
+                failures.append(f"restore DHW off: {err}")
+                _LOGGER.error(
+                    "Could not restore DHW off state for entry %s: %s",
+                    config_entry_id,
+                    err,
+                )
+
+        if failures:
+            async_create_dhw_heatup_restore_issue(hass, entry, "; ".join(failures))
+        else:
+            async_delete_dhw_heatup_restore_issue(hass, entry)
+        return failures
+
     async def async_set_operation_mode(call) -> None:
         """Set the heat pump operation mode."""
         hass = call.hass
@@ -519,10 +709,18 @@ if HAS_HA:
         manager = runtime_data.manager
         writer = runtime_data.coordinator.data_manager
 
-        previous_setpoint = _dhw_heatup_setpoint(manager)
         setpoint_written = False
-
+        previous_setpoint = None
         if setpoint is not None:
+            # A setpoint change is only safe when the previous value is known
+            # and can be restored if the activation fails.
+            previous_setpoint = await _resolve_dhw_heatup_setpoint(manager, writer)
+            if previous_setpoint is None:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="single_heatup_setpoint_unknown",
+                    translation_placeholders={"config_entry_id": config_entry_id},
+                )
             # Convert setpoint to register value (scale by 0.01)
             register_value = scaled_value_to_register(setpoint, 0.01)
             await _guarded_write(
@@ -538,11 +736,17 @@ if HAS_HA:
                     "holding_15", 1 if single_heatup else 0
                 ),
             )
-        except Exception:
-            if setpoint_written:
-                await _restore_dhw_heatup_setpoint(
-                    config_entry_id, writer, previous_setpoint
-                )
+        except (Exception, asyncio.CancelledError):
+            failures = await _restore_dhw_heatup_state(
+                hass,
+                entry,
+                writer,
+                previous_setpoint=previous_setpoint,
+                restore_setpoint=setpoint_written,
+                restore_dhw_off=False,
+            )
+            if not failures:
+                await _async_clear_dhw_state(hass, config_entry_id)
             raise
 
         if setpoint is not None:
@@ -765,36 +969,9 @@ if HAS_HA:
             scale = 1.0
         return round(value / scale)
 
-    async def _restore_dhw_heatup_setpoint(
-        config_entry_id, writer, previous_setpoint
-    ) -> None:
-        """Restore the previous holding_16 value after a failed activation."""
-        if previous_setpoint is None:
-            _LOGGER.warning(
-                "DHW single heat-up activation failed for entry %s and the "
-                "previous setpoint is unknown; holding_16 was left modified",
-                config_entry_id,
-            )
-            return
-        try:
-            await writer.write_holding_register(
-                "holding_16", previous_setpoint
-            )
-            _LOGGER.debug(
-                "Restored DHW single heat-up setpoint to %s for entry %s",
-                previous_setpoint,
-                config_entry_id,
-            )
-        except Exception as err:
-            _LOGGER.warning(
-                "Could not restore DHW single heat-up setpoint for entry %s: %s",
-                config_entry_id,
-                err,
-            )
-
     async def _run_dhw_single_heatup(
         hass,
-        config_entry_id,
+        entry,
         manager,
         writer,
         target,
@@ -807,18 +984,34 @@ if HAS_HA:
 
         Fires ``EVENT_DHW_SINGLE_HEATUP_FINISHED`` with the outcome and
         always leaves the request register cleared. Restores DHW to off
-        when this run switched it on. Uses coordinator data
-        (no extra Modbus traffic) for the temperature check.
+        when this run switched it on. Temperature decisions only use
+        coordinator data that is fresh enough (see ``_DHW_MAX_DATA_AGE``).
         """
+        config_entry_id = entry.entry_id
         outcome = "timeout"
         current = None
+        data_stale = False
+        data_age = None
         try:
             start = hass.loop.time()
+            stale_warned = False
             while True:
                 current = _dhw_temperature(manager)
-                if current is not None and current >= target - hysteresis:
+                fresh = _dhw_temperature_is_fresh(manager)
+                if fresh and current is not None and current >= target - hysteresis:
                     outcome = "reached"
                     break
+                if not fresh and not stale_warned:
+                    data_age = _dhw_temperature_age(manager)
+                    _LOGGER.warning(
+                        "DHW single heat-up for entry %s ignores stale "
+                        "temperature data (age %s s, max %s s); waiting for "
+                        "a fresh poll",
+                        config_entry_id,
+                        f"{data_age:.1f}" if data_age is not None else "unknown",
+                        _DHW_MAX_DATA_AGE,
+                    )
+                    stale_warned = True
                 elapsed = hass.loop.time() - start
                 if elapsed >= timeout_s:
                     break
@@ -829,27 +1022,34 @@ if HAS_HA:
             outcome = "cancelled"
             raise
         finally:
-            restore_failed = False
-            try:
-                await writer.write_holding_register("holding_15", 0)
-            except Exception as err:
-                restore_failed = True
-                _LOGGER.error(
-                    "Could not clear DHW heat-up request for entry %s: %s",
-                    config_entry_id,
-                    err,
-                )
-            if restore_dhw_off:
-                try:
-                    await writer.write_coil_register(dhw_coil_name, False)
-                except Exception as err:
-                    restore_failed = True
-                    _LOGGER.error(
-                        "Could not restore DHW off state for entry %s: %s",
-                        config_entry_id,
-                        err,
-                    )
+            data_age = _dhw_temperature_age(manager)
+            data_stale = not _dhw_temperature_is_fresh(manager)
+            failures = await _restore_dhw_heatup_state(
+                hass,
+                entry,
+                writer,
+                previous_setpoint=None,
+                restore_setpoint=False,
+                restore_dhw_off=restore_dhw_off,
+                dhw_coil_name=dhw_coil_name,
+            )
             _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
+            if failures:
+                # Keep the persisted state so a restart retries the restore.
+                state = await _async_load_dhw_state(hass, config_entry_id)
+                if state is not None:
+                    state["restore_failed"] = True
+                    try:
+                        await _async_save_dhw_state(hass, config_entry_id, state)
+                    except Exception as err:
+                        _LOGGER.warning(
+                            "Could not update DHW single heat-up recovery "
+                            "state for entry %s: %s",
+                            config_entry_id,
+                            err,
+                        )
+            else:
+                await _async_clear_dhw_state(hass, config_entry_id)
             hass.bus.async_fire(
                 EVENT_DHW_SINGLE_HEATUP_FINISHED,
                 {
@@ -857,10 +1057,12 @@ if HAS_HA:
                     "outcome": outcome,
                     "target_temperature": target,
                     "current_temperature": current,
-                    "restore_failed": restore_failed,
+                    "restore_failed": bool(failures),
+                    "data_stale": data_stale,
+                    "data_age_seconds": data_age,
                 },
             )
-            if restore_failed:
+            if failures:
                 _LOGGER.error(
                     "DHW single heat-up for entry %s finished: %s but the "
                     "final restore failed - device state may be inconsistent "
@@ -887,6 +1089,12 @@ if HAS_HA:
         DHW temperature, stops the request on target/timeout, restores
         DHW to off when this run switched it on, and fires
         ``EVENT_DHW_SINGLE_HEATUP_FINISHED``.
+
+        The previous setpoint and DHW state are read from the device (with
+        a cached fallback) before anything is written. If either is
+        unknown, the service refuses to start so no modified setpoint can
+        be left behind. The recovery state is persisted before the first
+        write, so an interrupted run can be cleaned up after a restart.
         """
         hass = call.hass
         config_entry_id = call.data[ATTR_CONFIG_ENTRY_ID]
@@ -915,70 +1123,104 @@ if HAS_HA:
                     translation_placeholders={"config_entry_id": config_entry_id},
                 )
 
+            # Resolve everything that must be restored BEFORE touching the
+            # device. Unknown values abort the start without any write.
+            previous_setpoint = await _resolve_dhw_heatup_setpoint(manager, writer)
+            if previous_setpoint is None:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="single_heatup_setpoint_unknown",
+                    translation_placeholders={"config_entry_id": config_entry_id},
+                )
+
             dhw_coil_name = REGISTER_DHW_HVAC_MODE
-            dhw_state = _dhw_enabled(manager)
+            dhw_state = await _resolve_dhw_enabled(manager, writer)
             restore_dhw_off = dhw_state is False
-            if restore_dhw_off:
-                await _guarded_write(
-                    REGISTER_DHW_HVAC_MODE,
-                    lambda: writer.write_coil_register(dhw_coil_name, True),
-                )
-                _LOGGER.debug(
-                    "Enabled DHW for single heat-up for entry %s",
-                    config_entry_id,
-                )
-            elif dhw_state is None:
+            if dhw_state is None:
                 raise ServiceValidationError(
                     translation_domain=DOMAIN,
                     translation_key="single_heatup_dhw_state_unknown",
                     translation_placeholders={"config_entry_id": config_entry_id},
                 )
 
-            previous_setpoint = _dhw_heatup_setpoint(manager)
-            register_value = scaled_value_to_register(target, 0.01)
-            setpoint_written = False
+            now = time.time()
+            state = {
+                "phase": "starting",
+                "started_at": now,
+                "deadline": now + timeout_s,
+                "target": target,
+                "timeout_s": timeout_s,
+                "hysteresis": hysteresis,
+                "restore_dhw_off": restore_dhw_off,
+                "dhw_coil_name": dhw_coil_name,
+                "previous_setpoint": previous_setpoint,
+            }
             try:
+                await _async_save_dhw_state(hass, config_entry_id, state)
+            except Exception as err:
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="write_failed",
+                    translation_placeholders={
+                        "operation_name": "save",
+                        "register_type": "recovery state",
+                        "register_name": "dhw_single_heatup",
+                        "error": str(err),
+                    },
+                ) from err
+
+            register_value = scaled_value_to_register(target, 0.01)
+            try:
+                if restore_dhw_off:
+                    await _guarded_write(
+                        REGISTER_DHW_HVAC_MODE,
+                        lambda: writer.write_coil_register(dhw_coil_name, True),
+                    )
+                    _LOGGER.debug(
+                        "Enabled DHW for single heat-up for entry %s",
+                        config_entry_id,
+                    )
                 await _guarded_write(
                     "holding_16",
-                    lambda: writer.write_holding_register(
-                        "holding_16", register_value
-                    ),
+                    lambda: writer.write_holding_register("holding_16", register_value),
                 )
-                setpoint_written = True
                 await _guarded_write(
                     "holding_15",
                     lambda: writer.write_holding_register("holding_15", 1),
                 )
-            except Exception:
+            except (Exception, asyncio.CancelledError):
                 # Roll back every change already applied so a failed start
                 # leaves the device in its previous state.
-                if setpoint_written:
-                    await _restore_dhw_heatup_setpoint(
-                        config_entry_id, writer, previous_setpoint
-                    )
-                if restore_dhw_off:
-                    try:
-                        await writer.write_coil_register(
-                            dhw_coil_name, False
-                        )
-                        _LOGGER.debug(
-                            "Restored DHW off state after failed single "
-                            "heat-up start for entry %s",
-                            config_entry_id,
-                        )
-                    except Exception as restore_err:
-                        _LOGGER.error(
-                            "DHW single heat-up start failed for entry %s "
-                            "and restoring the DHW off state also failed: %s",
-                            config_entry_id,
-                            restore_err,
-                        )
+                failures = await _restore_dhw_heatup_state(
+                    hass,
+                    entry,
+                    writer,
+                    previous_setpoint=previous_setpoint,
+                    restore_setpoint=True,
+                    restore_dhw_off=restore_dhw_off,
+                    dhw_coil_name=dhw_coil_name,
+                )
+                if not failures:
+                    await _async_clear_dhw_state(hass, config_entry_id)
                 raise
+
+            state["phase"] = "running"
+            try:
+                await _async_save_dhw_state(hass, config_entry_id, state)
+            except Exception as err:
+                # The run is already active; do not fail the service, but
+                # leave a trace because restart recovery is degraded.
+                _LOGGER.warning(
+                    "Could not persist running DHW single heat-up state for "
+                    "entry %s: %s",
+                    config_entry_id,
+                    err,
+                )
 
             task = hass.async_create_task(
                 _run_dhw_single_heatup(
                     hass,
-                    config_entry_id,
+                    entry,
                     manager,
                     writer,
                     target,
@@ -1019,6 +1261,119 @@ if HAS_HA:
                     err,
                 )
 
+    async def async_recover_dhw_single_heatup(hass, entry) -> None:
+        """Recover an interrupted DHW single heat-up after a restart.
+
+        Called during setup. If the persisted run is still active and its
+        deadline has not passed, the background monitor is resumed.
+        Otherwise the request and any partially applied changes are
+        rolled back. A failed restore keeps the persisted state and raises
+        a repair issue so the next start retries it.
+        """
+        config_entry_id = entry.entry_id
+        state = await _async_load_dhw_state(hass, config_entry_id)
+        if not state:
+            return
+
+        runtime_data = getattr(entry, "runtime_data", None)
+        if runtime_data is None:
+            return
+        manager = runtime_data.manager
+        writer = runtime_data.coordinator.data_manager
+
+        async with _single_heatup_lock(config_entry_id):
+            running = _SINGLE_HEATUP_TASKS.get(config_entry_id)
+            if running is not None and not running.done():
+                return
+
+            phase = state.get("phase")
+            try:
+                target = float(state.get("target", 0) or 0)
+                hysteresis = float(state.get("hysteresis", 0.5) or 0.5)
+                deadline = float(state.get("deadline", 0) or 0)
+            except (TypeError, ValueError):
+                _LOGGER.warning(
+                    "Ignoring corrupt DHW single heat-up recovery state for entry %s",
+                    config_entry_id,
+                )
+                await _async_clear_dhw_state(hass, config_entry_id)
+                return
+
+            previous_setpoint = state.get("previous_setpoint")
+            restore_dhw_off = bool(state.get("restore_dhw_off", False))
+            dhw_coil_name = state.get("dhw_coil_name") or REGISTER_DHW_HVAC_MODE
+            now = time.time()
+
+            active = None
+            reader = getattr(writer, "read_holding_register", None)
+            if callable(reader):
+                try:
+                    active = await reader("holding_15")
+                except Exception as err:
+                    _LOGGER.warning(
+                        "Could not read DHW heat-up request state during "
+                        "recovery for entry %s: %s",
+                        config_entry_id,
+                        err,
+                    )
+            if active is None:
+                active = _dhw_heatup_request_active(manager)
+
+            if phase == "running" and active != 0 and deadline > now and target > 0:
+                remaining = deadline - now
+                _LOGGER.info(
+                    "Resuming DHW single heat-up for entry %s after restart "
+                    "(target %s°C, %.0fs remaining)",
+                    config_entry_id,
+                    target,
+                    remaining,
+                )
+                task = hass.async_create_task(
+                    _run_dhw_single_heatup(
+                        hass,
+                        entry,
+                        manager,
+                        writer,
+                        target,
+                        remaining,
+                        hysteresis,
+                        restore_dhw_off,
+                        dhw_coil_name,
+                    ),
+                    name=f"{DOMAIN}_dhw_single_heatup_{config_entry_id}",
+                )
+                _SINGLE_HEATUP_TASKS[config_entry_id] = task
+                if task.done():
+                    _SINGLE_HEATUP_TASKS.pop(config_entry_id, None)
+                return
+
+            _LOGGER.info(
+                "Cleaning up interrupted DHW single heat-up for entry %s "
+                "(phase %s, request %s)",
+                config_entry_id,
+                phase,
+                active,
+            )
+            failures = await _restore_dhw_heatup_state(
+                hass,
+                entry,
+                writer,
+                previous_setpoint=previous_setpoint,
+                # A partially started run may have overwritten the setpoint;
+                # a completed run intentionally leaves the target setpoint.
+                restore_setpoint=phase != "running",
+                restore_dhw_off=restore_dhw_off,
+                dhw_coil_name=dhw_coil_name,
+            )
+            if failures:
+                _LOGGER.warning(
+                    "Could not fully restore DHW state for entry %s after "
+                    "restart; recovery state kept for the next start",
+                    config_entry_id,
+                )
+            else:
+                await _async_clear_dhw_state(hass, config_entry_id)
+
 else:  # pragma: no cover - dummies only without Home Assistant
     # Dummy functions for testing imports
     async def async_set_operation_mode(call):
@@ -1049,6 +1404,9 @@ else:  # pragma: no cover - dummies only without Home Assistant
         pass
 
     async def async_cancel_single_heatup(config_entry_id: str):
+        pass
+
+    async def async_recover_dhw_single_heatup(hass, entry):
         pass
 
     async def async_set_power_limit(call):

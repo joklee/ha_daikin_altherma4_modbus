@@ -774,6 +774,9 @@
     "single_heatup_dhw_state_unknown": {
       "message": "WW-Status für Eintrag {config_entry_id} unbekannt; Einmalaufheizung nicht gestartet."
     },
+    "single_heatup_setpoint_unknown": {
+      "message": "Die vorherige WW-Solltemperatur für Eintrag {config_entry_id} ist unbekannt; die Einmalaufheizung wurde nicht gestartet, damit kein veränderter Sollwert zurückbleibt."
+    },
     "write_failed": {
       "message": "Fehler beim {operation_name} von {register_type} {register_name}: {error}"
     },
@@ -799,6 +802,10 @@
     "unsupported_temperature_unit": {
       "title": "Nicht unterstützte Temperatureinheit: Fahrenheit",
       "description": "Die Daikin Altherma 4 Integration setzt das metrische Einheitensystem voraus und unterstützt Fahrenheit nicht.\n\nHome Assistant ist derzeit auf {temperature_unit} eingestellt, daher wurde die Integration für {entry_name} nicht gestartet. Die Modbus-Register der Wärmepumpe sind in Celsius definiert und die Integration schreibt Rohwerte in die Register, die nicht zuverlässig umgerechnet werden können.\n\nStelle das Einheitensystem unter Einstellungen → System → Allgemein auf metrisch (°C) um und lade die Integration anschließend neu."
+    },
+    "dhw_single_heatup_restore_failed": {
+      "title": "Zustand der WW-Einmalaufheizung konnte nicht wiederhergestellt werden",
+      "description": "Nach einer WW-Einmalaufheizung für {entry_name} konnte die Integration den vorherigen Gerätezustand nicht vollständig wiederherstellen.\n\nFehlgeschlagene Schritte: {reason}\n\nDie gespeicherten Wiederherstellungsdaten bleiben erhalten und werden beim nächsten Start von Home Assistant erneut verwendet. Prüfen Sie Solltemperatur und Ein/Aus-Zustand des Warmwassers am Gerät und lade die Integration anschließend neu."
     }
   },
   "selector": {

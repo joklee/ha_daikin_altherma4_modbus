@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -76,6 +77,11 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         # Modbus request of this integration runs under this one lock.
         self.io_lock = io_lock if io_lock is not None else asyncio.Lock()
 
+        # Monotonic timestamp of the last successful poll. Consumers that
+        # make decisions from cached values (e.g. the DHW heat-up run) must
+        # check this instead of trusting arbitrarily old coordinator data.
+        self.last_successful_poll: float | None = None
+
         # Data manager for input/discrete registers
         self.data_manager = ModbusDataManager(
             host, port, demo_mode, hass, entry, unit_id
@@ -116,6 +122,7 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
 
             # Combine data
             self.data = {**input_data, **discrete_data}
+            self.last_successful_poll = time.monotonic()
 
             # Success resets the outage classification: a later failure
             # starts over as transient.
@@ -188,6 +195,11 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
         # Modbus request of this integration runs under this one lock.
         self.io_lock = io_lock if io_lock is not None else asyncio.Lock()
 
+        # Monotonic timestamp of the last successful poll. Consumers that
+        # make decisions from cached values (e.g. the DHW heat-up run) must
+        # check this instead of trusting arbitrarily old coordinator data.
+        self.last_successful_poll: float | None = None
+
         # Data manager for coil/holding registers. All writes are routed
         # here via UnifiedWriteProxy, so it gets a coordinator reference to
         # update coordinator.data after device-confirmed writes.
@@ -227,6 +239,7 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
 
             # Combine data
             self.data = {**coil_data, **holding_data}
+            self.last_successful_poll = time.monotonic()
 
             # Success resets the outage classification (see normal coordinator).
             self._consecutive_failures = 0

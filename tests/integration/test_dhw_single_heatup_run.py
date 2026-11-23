@@ -7,6 +7,7 @@ offline via demo entries and stubbed writers.
 """
 
 import asyncio
+import time
 from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -15,6 +16,7 @@ import pytest
 import voluptuous as vol
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.service import ServiceCall, ServiceValidationError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -24,6 +26,9 @@ from custom_components.ha_daikin_altherma4_modbus.core.const import (
 )
 from custom_components.ha_daikin_altherma4_modbus.integration import (
     services as services_module,
+)
+from custom_components.ha_daikin_altherma4_modbus.integration.repair import (
+    dhw_heatup_restore_issue_id,
 )
 from custom_components.ha_daikin_altherma4_modbus.integration.services import (
     _SINGLE_HEATUP_TASKS,
@@ -74,6 +79,7 @@ def _stub_io(entry, temp):
         return_value={
             "input_43": {"value": temp},
             "coil_1": {"value": 1},
+            "holding_16": {"value": 48.0},
         }
     )
     return writer, manager
@@ -259,7 +265,12 @@ async def test_run_without_temperature_reading_waits_for_timeout(
     monkeypatch.setattr(services_module, "_DHW_RUN_STATUS_POLL_INTERVAL", 0.05)
     entry = await _setup_demo(hass)
     writer, manager = _stub_io(entry, temp=None)
-    manager.get_all_data = MagicMock(return_value={"coil_1": {"value": 1}})
+    manager.get_all_data = MagicMock(
+        return_value={
+            "coil_1": {"value": 1},
+            "holding_16": {"value": 48.0},
+        }
+    )
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
 
@@ -285,7 +296,11 @@ async def test_start_enables_dhw_when_off_and_restores_after_reached(
     entry = await _setup_demo(hass)
     writer, manager = _stub_io(entry, temp=47.8)
     manager.get_all_data = MagicMock(
-        return_value={"input_43": {"value": 47.8}, "coil_1": {"value": 0}}
+        return_value={
+            "input_43": {"value": 47.8},
+            "coil_1": {"value": 0},
+            "holding_16": {"value": 48.0},
+        }
     )
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
@@ -310,7 +325,11 @@ async def test_start_leaves_dhw_on_when_already_on(hass, enable_custom_integrati
     entry = await _setup_demo(hass)
     writer, manager = _stub_io(entry, temp=47.8)
     manager.get_all_data = MagicMock(
-        return_value={"input_43": {"value": 47.8}, "coil_1": {"value": 1}}
+        return_value={
+            "input_43": {"value": 47.8},
+            "coil_1": {"value": 1},
+            "holding_16": {"value": 48.0},
+        }
     )
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
@@ -329,14 +348,15 @@ async def test_start_leaves_dhw_on_when_already_on(hass, enable_custom_integrati
     assert events[0].data["outcome"] == "reached"
 
 
-async def test_start_rejected_when_dhw_state_unknown(
-    hass, enable_custom_integrations
-):
+async def test_start_rejected_when_dhw_state_unknown(hass, enable_custom_integrations):
     """Unknown DHW state: start aborts with ServiceValidationError, no writes."""
     entry = await _setup_demo(hass)
     writer, manager = _stub_io(entry, temp=47.8)
     manager.get_all_data = MagicMock(
-        return_value={"input_43": {"value": 47.8}}  # no coil_1 -> unknown
+        return_value={
+            "input_43": {"value": 47.8},
+            "holding_16": {"value": 48.0},
+        }  # no coil_1 -> unknown
     )
     events = []
     hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
@@ -352,9 +372,7 @@ async def test_start_rejected_when_dhw_state_unknown(
     assert events == []
 
 
-async def test_run_restore_failure_flagged_in_event(
-    hass, enable_custom_integrations
-):
+async def test_run_restore_failure_flagged_in_event(hass, enable_custom_integrations):
     """Failed final restore sets restore_failed in the finish event."""
     entry = await _setup_demo(hass)
     writer, _ = _stub_io(entry, temp=47.8)
@@ -380,3 +398,186 @@ async def test_run_restore_failure_flagged_in_event(
     assert len(events) == 1
     assert events[0].data["outcome"] == "reached"
     assert events[0].data["restore_failed"] is True
+
+
+async def test_start_rejected_when_previous_setpoint_unknown(
+    hass, enable_custom_integrations
+):
+    """Unknown previous setpoint aborts before any write is attempted."""
+    entry = await _setup_demo(hass)
+    writer, manager = _stub_io(entry, temp=47.8)
+    manager.get_all_data = MagicMock(
+        return_value={
+            "input_43": {"value": 47.8},
+            "coil_1": {"value": 1},
+            # no holding_16 -> previous setpoint unknown
+        }
+    )
+
+    with pytest.raises(ServiceValidationError):
+        await async_start_dhw_single_heatup(
+            _call(hass, entry.entry_id, target_temperature=48.0)
+        )
+
+    writer.write_holding_register.assert_not_called()
+    writer.write_coil_register.assert_not_called()
+    assert entry.entry_id not in _SINGLE_HEATUP_TASKS
+    assert await services_module._async_load_dhw_state(hass, entry.entry_id) is None
+
+
+async def test_stale_temperature_does_not_count_as_reached(
+    hass, enable_custom_integrations, monkeypatch
+):
+    """A stale reading above target must not end the run as reached."""
+    monkeypatch.setattr(services_module, "_DHW_RUN_STATUS_POLL_INTERVAL", 0.05)
+    entry = await _setup_demo(hass)
+    _, manager = _stub_io(entry, temp=60.0)
+    manager.normal_coordinator.last_successful_poll = (
+        time.monotonic() - services_module._DHW_MAX_DATA_AGE - 30
+    )
+    events = []
+    hass.bus.async_listen(EVENT_DHW_SINGLE_HEATUP_FINISHED, events.append)
+
+    await async_start_dhw_single_heatup(
+        _call(
+            hass,
+            entry.entry_id,
+            target_temperature=48.0,
+            timeout=timedelta(seconds=1),
+        )
+    )
+    task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
+    if task is not None:
+        await asyncio.wait_for(task, timeout=10)
+    await hass.async_block_till_done()
+
+    assert len(events) == 1
+    assert events[0].data["outcome"] == "timeout"
+    assert events[0].data["data_stale"] is True
+    assert events[0].data["current_temperature"] == pytest.approx(60.0)
+
+
+async def test_restore_failure_creates_repair_issue_and_keeps_state(
+    hass, enable_custom_integrations
+):
+    """A failed restore raises a repair issue and keeps recovery data."""
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=47.8)
+
+    async def flaky_write(register_name, value):
+        if register_name == "holding_15" and value == 0:
+            raise OSError("dead gateway")
+        return True
+
+    writer.write_holding_register = AsyncMock(side_effect=flaky_write)
+    entry.runtime_data.coordinator.data_manager = writer
+
+    await async_start_dhw_single_heatup(
+        _call(hass, entry.entry_id, target_temperature=48.0)
+    )
+    task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
+    if task is not None:
+        await asyncio.wait_for(task, timeout=10)
+    await hass.async_block_till_done()
+
+    issue = ir.async_get(hass).async_get_issue(
+        DOMAIN, dhw_heatup_restore_issue_id(entry)
+    )
+    assert issue is not None
+
+    state = await services_module._async_load_dhw_state(hass, entry.entry_id)
+    assert state is not None
+    assert state["restore_failed"] is True
+
+
+async def test_recovery_cleans_up_interrupted_start(hass, enable_custom_integrations):
+    """A persisted 'starting' phase is rolled back on recovery."""
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=30.0)
+    await services_module._async_save_dhw_state(
+        hass,
+        entry.entry_id,
+        {
+            "phase": "starting",
+            "started_at": time.time() - 10,
+            "deadline": time.time() + 3600,
+            "target": 48.0,
+            "hysteresis": 0.5,
+            "restore_dhw_off": True,
+            "dhw_coil_name": "coil_1",
+            "previous_setpoint": 4500,
+        },
+    )
+
+    await services_module.async_recover_dhw_single_heatup(hass, entry)
+    await hass.async_block_till_done()
+
+    writer.write_holding_register.assert_any_call("holding_15", 0)
+    writer.write_holding_register.assert_any_call("holding_16", 4500)
+    writer.write_coil_register.assert_any_call("coil_1", False)
+    assert await services_module._async_load_dhw_state(hass, entry.entry_id) is None
+
+
+async def test_recovery_resumes_active_run(
+    hass, enable_custom_integrations, monkeypatch
+):
+    """A still-active persisted run is resumed and finishes normally."""
+    monkeypatch.setattr(services_module, "_DHW_RUN_STATUS_POLL_INTERVAL", 0.05)
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=30.0)
+    writer.read_holding_register = AsyncMock(return_value=1)
+    await services_module._async_save_dhw_state(
+        hass,
+        entry.entry_id,
+        {
+            "phase": "running",
+            "started_at": time.time() - 10,
+            "deadline": time.time() + 1,
+            "target": 48.0,
+            "hysteresis": 0.5,
+            "restore_dhw_off": False,
+            "dhw_coil_name": "coil_1",
+            "previous_setpoint": 4500,
+        },
+    )
+
+    await services_module.async_recover_dhw_single_heatup(hass, entry)
+    task = _SINGLE_HEATUP_TASKS.get(entry.entry_id)
+    assert task is not None
+    await asyncio.wait_for(task, timeout=10)
+    await hass.async_block_till_done()
+
+    writer.write_holding_register.assert_any_call("holding_15", 0)
+    assert await services_module._async_load_dhw_state(hass, entry.entry_id) is None
+
+
+async def test_recovery_restore_failure_keeps_state_and_issue(
+    hass, enable_custom_integrations
+):
+    """A failed recovery restore keeps the state and raises a repair issue."""
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=30.0)
+    writer.write_holding_register = AsyncMock(side_effect=OSError("dead gateway"))
+    await services_module._async_save_dhw_state(
+        hass,
+        entry.entry_id,
+        {
+            "phase": "starting",
+            "started_at": time.time() - 10,
+            "deadline": time.time() + 3600,
+            "target": 48.0,
+            "hysteresis": 0.5,
+            "restore_dhw_off": True,
+            "dhw_coil_name": "coil_1",
+            "previous_setpoint": 4500,
+        },
+    )
+
+    await services_module.async_recover_dhw_single_heatup(hass, entry)
+    await hass.async_block_till_done()
+
+    issue = ir.async_get(hass).async_get_issue(
+        DOMAIN, dhw_heatup_restore_issue_id(entry)
+    )
+    assert issue is not None
+    assert await services_module._async_load_dhw_state(hass, entry.entry_id) is not None

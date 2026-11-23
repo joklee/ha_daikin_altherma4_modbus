@@ -161,9 +161,7 @@ class ModbusDataManager:
             try:
                 coordinator.async_set_updated_data(coordinator.data.copy())
             except Exception as err:
-                _LOGGER.warning(
-                    "Failed to notify coordinator of data change: %s", err
-                )
+                _LOGGER.warning("Failed to notify coordinator of data change: %s", err)
 
     async def fetch_input_registers_data(self) -> StateData:
         """Fetch only input registers."""
@@ -421,6 +419,16 @@ class ModbusDataManager:
                 err,
             )
             return None
+
+    async def read_holding_register(self, register_name: str | int) -> int | None:
+        """Read one holding register directly from the device."""
+        register_name = _canonical_register_name(register_name, "holding")
+        return await self._repository.read_holding_register(register_name)
+
+    async def read_coil_register(self, register_name: str | int) -> bool | None:
+        """Read one coil directly from the device."""
+        register_name = _canonical_register_name(register_name, "coil")
+        return await self._repository.read_coil_register(register_name)
 
     async def write_holding_register(self, register_name: str | int, value: int) -> Any:
         """Write to a holding register and cache the device read-back."""

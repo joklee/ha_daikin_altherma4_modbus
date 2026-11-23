@@ -102,6 +102,9 @@ def mock_runtime_data():
     runtime_data.coordinator.data_manager.write_coil_register = AsyncMock(
         return_value=True
     )
+    runtime_data.manager.get_all_data = MagicMock(
+        return_value={"holding_16": {"value": 45.0}}
+    )
     return runtime_data
 
 

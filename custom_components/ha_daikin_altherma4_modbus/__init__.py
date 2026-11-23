@@ -21,7 +21,11 @@ from .integration.repair import (
     async_delete_unsupported_temperature_unit_issue,
 )
 from .integration.runtime_data import RuntimeData
-from .integration.services import async_cancel_single_heatup, register_services
+from .integration.services import (
+    async_cancel_single_heatup,
+    async_recover_dhw_single_heatup,
+    register_services,
+)
 from .integration.units import is_fahrenheit
 
 _LOGGER = logging.getLogger(__name__)
@@ -181,6 +185,17 @@ async def async_setup_entry(hass, entry) -> bool:
 
         # Register integration services
         register_services(hass)
+
+        # Clean up or resume a DHW single heat-up that was interrupted by a
+        # Home Assistant restart. Never block setup on recovery problems.
+        try:
+            await async_recover_dhw_single_heatup(hass, entry)
+        except Exception as err:
+            _LOGGER.warning(
+                "Could not recover DHW single heat-up state for entry %s: %s",
+                entry.entry_id,
+                err,
+            )
 
         # Connection is healthy - delete any existing connection repair issue
         async_delete_connection_issue(hass, entry)
