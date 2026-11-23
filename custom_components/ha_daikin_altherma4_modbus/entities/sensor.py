@@ -1,4 +1,5 @@
 import logging
+from typing import ClassVar
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -1103,7 +1104,7 @@ class DeviceStatusSensor(
     _attr_has_entity_name = True
     _attr_log_when_unavailable = False
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = ["ok", "degraded", "unreachable"]
+    _attr_options: ClassVar[list[str]] = ["ok", "degraded", "unreachable"]
 
     def __init__(
         self,
