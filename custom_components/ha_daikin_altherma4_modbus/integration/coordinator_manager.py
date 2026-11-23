@@ -12,6 +12,13 @@ from .coordinator import DaikinAlthermaNormalCoordinator, DaikinAlthermaSlowCoor
 
 _LOGGER = logging.getLogger(__name__)
 
+# Aggregated device health. ``ok`` means every poll group is readable,
+# ``degraded`` means the link or at least one poll group still works but
+# others fail, and ``unreachable`` means nothing answers.
+DEVICE_STATUS_OK = "ok"
+DEVICE_STATUS_DEGRADED = "degraded"
+DEVICE_STATUS_UNREACHABLE = "unreachable"
+
 
 class CoordinatorManager:
     """Manages multiple coordinators and ensures they run independently."""
@@ -127,19 +134,65 @@ class CoordinatorManager:
         return False
 
     @property
-    def device_reachable(self) -> bool:
-        """Whether the device recently answered polls.
+    def tcp_connected(self) -> bool:
+        """Whether any coordinator currently holds a connected TCP client.
 
-        Unlike :meth:`connection_active`, this reflects observed poll
-        outcomes: reachable when at least one coordinator's last update
-        succeeded without pending consecutive failures.
+        This is shared-link state, not device health: the link can be up
+        while the device stops answering.
         """
-        for coordinator in self.coordinators.values():
-            last_ok = getattr(coordinator, "last_update_success", False) is True
-            failures = int(getattr(coordinator, "_consecutive_failures", 0) or 0)
-            if last_ok and failures == 0:
-                return True
-        return False
+        return self.connection_active
+
+    @staticmethod
+    def _poll_group_readable(coordinator) -> bool:
+        """Whether one coordinator's last poll succeeded without failures."""
+        if coordinator is None:
+            return False
+        last_ok = getattr(coordinator, "last_update_success", False) is True
+        failures = int(getattr(coordinator, "_consecutive_failures", 0) or 0)
+        return last_ok and failures == 0
+
+    @property
+    def input_registers_readable(self) -> bool:
+        """Whether input/discrete registers were readable in the last poll.
+
+        Served by the normal (fast) coordinator.
+        """
+        return self._poll_group_readable(self.normal_coordinator)
+
+    @property
+    def holding_registers_readable(self) -> bool:
+        """Whether holding/coil registers were readable in the last poll.
+
+        Served by the slow coordinator.
+        """
+        return self._poll_group_readable(self.slow_coordinator)
+
+    @property
+    def device_status(self) -> str:
+        """Aggregated device health: ``ok``, ``degraded`` or ``unreachable``.
+
+        All poll groups readable -> ``ok``. Only some groups (or just the
+        TCP link) alive -> ``degraded``. Nothing answering -> ``unreachable``.
+        """
+        input_ok = self.input_registers_readable
+        holding_ok = self.holding_registers_readable
+        if input_ok and holding_ok:
+            return DEVICE_STATUS_OK
+        if input_ok or holding_ok or self.tcp_connected:
+            return DEVICE_STATUS_DEGRADED
+        return DEVICE_STATUS_UNREACHABLE
+
+    @property
+    def device_reachable(self) -> bool:
+        """Whether the device is fully usable for the integration.
+
+        True only when *all* poll groups succeeded without pending
+        consecutive failures. Previously a single working coordinator was
+        enough, which reported a device whose holding registers could not
+        be read as reachable. Use :attr:`device_status` to distinguish a
+        partially working device (``degraded``) from a dead one.
+        """
+        return self.input_registers_readable and self.holding_registers_readable
 
     @property
     def max_consecutive_failures(self) -> int:

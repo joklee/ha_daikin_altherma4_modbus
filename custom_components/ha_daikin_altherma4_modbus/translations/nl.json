@@ -168,10 +168,16 @@
     },
     "binary_sensor": {
       "connection_active": {
-        "name": "Verbinding actief"
+        "name": "TCP-verbinding"
       },
       "device_reachable": {
         "name": "Apparaat bereikbaar"
+      },
+      "input_registers_readable": {
+        "name": "Ingangsregisters leesbaar"
+      },
+      "holding_registers_readable": {
+        "name": "Holding-/coilregisters leesbaar"
       },
       "input_30": {
         "name": "Circulatie pomp actief"
@@ -301,6 +307,14 @@
       },
       "connection_consecutive_failures": {
         "name": "Opeenvolgende fouten"
+      },
+      "device_status": {
+        "name": "Apparaatstatus",
+        "state": {
+          "ok": "OK",
+          "degraded": "Beperkt",
+          "unreachable": "Niet bereikbaar"
+        }
       },
       "input_21": {
         "name": "Unit abnormality",

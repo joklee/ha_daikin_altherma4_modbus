@@ -68,36 +68,56 @@ async def test_shutdown_without_client_and_with_failing_shutdown():
     await manager.async_shutdown(disconnect_clients=True)
 
 
-def test_device_reachable_reflects_poll_outcomes():
-    """Reachable = at least one coordinator succeeded without pending failures."""
+def test_device_reachable_requires_all_poll_groups():
+    """Reachable only when every poll group succeeded without failures."""
     healthy = SimpleNamespace(last_update_success=True)
     healthy._consecutive_failures = 0
     failing = SimpleNamespace(last_update_success=False)
     failing._consecutive_failures = 3
     manager = _manager(normal=healthy, slow=failing)
-    # _manager builds SimpleNamespace coordinators; attach flags directly.
-    assert manager.device_reachable is True
+
+    # One working group is not enough: the device is degraded, not healthy.
+    assert manager.device_reachable is False
+    assert manager.input_registers_readable is True
+    assert manager.holding_registers_readable is False
+    assert manager.device_status == "degraded"
     assert manager.max_consecutive_failures == 3
 
-    healthy.last_update_success = False
-    assert manager.device_reachable is False
-
-    healthy.last_update_success = True
-    healthy._consecutive_failures = 1
-    failing._consecutive_failures = 0
     failing.last_update_success = True
+    failing._consecutive_failures = 0
     assert manager.device_reachable is True
+    assert manager.device_status == "ok"
+
+    healthy.last_update_success = False
+    healthy._consecutive_failures = 1
+    assert manager.device_reachable is False
+    assert manager.device_status == "degraded"
     assert manager.max_consecutive_failures == 1
 
 
-def test_device_reachable_false_without_success():
+def test_device_status_unreachable_without_success():
     """No successful poll yet means unreachable, zero failures."""
     manager = _manager(
         normal=SimpleNamespace(last_update_success=None),
         slow=SimpleNamespace(last_update_success=None),
     )
     assert manager.device_reachable is False
+    assert manager.input_registers_readable is False
+    assert manager.holding_registers_readable is False
+    assert manager.tcp_connected is False
+    assert manager.device_status == "unreachable"
     assert manager.max_consecutive_failures == 0
+
+
+def test_device_status_degraded_with_link_but_no_polls():
+    """A held TCP link without successful polls is degraded, not unreachable."""
+    manager = _manager(
+        normal=_coordinator(client=SimpleNamespace(connected=True)),
+        slow=_coordinator(client=SimpleNamespace(connected=False)),
+    )
+    assert manager.tcp_connected is True
+    assert manager.device_reachable is False
+    assert manager.device_status == "degraded"
 
 
 async def test_get_coordinator_and_delegates():

@@ -152,10 +152,16 @@
     },
     "binary_sensor": {
       "connection_active": {
-        "name": "Verbindung aktiv"
+        "name": "TCP-Verbindung"
       },
       "device_reachable": {
         "name": "Gerät erreichbar"
+      },
+      "input_registers_readable": {
+        "name": "Eingangsregister lesbar"
+      },
+      "holding_registers_readable": {
+        "name": "Holding-/Coil-Register lesbar"
       },
       "input_30": {
         "name": "Umwälzpumpe läuft"
@@ -285,6 +291,14 @@
       },
       "connection_consecutive_failures": {
         "name": "Aufeinanderfolgende Fehler"
+      },
+      "device_status": {
+        "name": "Gerätestatus",
+        "state": {
+          "ok": "OK",
+          "degraded": "Eingeschränkt",
+          "unreachable": "Nicht erreichbar"
+        }
       },
       "input_21": {
         "name": "Unregelmäßigkeit bei der Einheit",

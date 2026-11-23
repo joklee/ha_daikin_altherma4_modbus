@@ -168,10 +168,16 @@
     },
     "binary_sensor": {
       "connection_active": {
-        "name": "Connection active"
+        "name": "TCP connection"
       },
       "device_reachable": {
         "name": "Device reachable"
+      },
+      "input_registers_readable": {
+        "name": "Input registers readable"
+      },
+      "holding_registers_readable": {
+        "name": "Holding/coil registers readable"
       },
       "input_30": {
         "name": "Circulation pump running"
@@ -301,6 +307,14 @@
       },
       "connection_consecutive_failures": {
         "name": "Consecutive failures"
+      },
+      "device_status": {
+        "name": "Device status",
+        "state": {
+          "ok": "OK",
+          "degraded": "Degraded",
+          "unreachable": "Unreachable"
+        }
       },
       "input_21": {
         "name": "Unit abnormality",

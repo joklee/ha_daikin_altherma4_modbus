@@ -106,6 +106,29 @@ async def async_setup_entry(hass, entry, async_add_entities):
             )
         )
 
+    # Per-poll-group readability on the "Enhanced" device. Together with
+    # the TCP and aggregate sensors these make partial outages visible:
+    # one group can fail while the other still reads fine.
+    for conn in CONNECTION_SENSORS:
+        if conn.calc_type not in (
+            "input_registers_readable",
+            "holding_registers_readable",
+        ):
+            continue
+        entities.append(
+            PollGroupReadableSensor(
+                coordinator=coordinator,
+                entry=entry,
+                unique_id=conn.register_name,
+                readable_kind=conn.calc_type,
+                device_class=conn.device_class or BinarySensorDeviceClass.CONNECTIVITY,
+                entity_category=conn.entity_category or EntityCategory.DIAGNOSTIC,
+                device_info=CALCULATED_DEVICE_INFO,
+                translation_key=conn.translation_key,
+                disabled_by_default=conn.disabled_by_default,
+            )
+        )
+
     async_add_entities(entities)
 
 
@@ -249,14 +272,73 @@ class ConnectionActiveSensor(
         return bool(manager.connection_active)
 
 
+class PollGroupReadableSensor(
+    RegisterVersionDeviceInfoMixin, CoordinatorEntity, BinarySensorEntity
+):
+    """Diagnostic sensor: was one register group readable in the last poll?
+
+    Lives on the "Enhanced" device. ``input_registers_readable`` follows the
+    normal (input/discrete) coordinator, ``holding_registers_readable`` the
+    slow (holding/coil) coordinator. Keeping them separate avoids hiding a
+    partial outage behind a single optimistic reachability flag.
+    """
+
+    _attr_has_entity_name = True
+    _attr_log_when_unavailable = False
+
+    def __init__(
+        self,
+        coordinator,
+        entry,
+        unique_id,
+        readable_kind,
+        device_class=None,
+        entity_category=None,
+        device_info=None,
+        translation_key=None,
+        disabled_by_default=False,
+    ):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._readable_kind = readable_kind
+        self._attr_unique_id = unique_id
+        self._attr_device_class = device_class
+        self._attr_entity_category = entity_category
+        self._attr_device_info = device_info or CALCULATED_DEVICE_INFO
+        self._attr_translation_key = translation_key
+        self._attr_entity_registry_enabled_default = not disabled_by_default
+
+    def _manager(self):
+        """Return the CoordinatorManager behind the unified coordinator."""
+        return getattr(self.coordinator, "manager", None)
+
+    @property
+    def available(self) -> bool:
+        """Available whenever the manager is reachable."""
+        return self._manager() is not None
+
+    @property
+    def is_on(self):
+        """True while the selected poll group last read successfully."""
+        manager = self._manager()
+        if manager is None:
+            return None
+        if self._readable_kind == "input_registers_readable":
+            return bool(manager.input_registers_readable)
+        return bool(manager.holding_registers_readable)
+
+
 class DeviceReachableSensor(
     RegisterVersionDeviceInfoMixin, CoordinatorEntity, BinarySensorEntity
 ):
-    """Primary health metric: did the device recently answer polls?
+    """Primary health metric: are *all* poll groups readable?
 
     Lives on the "Enhanced" device. Unlike :class:`ConnectionActiveSensor`
     (shared-link state), this reflects observed poll outcomes, so a link
-    that is up while the heat pump stopped answering reads OFF here.
+    that is up while the heat pump stopped answering reads OFF here. It is
+    only ON when both the input/discrete and the holding/coil polls
+    succeeded; partial outages read OFF and are visible as ``degraded`` on
+    the device-status sensor.
     """
 
     _attr_has_entity_name = True
