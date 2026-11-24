@@ -445,9 +445,7 @@ class ModbusDataManager:
         """
         register_name = _canonical_register_name(register_name, "holding")
         async with self.io_lock:
-            result = await self._repository.write_holding_register(
-                register_name, value
-            )
+            result = await self._repository.write_holding_register(register_name, value)
             if result is not None:
                 actual = await self._read_back_register(
                     register_name, "read_holding_register"
@@ -463,9 +461,7 @@ class ModbusDataManager:
         """
         register_name = _canonical_register_name(register_name, "coil")
         async with self.io_lock:
-            result = await self._repository.write_coil_register(
-                register_name, value
-            )
+            result = await self._repository.write_coil_register(register_name, value)
             if result is not None:
                 actual = await self._read_back_register(
                     register_name, "read_coil_register"

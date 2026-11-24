@@ -460,9 +460,7 @@ async def test_read_back_holding_and_coil_paths():
     with pytest.raises(ModbusReadException):
         await repo.read_holding_register("holding_15")
 
-    repo, _ = _repository(
-        _client(read_coils=AsyncMock(return_value=_ErrorResponse()))
-    )
+    repo, _ = _repository(_client(read_coils=AsyncMock(return_value=_ErrorResponse())))
     with pytest.raises(ModbusReadException):
         await repo.read_coil_register("coil_1")
 

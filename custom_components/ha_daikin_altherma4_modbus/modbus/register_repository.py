@@ -404,8 +404,7 @@ class ModbusRegisterRepository:
                     blocks.append((v4_result, 138, 139, 138))
                 elif classification in ("illegal_address", "illegal_function"):
                     _LOGGER.warning(
-                        "v4 Input Register Block (138-139) refused "
-                        "(%s), narrowing map",
+                        "v4 Input Register Block (138-139) refused (%s), narrowing map",
                         classification,
                     )
                     self._supports_input_138_139 = False
@@ -509,17 +508,13 @@ class ModbusRegisterRepository:
         if classification in ("illegal_address", "illegal_function"):
             self._log_unsupported_register_type(result, "discrete inputs")
             return None
-        raise ModbusReadException(
-            f"Invalid response reading discrete inputs: {result}"
-        )
+        raise ModbusReadException(f"Invalid response reading discrete inputs: {result}")
 
     async def read_coils(self) -> Any | None:
         """Read coils with one reconnect retry."""
         client = self._session.client
         if client is None:
-            raise ModbusConnectionException(
-                "Modbus client is None, cannot read coils"
-            )
+            raise ModbusConnectionException("Modbus client is None, cannot read coils")
 
         try:
             read_start = time.time()
@@ -582,8 +577,7 @@ class ModbusRegisterRepository:
                 )
             elif classification in ("illegal_address", "illegal_function"):
                 _LOGGER.warning(
-                    "Device does not support full holding register range (1-%d) "
-                    "(%s)",
+                    "Device does not support full holding register range (1-%d) (%s)",
                     end_address,
                     classification,
                 )
