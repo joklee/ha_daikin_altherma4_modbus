@@ -1103,7 +1103,9 @@ class DeviceStatusSensor(
 
     _attr_has_entity_name = True
     _attr_log_when_unavailable = False
-    _attr_device_class = SensorDeviceClass.ENUM
+    # getattr fallback: some test stubs provide a SensorDeviceClass without
+    # ENUM; the sensor then behaves like a plain text sensor.
+    _attr_device_class = getattr(SensorDeviceClass, "ENUM", None)
     _attr_options: ClassVar[list[str]] = ["ok", "degraded", "unreachable"]
 
     def __init__(

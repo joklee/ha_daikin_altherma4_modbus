@@ -5,6 +5,7 @@ and repository are stubbed at the I/O boundary while the real mapping
 transform runs, so fetch paths are exercised end to end without hardware.
 """
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -224,6 +225,60 @@ async def test_signed_holding_read_back_is_converted_and_scaled():
 
     assert await manager.write_holding_register("holding_54", -5) is True
     assert manager.coordinator.data["holding_54"]["value"] == -5
+
+
+async def test_write_holds_io_lock_across_write_and_read_back():
+    """The shared I/O lock spans Modbus write, read-back and cache update.
+
+    Without this, a concurrent poll or write could interleave between the
+    write and its verifying read-back and make the read-back observe a
+    value belonging to a different operation.
+    """
+    manager = _manager()
+    lock = asyncio.Lock()
+    manager.io_lock = lock
+    seen = []
+
+    async def write_reg(name, value):
+        seen.append(("write", lock.locked()))
+        return True
+
+    async def read_reg(name):
+        seen.append(("read", lock.locked()))
+        return 1
+
+    manager._repository = _repository(
+        write_holding_register=write_reg,
+        read_holding_register=read_reg,
+    )
+
+    assert await manager.write_holding_register("holding_3", 1) is True
+    assert seen == [("write", True), ("read", True)]
+    assert not lock.locked()
+
+
+async def test_concurrent_writes_are_serialized():
+    """Two writes cannot interleave their write/read-back sequences."""
+    manager = _manager()
+    manager.io_lock = asyncio.Lock()
+    order = []
+
+    async def slow_write(name, value):
+        order.append(f"start-{value}")
+        await asyncio.sleep(0.01)
+        order.append(f"end-{value}")
+        return True
+
+    manager._repository = _repository(
+        write_holding_register=slow_write,
+        read_holding_register=AsyncMock(return_value=1),
+    )
+
+    await asyncio.gather(
+        manager.write_holding_register("holding_3", 1),
+        manager.write_holding_register("holding_3", 2),
+    )
+    assert order == ["start-1", "end-1", "start-2", "end-2"]
 
 
 async def test_read_back_failure_leaves_cache_unchanged():

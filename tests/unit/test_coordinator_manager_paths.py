@@ -195,8 +195,14 @@ async def test_write_proxy_reads_under_shared_io_lock():
     assert await task == 4800
 
 
-async def test_write_proxy_waits_for_shared_io_lock():
-    """A write cannot start while a poll holds the shared I/O lock."""
+async def test_write_proxy_delegates_write_transaction_to_data_manager():
+    """The proxy delegates writes without its own lock.
+
+    Write + read-back atomicity is enforced inside
+    ``ModbusDataManager.write_*`` (see test_data_manager), so the proxy must
+    not hold the shared lock itself - asyncio.Lock is not reentrant and a
+    nested acquire would deadlock.
+    """
     lock = asyncio.Lock()
     write = AsyncMock(return_value=True)
     normal = _coordinator()
@@ -211,11 +217,12 @@ async def test_write_proxy_waits_for_shared_io_lock():
     await lock.acquire()
     task = asyncio.create_task(proxy.write_holding_register("holding_3", 1))
     await asyncio.sleep(0)
-    write.assert_not_awaited()
+    # The proxy itself does not wait on the lock; the data manager's write
+    # transaction does.
+    write.assert_awaited_once_with("holding_3", 1)
 
     lock.release()
     assert await task is True
-    write.assert_awaited_once_with("holding_3", 1)
 
 
 def test_manager_creates_one_shared_io_lock(monkeypatch):

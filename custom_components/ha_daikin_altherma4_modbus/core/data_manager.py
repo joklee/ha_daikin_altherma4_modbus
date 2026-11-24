@@ -1,5 +1,6 @@
 """Facade data manager composed of transport/session, repository and mapping layers."""
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
@@ -53,6 +54,11 @@ class ModbusDataManager:
     hass: Any | None = None
     entry: Any | None = None
     unit_id: int | None = None
+    # Shared integration-wide I/O lock. Write transactions (Modbus write +
+    # verifying read-back + cache update) acquire it internally so the
+    # sequence is atomic even for callers that bypass UnifiedWriteProxy.
+    # Bulk poll paths keep acquiring it in the coordinators instead.
+    io_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     _session: ModbusTransportSession = field(init=False)
     _repository: ModbusRegisterRepository = field(init=False)
@@ -431,25 +437,41 @@ class ModbusDataManager:
         return await self._repository.read_coil_register(register_name)
 
     async def write_holding_register(self, register_name: str | int, value: int) -> Any:
-        """Write to a holding register and cache the device read-back."""
+        """Write to a holding register and cache the device read-back.
+
+        The Modbus write and the verifying read-back run as one transaction
+        under the shared I/O lock: no poll or other write can interleave and
+        make the read-back observe a value belonging to a different operation.
+        """
         register_name = _canonical_register_name(register_name, "holding")
-        result = await self._repository.write_holding_register(register_name, value)
-        if result is not None:
-            actual = await self._read_back_register(
-                register_name, "read_holding_register"
+        async with self.io_lock:
+            result = await self._repository.write_holding_register(
+                register_name, value
             )
-            if actual is not None:
-                self._update_coordinator_data(register_name, actual)
+            if result is not None:
+                actual = await self._read_back_register(
+                    register_name, "read_holding_register"
+                )
+                if actual is not None:
+                    self._update_coordinator_data(register_name, actual)
         return result
 
     async def write_coil_register(self, register_name: str | int, value: bool) -> Any:
-        """Write to a coil register and cache the device read-back."""
+        """Write to a coil register and cache the device read-back.
+
+        See :meth:`write_holding_register` for the transaction semantics.
+        """
         register_name = _canonical_register_name(register_name, "coil")
-        result = await self._repository.write_coil_register(register_name, value)
-        if result is not None:
-            actual = await self._read_back_register(register_name, "read_coil_register")
-            if actual is not None:
-                self._update_coordinator_data(register_name, actual)
+        async with self.io_lock:
+            result = await self._repository.write_coil_register(
+                register_name, value
+            )
+            if result is not None:
+                actual = await self._read_back_register(
+                    register_name, "read_coil_register"
+                )
+                if actual is not None:
+                    self._update_coordinator_data(register_name, actual)
         return result
 
     async def refresh_connection(self) -> None:

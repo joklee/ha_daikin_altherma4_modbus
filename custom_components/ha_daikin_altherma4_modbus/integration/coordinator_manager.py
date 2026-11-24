@@ -371,21 +371,27 @@ class UnifiedWriteProxy:
             )
 
     async def write_holding_register(self, register_name: str, value: int) -> Any:
-        """Write a holding register and fire domain event."""
-        async with self._io_lock:
-            result = await self._slow_coordinator.data_manager.write_holding_register(
-                register_name, value
-            )
+        """Write a holding register and fire domain event.
+
+        No proxy-level lock here: ``ModbusDataManager.write_*`` acquires the
+        shared I/O lock itself so the Modbus write and its verifying
+        read-back form a single atomic transaction.
+        """
+        result = await self._slow_coordinator.data_manager.write_holding_register(
+            register_name, value
+        )
         if result is not None:
             await self._async_fire_write_event(register_name, value)
         return result
 
     async def write_coil_register(self, register_name: str, value: bool) -> Any:
-        """Write a coil register and refresh coordinators."""
-        async with self._io_lock:
-            result = await self._slow_coordinator.data_manager.write_coil_register(
-                register_name, value
-            )
+        """Write a coil register and refresh coordinators.
+
+        See :meth:`write_holding_register` for the locking contract.
+        """
+        result = await self._slow_coordinator.data_manager.write_coil_register(
+            register_name, value
+        )
         if result is not None:
             await self._async_fire_write_event(register_name, value)
         return result

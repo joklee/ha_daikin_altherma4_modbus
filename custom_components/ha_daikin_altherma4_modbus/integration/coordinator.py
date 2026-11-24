@@ -82,9 +82,11 @@ class DaikinAlthermaNormalCoordinator(DataUpdateCoordinator):
         # check this instead of trusting arbitrarily old coordinator data.
         self.last_successful_poll: float | None = None
 
-        # Data manager for input/discrete registers
+        # Data manager for input/discrete registers. It shares the
+        # integration-wide I/O lock so write transactions stay atomic with
+        # respect to polls.
         self.data_manager = ModbusDataManager(
-            host, port, demo_mode, hass, entry, unit_id
+            host, port, demo_mode, hass, entry, unit_id, io_lock=self.io_lock
         )
 
         self.data = {}
@@ -202,9 +204,11 @@ class DaikinAlthermaSlowCoordinator(DataUpdateCoordinator):
 
         # Data manager for coil/holding registers. All writes are routed
         # here via UnifiedWriteProxy, so it gets a coordinator reference to
-        # update coordinator.data after device-confirmed writes.
+        # update coordinator.data after device-confirmed writes. It shares
+        # the integration-wide I/O lock so each write + read-back runs as
+        # one atomic transaction with respect to polls and other writes.
         self.data_manager = ModbusDataManager(
-            host, port, demo_mode, hass, entry, unit_id
+            host, port, demo_mode, hass, entry, unit_id, io_lock=self.io_lock
         )
         self.data_manager.coordinator = self
 
