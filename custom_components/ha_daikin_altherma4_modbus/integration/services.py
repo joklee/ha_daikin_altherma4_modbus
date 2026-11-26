@@ -1319,7 +1319,60 @@ if HAS_HA:
             if active is None:
                 active = _dhw_heatup_request_active(manager)
 
-            if phase == "running" and active != 0 and deadline > now and target > 0:
+            # Verify the device still holds the state this run left behind
+            # before restoring anything. A user (or the device itself) may
+            # have changed the setpoint while Home Assistant was down;
+            # overwriting that change would destroy user intent. The
+            # expected value is the raw register value the run wrote,
+            # derived from the persisted target.
+            expected_setpoint = scaled_value_to_register(target, 0.01)
+            current_setpoint = None
+            if callable(reader):
+                try:
+                    current_setpoint = await reader("holding_16")
+                except Exception as err:
+                    _LOGGER.debug(
+                        "Could not read DHW setpoint during recovery for entry %s: %s",
+                        config_entry_id,
+                        err,
+                    )
+            try:
+                current_setpoint = (
+                    int(current_setpoint) if current_setpoint is not None else None
+                )
+            except (TypeError, ValueError):
+                current_setpoint = None
+
+            if current_setpoint is None:
+                setpoint_restore = "unknown"
+            elif current_setpoint == expected_setpoint:
+                setpoint_restore = "ours"
+            elif previous_setpoint is not None and current_setpoint == int(
+                previous_setpoint
+            ):
+                # The run's setpoint write never landed (or was already
+                # reverted); nothing to restore for this register.
+                setpoint_restore = "already_restored"
+            else:
+                setpoint_restore = "changed"
+
+            if setpoint_restore == "changed":
+                _LOGGER.info(
+                    "DHW setpoint for entry %s changed while Home Assistant "
+                    "was down (expected %s, found %s); skipping setpoint "
+                    "and DHW-state restore to preserve the user change",
+                    config_entry_id,
+                    expected_setpoint,
+                    current_setpoint,
+                )
+
+            if (
+                phase == "running"
+                and active != 0
+                and deadline > now
+                and target > 0
+                and setpoint_restore == "ours"
+            ):
                 remaining = deadline - now
                 _LOGGER.info(
                     "Resuming DHW single heat-up for entry %s after restart "
@@ -1361,10 +1414,20 @@ if HAS_HA:
                 previous_setpoint=previous_setpoint,
                 # A partially started run may have overwritten the setpoint;
                 # a completed run intentionally leaves the target setpoint.
-                restore_setpoint=phase != "running",
-                restore_dhw_off=restore_dhw_off,
+                # The write only happens when the device still holds the
+                # value this run wrote - never over a user change.
+                restore_setpoint=(phase != "running" and setpoint_restore == "ours"),
+                # The DHW-off restore is skipped when the setpoint proves
+                # the user took over the device while HA was down.
+                restore_dhw_off=restore_dhw_off and setpoint_restore != "changed",
                 dhw_coil_name=dhw_coil_name,
             )
+            if setpoint_restore == "unknown" and phase != "running":
+                # The setpoint could not be verified, so restoring it
+                # blindly could overwrite a user change. Keep the recovery
+                # state and raise a repair issue so the next start retries.
+                failures.append("setpoint verification failed")
+                async_create_dhw_heatup_restore_issue(hass, entry, "; ".join(failures))
             if failures:
                 _LOGGER.warning(
                     "Could not fully restore DHW state for entry %s after "

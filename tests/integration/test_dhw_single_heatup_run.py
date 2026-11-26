@@ -494,6 +494,8 @@ async def test_recovery_cleans_up_interrupted_start(hass, enable_custom_integrat
     """A persisted 'starting' phase is rolled back on recovery."""
     entry = await _setup_demo(hass)
     writer, _ = _stub_io(entry, temp=30.0)
+    # Device still holds the setpoint the run wrote (48.0 C -> 4800).
+    writer.read_holding_register = AsyncMock(return_value=4800)
     await services_module._async_save_dhw_state(
         hass,
         entry.entry_id,
@@ -525,7 +527,11 @@ async def test_recovery_resumes_active_run(
     monkeypatch.setattr(services_module, "_DHW_RUN_STATUS_POLL_INTERVAL", 0.05)
     entry = await _setup_demo(hass)
     writer, _ = _stub_io(entry, temp=30.0)
-    writer.read_holding_register = AsyncMock(return_value=1)
+
+    async def read_register(name):
+        return 1 if name == "holding_15" else 4800
+
+    writer.read_holding_register = AsyncMock(side_effect=read_register)
     await services_module._async_save_dhw_state(
         hass,
         entry.entry_id,
@@ -558,6 +564,7 @@ async def test_recovery_restore_failure_keeps_state_and_issue(
     entry = await _setup_demo(hass)
     writer, _ = _stub_io(entry, temp=30.0)
     writer.write_holding_register = AsyncMock(side_effect=OSError("dead gateway"))
+    writer.read_holding_register = AsyncMock(return_value=4800)
     await services_module._async_save_dhw_state(
         hass,
         entry.entry_id,
@@ -581,3 +588,175 @@ async def test_recovery_restore_failure_keeps_state_and_issue(
     )
     assert issue is not None
     assert await services_module._async_load_dhw_state(hass, entry.entry_id) is not None
+
+
+async def test_recovery_skips_restore_when_user_changed_setpoint(
+    hass, enable_custom_integrations
+):
+    """A setpoint changed while HA was down is never overwritten."""
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=30.0)
+
+    async def read_register(name):
+        if name == "holding_15":
+            return 0
+        return 5000  # user set 50.0 C while HA was down
+
+    writer.read_holding_register = AsyncMock(side_effect=read_register)
+    await services_module._async_save_dhw_state(
+        hass,
+        entry.entry_id,
+        {
+            "phase": "starting",
+            "started_at": time.time() - 10,
+            "deadline": time.time() + 3600,
+            "target": 48.0,
+            "hysteresis": 0.5,
+            "restore_dhw_off": True,
+            "dhw_coil_name": "coil_1",
+            "previous_setpoint": 4500,
+        },
+    )
+
+    await services_module.async_recover_dhw_single_heatup(hass, entry)
+    await hass.async_block_till_done()
+
+    # The heat-up request is still cleared, but neither the setpoint nor
+    # the DHW state is touched and no repair issue is raised.
+    writer.write_holding_register.assert_any_call("holding_15", 0)
+    assert all(
+        call.args[0] != "holding_16"
+        for call in writer.write_holding_register.await_args_list
+    )
+    writer.write_coil_register.assert_not_called()
+    assert await services_module._async_load_dhw_state(hass, entry.entry_id) is None
+    assert (
+        ir.async_get(hass).async_get_issue(DOMAIN, dhw_heatup_restore_issue_id(entry))
+        is None
+    )
+
+
+async def test_recovery_skips_setpoint_write_when_already_restored(
+    hass, enable_custom_integrations
+):
+    """A setpoint already back at the previous value needs no rewrite."""
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=30.0)
+
+    async def read_register(name):
+        if name == "holding_15":
+            return 0
+        return 4500  # previous setpoint - run's write never landed
+
+    writer.read_holding_register = AsyncMock(side_effect=read_register)
+    await services_module._async_save_dhw_state(
+        hass,
+        entry.entry_id,
+        {
+            "phase": "starting",
+            "started_at": time.time() - 10,
+            "deadline": time.time() + 3600,
+            "target": 48.0,
+            "hysteresis": 0.5,
+            "restore_dhw_off": True,
+            "dhw_coil_name": "coil_1",
+            "previous_setpoint": 4500,
+        },
+    )
+
+    await services_module.async_recover_dhw_single_heatup(hass, entry)
+    await hass.async_block_till_done()
+
+    writer.write_holding_register.assert_any_call("holding_15", 0)
+    assert all(
+        call.args[0] != "holding_16"
+        for call in writer.write_holding_register.await_args_list
+    )
+    # The DHW-off restore still runs: the coil change was ours.
+    writer.write_coil_register.assert_any_call("coil_1", False)
+    assert await services_module._async_load_dhw_state(hass, entry.entry_id) is None
+
+
+async def test_recovery_keeps_state_when_setpoint_unreadable(
+    hass, enable_custom_integrations, monkeypatch
+):
+    """An unverifiable setpoint keeps recovery state instead of guessing."""
+    issue_mock = MagicMock()
+    monkeypatch.setattr(
+        services_module, "async_create_dhw_heatup_restore_issue", issue_mock
+    )
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=30.0)
+
+    async def read_register(name):
+        if name == "holding_15":
+            return 0
+        raise OSError("read failed")
+
+    writer.read_holding_register = AsyncMock(side_effect=read_register)
+    await services_module._async_save_dhw_state(
+        hass,
+        entry.entry_id,
+        {
+            "phase": "starting",
+            "started_at": time.time() - 10,
+            "deadline": time.time() + 3600,
+            "target": 48.0,
+            "hysteresis": 0.5,
+            "restore_dhw_off": True,
+            "dhw_coil_name": "coil_1",
+            "previous_setpoint": 4500,
+        },
+    )
+
+    await services_module.async_recover_dhw_single_heatup(hass, entry)
+    await hass.async_block_till_done()
+
+    assert all(
+        call.args[0] != "holding_16"
+        for call in writer.write_holding_register.await_args_list
+    )
+    assert await services_module._async_load_dhw_state(hass, entry.entry_id) is not None
+    issue_mock.assert_called_once()
+
+
+async def test_recovery_does_not_resume_when_user_changed_setpoint(
+    hass, enable_custom_integrations, monkeypatch
+):
+    """A persisted run is not resumed once the user changed the setpoint."""
+    monkeypatch.setattr(services_module, "_DHW_RUN_STATUS_POLL_INTERVAL", 0.05)
+    entry = await _setup_demo(hass)
+    writer, _ = _stub_io(entry, temp=30.0)
+
+    async def read_register(name):
+        if name == "holding_15":
+            return 1
+        return 5000  # user set 50.0 C while HA was down
+
+    writer.read_holding_register = AsyncMock(side_effect=read_register)
+    await services_module._async_save_dhw_state(
+        hass,
+        entry.entry_id,
+        {
+            "phase": "running",
+            "started_at": time.time() - 10,
+            "deadline": time.time() + 3600,
+            "target": 48.0,
+            "hysteresis": 0.5,
+            "restore_dhw_off": False,
+            "dhw_coil_name": "coil_1",
+            "previous_setpoint": 4500,
+        },
+    )
+
+    await services_module.async_recover_dhw_single_heatup(hass, entry)
+    await hass.async_block_till_done()
+
+    # No background run is resumed; only the request register is cleared.
+    assert entry.entry_id not in _SINGLE_HEATUP_TASKS
+    writer.write_holding_register.assert_any_call("holding_15", 0)
+    assert all(
+        call.args[0] != "holding_16"
+        for call in writer.write_holding_register.await_args_list
+    )
+    assert await services_module._async_load_dhw_state(hass, entry.entry_id) is None
