@@ -18,6 +18,7 @@ and asserts the *observable* behaviour of the production code. It does **not**
 mock the coordinator, the data manager or the entity.
 """
 
+import asyncio
 import logging
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -39,6 +40,7 @@ from custom_components.ha_daikin_altherma4_modbus.entities.sensor import (
 )
 from custom_components.ha_daikin_altherma4_modbus.integration.coordinator import (
     DaikinAlthermaNormalCoordinator,
+    DaikinAlthermaSlowCoordinator,
 )
 from tests.fakes.modbus import FakeModbusResponse
 
@@ -188,6 +190,27 @@ async def test_connection_recovery_cycle(fail_cls, hass):
     assert coordinator.data.get("input_40") is not None
     assert sensor.available is True
     assert sensor.native_value == pytest.approx(TEMP16_EXPECTED)
+
+
+def test_coordinators_share_io_lock_with_data_managers(hass):
+    """The write transaction lock is the same object as the poll lock.
+
+    ``ModbusDataManager.write_*`` acquires ``io_lock`` internally, so the
+    data manager must receive the coordinator's shared lock - otherwise a
+    write could interleave with a poll on the physical Modbus connection.
+    """
+    lock = asyncio.Lock()
+    normal = DaikinAlthermaNormalCoordinator(
+        hass, "192.0.2.1", 502, scan_interval=10, demo_mode=False, io_lock=lock
+    )
+    slow = DaikinAlthermaSlowCoordinator(
+        hass, "192.0.2.1", 502, scan_interval=10, demo_mode=False, io_lock=lock
+    )
+
+    assert normal.io_lock is lock
+    assert slow.io_lock is lock
+    assert normal.data_manager.io_lock is lock
+    assert slow.data_manager.io_lock is lock
 
 
 async def test_coordinator_logs_outage_once(hass, caplog):

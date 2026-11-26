@@ -16,6 +16,7 @@ from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
     ModbusConnectionException,
     ModbusDeviceException,
     ModbusInvalidAddressException,
+    ModbusReadException,
     ModbusWriteException,
 )
 from custom_components.ha_daikin_altherma4_modbus.modbus.register_repository import (
@@ -112,7 +113,8 @@ def test_signed_conversion_and_scaling_helpers():
 
 async def test_input_blocks_without_client():
     repo, _ = _repository(None)
-    assert await repo.read_input_blocks() == []
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_input_blocks()
 
 
 async def test_input_blocks_invalid_address_and_generic_error():
@@ -123,7 +125,8 @@ async def test_input_blocks_invalid_address_and_generic_error():
             )
         )
     )
-    assert await repo.read_input_blocks() == []
+    with pytest.raises(ModbusReadException):
+        await repo.read_input_blocks()
 
     repo, _ = _repository(
         _client(
@@ -132,27 +135,38 @@ async def test_input_blocks_invalid_address_and_generic_error():
             )
         )
     )
-    assert await repo.read_input_blocks() == []
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_input_blocks()
 
 
 async def test_input_blocks_error_result_object():
     repo, _ = _repository(
         _client(read_input_registers=AsyncMock(return_value=_ErrorResponse()))
     )
-    assert await repo.read_input_blocks() == []
+    with pytest.raises(ModbusReadException):
+        await repo.read_input_blocks()
 
 
 async def test_discrete_without_client():
     repo, _ = _repository(None)
-    assert await repo.read_discrete_inputs() is None
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_discrete_inputs()
 
 
-@pytest.mark.parametrize("code", ["exception_code=2", "exception_code=1", "other"])
-async def test_discrete_error_result_variants(code):
+@pytest.mark.parametrize("code", ["exception_code=2", "exception_code=1"])
+async def test_discrete_error_result_unsupported_returns_none(code):
     repo, _ = _repository(
         _client(read_discrete_inputs=AsyncMock(return_value=_ErrorResponse(code)))
     )
     assert await repo.read_discrete_inputs() is None
+
+
+async def test_discrete_error_result_other_raises():
+    repo, _ = _repository(
+        _client(read_discrete_inputs=AsyncMock(return_value=_ErrorResponse("other")))
+    )
+    with pytest.raises(ModbusReadException):
+        await repo.read_discrete_inputs()
 
 
 async def test_discrete_invalid_address_returns_none():
@@ -179,7 +193,8 @@ async def test_discrete_retry_without_client():
         read_discrete_inputs=AsyncMock(side_effect=ModbusConnectionException("down"))
     )
     repo, _ = _repository(failing, reconnect_client=None)
-    assert await repo.read_discrete_inputs() is None
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_discrete_inputs()
 
 
 async def test_discrete_retry_invalid_address_and_generic_error():
@@ -194,7 +209,8 @@ async def test_discrete_retry_invalid_address_and_generic_error():
 
     dead = _client(read_discrete_inputs=AsyncMock(side_effect=OSError("still down")))
     repo, _ = _repository(failing, reconnect_client=dead)
-    assert await repo.read_discrete_inputs() is None
+    with pytest.raises(OSError):
+        await repo.read_discrete_inputs()
 
 
 async def test_discrete_retry_error_result_returns_none():
@@ -208,12 +224,14 @@ async def test_discrete_retry_error_result_returns_none():
 
 async def test_coils_without_client_error_result_and_invalid_address():
     repo, _ = _repository(None)
-    assert await repo.read_coils() is None
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_coils()
 
     repo, _ = _repository(
         _client(read_coils=AsyncMock(return_value=_ErrorResponse("other")))
     )
-    assert await repo.read_coils() is None
+    with pytest.raises(ModbusReadException):
+        await repo.read_coils()
 
     repo, _ = _repository(
         _client(read_coils=AsyncMock(side_effect=ModbusInvalidAddressException("bad")))
@@ -229,7 +247,8 @@ async def test_coils_retry_success_and_failure():
     assert await repo.read_coils() == [False] * 3
 
     repo, _ = _repository(failing, reconnect_client=None)
-    assert await repo.read_coils() is None
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_coils()
 
     erroneous = _client(read_coils=AsyncMock(return_value=_ErrorResponse()))
     repo, _ = _repository(failing, reconnect_client=erroneous)
@@ -237,7 +256,8 @@ async def test_coils_retry_success_and_failure():
 
     dead = _client(read_coils=AsyncMock(side_effect=OSError("still down")))
     repo, _ = _repository(failing, reconnect_client=dead)
-    assert await repo.read_coils() is None
+    with pytest.raises(OSError):
+        await repo.read_coils()
 
     bad = _client(
         read_coils=AsyncMock(side_effect=ModbusInvalidAddressException("bad"))
@@ -248,17 +268,18 @@ async def test_coils_retry_success_and_failure():
 
 async def test_holding_blocks_without_client():
     repo, _ = _repository(None)
-    assert await repo.read_holding_blocks() == []
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_holding_blocks()
 
 
 async def test_holding_blocks_fallback_on_error_result():
-    """Error-result batch falls back to chunked blocks."""
+    """Error-result batch falls back; a refused required chunk propagates."""
     client = _client(read_holding_registers=AsyncMock(return_value=_ErrorResponse()))
     repo, _ = _repository(client)
-    blocks = await repo.read_holding_blocks()
-    # Fallback chunks return the same error object per chunk -> skipped.
-    assert blocks == []
-    assert client.read_holding_registers.await_count == 1 + 3
+    with pytest.raises(ModbusReadException):
+        await repo.read_holding_blocks()
+    # Big read + first required chunk (1-25) refused -> poll fails.
+    assert client.read_holding_registers.await_count == 1 + 1
 
 
 async def test_holding_blocks_fallback_merges_chunks():
@@ -282,12 +303,10 @@ async def test_holding_blocks_fallback_merges_chunks():
     ]
 
 
-async def test_holding_block_client_none_and_optional_skip():
+async def test_holding_block_client_none_raises():
     repo = ModbusRegisterRepository(SimpleNamespace(client=None))
-    assert (
+    with pytest.raises(ModbusConnectionException):
         await repo._read_holding_register_block(1, 25, 1, 25, 1, "Block 1", False)
-        is None
-    )
 
 
 async def test_holding_retry_without_client():
@@ -298,7 +317,8 @@ async def test_holding_retry_without_client():
             reconnect_with_new_client=AsyncMock(return_value=None),
         )
     )
-    assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False) is None
+    with pytest.raises(ModbusConnectionException):
+        await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False)
 
 
 async def test_holding_retry_error_result_optional_and_required():
@@ -308,7 +328,8 @@ async def test_holding_retry_error_result_optional_and_required():
     erroneous = _client(read_holding_registers=AsyncMock(return_value=_ErrorResponse()))
     repo, _ = _repository(failing, reconnect_client=erroneous)
     assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", True) is None
-    assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False) is None
+    with pytest.raises(ModbusReadException):
+        await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False)
 
 
 async def test_holding_retry_invalid_address_and_generic_error():
@@ -319,11 +340,14 @@ async def test_holding_retry_invalid_address_and_generic_error():
         )
     )
     repo, _ = _repository(client, reconnect_client=bad)
-    assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False) is None
+    with pytest.raises(ModbusReadException):
+        await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False)
+    assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", True) is None
 
     dead = _client(read_holding_registers=AsyncMock(side_effect=OSError("down")))
     repo, _ = _repository(client, reconnect_client=dead)
-    assert await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False) is None
+    with pytest.raises(OSError):
+        await repo._retry_holding_block(1, 25, 1, 25, 1, "Block 1", False)
 
 
 async def test_write_holding_no_client_and_bad_name():
@@ -400,6 +424,45 @@ async def test_write_coil_paths():
     )
     with pytest.raises(ModbusConnectionException):
         await repo.write_coil_register("coil_1", True)
+
+
+async def test_read_back_holding_and_coil_paths():
+    client = _client(
+        read_holding_registers=AsyncMock(return_value=[123]),
+        read_coils=AsyncMock(side_effect=[[True], [False]]),
+    )
+    repo, _ = _repository(client)
+
+    assert await repo.read_holding_register("holding_15") == 123
+    client.read_holding_registers.assert_awaited_once_with(15, 1)
+
+    assert await repo.read_coil_register("coil_1") is True
+    assert await repo.read_coil_register(2) is False
+
+    repo, _ = _repository(None)
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_holding_register("holding_15")
+    with pytest.raises(ModbusConnectionException):
+        await repo.read_coil_register("coil_1")
+
+    client = _client()
+    repo, _ = _repository(client)
+    with pytest.raises(ValueError):
+        await repo.read_holding_register("holding")
+    with pytest.raises(ValueError):
+        await repo.read_coil_register("coil_x")
+    with pytest.raises(ValueError):
+        await repo.read_coil_register(2.5)
+
+    repo, _ = _repository(
+        _client(read_holding_registers=AsyncMock(return_value=_ErrorResponse()))
+    )
+    with pytest.raises(ModbusReadException):
+        await repo.read_holding_register("holding_15")
+
+    repo, _ = _repository(_client(read_coils=AsyncMock(return_value=_ErrorResponse())))
+    with pytest.raises(ModbusReadException):
+        await repo.read_coil_register("coil_1")
 
 
 async def test_snapshot_without_client_and_with_space_failure():

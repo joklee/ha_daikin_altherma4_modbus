@@ -118,6 +118,12 @@
     },
     "device_reachable": {
       "icon": "mdi:lan-check"
+    },
+    "input_registers_readable": {
+      "icon": "mdi:download-network"
+    },
+    "holding_registers_readable": {
+      "icon": "mdi:upload-network"
     }
   },
   "number": {
@@ -333,6 +339,9 @@
     },
     "connection_consecutive_failures": {
       "icon": "mdi:counter"
+    },
+    "device_status": {
+      "icon": "mdi:heart-pulse"
     }
   }
 }

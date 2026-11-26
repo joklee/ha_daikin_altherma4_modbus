@@ -35,6 +35,7 @@ def _manager(normal=None, slow=None):
         "normal": manager.normal_coordinator,
         "slow": manager.slow_coordinator,
     }
+    manager.io_lock = asyncio.Lock()
     manager.get_all_data = MagicMock(return_value={"a": 1})
     return manager
 
@@ -67,36 +68,56 @@ async def test_shutdown_without_client_and_with_failing_shutdown():
     await manager.async_shutdown(disconnect_clients=True)
 
 
-def test_device_reachable_reflects_poll_outcomes():
-    """Reachable = at least one coordinator succeeded without pending failures."""
+def test_device_reachable_requires_all_poll_groups():
+    """Reachable only when every poll group succeeded without failures."""
     healthy = SimpleNamespace(last_update_success=True)
     healthy._consecutive_failures = 0
     failing = SimpleNamespace(last_update_success=False)
     failing._consecutive_failures = 3
     manager = _manager(normal=healthy, slow=failing)
-    # _manager builds SimpleNamespace coordinators; attach flags directly.
-    assert manager.device_reachable is True
+
+    # One working group is not enough: the device is degraded, not healthy.
+    assert manager.device_reachable is False
+    assert manager.input_registers_readable is True
+    assert manager.holding_registers_readable is False
+    assert manager.device_status == "degraded"
     assert manager.max_consecutive_failures == 3
 
-    healthy.last_update_success = False
-    assert manager.device_reachable is False
-
-    healthy.last_update_success = True
-    healthy._consecutive_failures = 1
-    failing._consecutive_failures = 0
     failing.last_update_success = True
+    failing._consecutive_failures = 0
     assert manager.device_reachable is True
+    assert manager.device_status == "ok"
+
+    healthy.last_update_success = False
+    healthy._consecutive_failures = 1
+    assert manager.device_reachable is False
+    assert manager.device_status == "degraded"
     assert manager.max_consecutive_failures == 1
 
 
-def test_device_reachable_false_without_success():
+def test_device_status_unreachable_without_success():
     """No successful poll yet means unreachable, zero failures."""
     manager = _manager(
         normal=SimpleNamespace(last_update_success=None),
         slow=SimpleNamespace(last_update_success=None),
     )
     assert manager.device_reachable is False
+    assert manager.input_registers_readable is False
+    assert manager.holding_registers_readable is False
+    assert manager.tcp_connected is False
+    assert manager.device_status == "unreachable"
     assert manager.max_consecutive_failures == 0
+
+
+def test_device_status_degraded_with_link_but_no_polls():
+    """A held TCP link without successful polls is degraded, not unreachable."""
+    manager = _manager(
+        normal=_coordinator(client=SimpleNamespace(connected=True)),
+        slow=_coordinator(client=SimpleNamespace(connected=False)),
+    )
+    assert manager.tcp_connected is True
+    assert manager.device_reachable is False
+    assert manager.device_status == "degraded"
 
 
 async def test_get_coordinator_and_delegates():
@@ -146,6 +167,123 @@ async def test_write_proxy_fires_event_only_on_result():
 
     assert await proxy.write_coil_register("coil_1", True) is True
     assert hass.bus.async_fire.call_count == 2
+
+
+async def test_write_proxy_reads_under_shared_io_lock():
+    """Direct reads use the same lock as writes and delegate to slow data."""
+    lock = asyncio.Lock()
+    read_holding = AsyncMock(return_value=4800)
+    read_coil = AsyncMock(return_value=True)
+    normal = _coordinator()
+    slow = _coordinator()
+    slow.data_manager = SimpleNamespace(
+        read_holding_register=read_holding,
+        read_coil_register=read_coil,
+    )
+    proxy = UnifiedWriteProxy(normal, slow, lock)
+
+    assert await proxy.read_holding_register("holding_16") == 4800
+    read_holding.assert_awaited_once_with("holding_16")
+    assert await proxy.read_coil_register("coil_1") is True
+    read_coil.assert_awaited_once_with("coil_1")
+
+    await lock.acquire()
+    task = asyncio.create_task(proxy.read_holding_register("holding_16"))
+    await asyncio.sleep(0)
+    assert read_holding.await_count == 1
+    lock.release()
+    assert await task == 4800
+
+
+async def test_write_proxy_delegates_write_transaction_to_data_manager():
+    """The proxy delegates writes without its own lock.
+
+    Write + read-back atomicity is enforced inside
+    ``ModbusDataManager.write_*`` (see test_data_manager), so the proxy must
+    not hold the shared lock itself - asyncio.Lock is not reentrant and a
+    nested acquire would deadlock.
+    """
+    lock = asyncio.Lock()
+    write = AsyncMock(return_value=True)
+    normal = _coordinator()
+    normal.hass = SimpleNamespace(bus=SimpleNamespace(async_fire=MagicMock()))
+    slow = _coordinator()
+    slow.data_manager = SimpleNamespace(
+        write_holding_register=write,
+        write_coil_register=write,
+    )
+    proxy = UnifiedWriteProxy(normal, slow, lock)
+
+    await lock.acquire()
+    task = asyncio.create_task(proxy.write_holding_register("holding_3", 1))
+    await asyncio.sleep(0)
+    # The proxy itself does not wait on the lock; the data manager's write
+    # transaction does.
+    write.assert_awaited_once_with("holding_3", 1)
+
+    lock.release()
+    assert await task is True
+
+
+def test_manager_creates_one_shared_io_lock(monkeypatch):
+    """Both coordinators receive the same integration-wide I/O lock."""
+    from custom_components.ha_daikin_altherma4_modbus.integration import (
+        coordinator_manager as manager_module,
+    )
+
+    locks = []
+
+    class FakeCoordinator:
+        def __init__(self, *args, io_lock=None, **kwargs):
+            self.io_lock = io_lock
+            locks.append(io_lock)
+
+    monkeypatch.setattr(
+        manager_module, "DaikinAlthermaNormalCoordinator", FakeCoordinator
+    )
+    monkeypatch.setattr(
+        manager_module, "DaikinAlthermaSlowCoordinator", FakeCoordinator
+    )
+
+    manager = CoordinatorManager(SimpleNamespace(), "host", 502)
+
+    assert manager.io_lock is not None
+    assert manager.normal_coordinator.io_lock is manager.io_lock
+    assert manager.slow_coordinator.io_lock is manager.io_lock
+    assert locks == [manager.io_lock, manager.io_lock]
+
+
+async def test_normal_poll_holds_shared_io_lock():
+    """A coordinator poll holds the shared lock across all its reads."""
+    from custom_components.ha_daikin_altherma4_modbus.integration.coordinator import (
+        DaikinAlthermaNormalCoordinator,
+    )
+
+    lock = asyncio.Lock()
+    coordinator = DaikinAlthermaNormalCoordinator.__new__(
+        DaikinAlthermaNormalCoordinator
+    )
+    coordinator.io_lock = lock
+    coordinator.data = {}
+    coordinator._consecutive_failures = 0
+    coordinator._unavailable_logged = False
+    coordinator._connection_issue_created = False
+
+    async def fetch_input():
+        assert lock.locked()
+        return {"input_40": 1}
+
+    async def fetch_discrete():
+        assert lock.locked()
+        return {}
+
+    coordinator.data_manager = SimpleNamespace(
+        fetch_input_registers_data=fetch_input,
+        fetch_discrete_inputs_data=fetch_discrete,
+    )
+
+    assert await coordinator._async_update_data() == {"input_40": 1}
+    assert not lock.locked()
 
 
 def _unified(manager=None):

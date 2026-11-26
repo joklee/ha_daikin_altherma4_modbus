@@ -168,10 +168,16 @@
     },
     "binary_sensor": {
       "connection_active": {
-        "name": "Connection active"
+        "name": "TCP connection"
       },
       "device_reachable": {
         "name": "Device reachable"
+      },
+      "input_registers_readable": {
+        "name": "Input registers readable"
+      },
+      "holding_registers_readable": {
+        "name": "Holding/coil registers readable"
       },
       "input_30": {
         "name": "Circulation pump running"
@@ -301,6 +307,14 @@
       },
       "connection_consecutive_failures": {
         "name": "Consecutive failures"
+      },
+      "device_status": {
+        "name": "Device status",
+        "state": {
+          "ok": "OK",
+          "degraded": "Degraded",
+          "unreachable": "Unreachable"
+        }
       },
       "input_21": {
         "name": "Unit abnormality",
@@ -787,6 +801,12 @@
     "single_heatup_already_running": {
       "message": "DHW single heat-up is already running for entry {config_entry_id}."
     },
+    "single_heatup_dhw_state_unknown": {
+      "message": "DHW state is unknown for entry {config_entry_id}; single heat-up not started."
+    },
+    "single_heatup_setpoint_unknown": {
+      "message": "The previous DHW setpoint is unknown for entry {config_entry_id}; the single heat-up was not started so no modified setpoint can be left behind."
+    },
     "write_failed": {
       "message": "Failed to {operation_name} {register_type} {register_name}: {error}"
     },
@@ -812,6 +832,10 @@
     "unsupported_temperature_unit": {
       "title": "Unsupported temperature unit: Fahrenheit",
       "description": "The Daikin Altherma 4 integration requires the metric unit system and does not support Fahrenheit.\n\nHome Assistant is currently configured for {temperature_unit}, so the integration was not started for {entry_name}. The heat pump's Modbus registers are defined in Celsius and the integration writes raw register values, which cannot be converted reliably.\n\nChange the unit system under Settings → System → General to metric (°C), then reload the integration."
+    },
+    "dhw_single_heatup_restore_failed": {
+      "title": "DHW single heat-up state could not be restored",
+      "description": "After a DHW single heat-up run for {entry_name}, the integration could not fully restore the previous device state.\n\nFailed step(s): {reason}\n\nThe saved recovery data is kept and the restore is retried on the next Home Assistant start. Check the DHW setpoint and DHW on/off state on the device, then reload the integration."
     }
   },
   "selector": {

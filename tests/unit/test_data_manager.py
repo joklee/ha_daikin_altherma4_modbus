@@ -5,6 +5,7 @@ and repository are stubbed at the I/O boundary while the real mapping
 transform runs, so fetch paths are exercised end to end without hardware.
 """
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -39,6 +40,8 @@ def _repository(**overrides):
         "read_holding_blocks": AsyncMock(return_value=[([0] * 80, 1, 80, 1)]),
         "write_holding_register": AsyncMock(return_value=True),
         "write_coil_register": AsyncMock(return_value=True),
+        "read_holding_register": AsyncMock(return_value=1),
+        "read_coil_register": AsyncMock(return_value=True),
         "read_raw_snapshot": AsyncMock(return_value=({"input": {}}, {})),
     }
     defaults.update(overrides)
@@ -144,6 +147,157 @@ async def test_writes_update_coordinator_data():
     assert await manager.write_holding_register("holding_3", 1) is True
     assert manager.coordinator.data["holding_3"]["value"] == 1
     assert await manager.write_coil_register("coil_1", True) is True
+
+
+@pytest.mark.parametrize("register_name", [1, "1"])
+async def test_numeric_coil_write_updates_canonical_cache(register_name):
+    """A numeric coil address is written and cached under its canonical name."""
+    manager = _manager()
+    manager._repository = _repository()
+    manager.coordinator = SimpleNamespace(
+        data={"coil_1": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_coil_register(register_name, True) is True
+
+    manager._repository.write_coil_register.assert_awaited_once_with("coil_1", True)
+    assert manager.coordinator.data["coil_1"]["value"] == 1
+
+
+@pytest.mark.parametrize("register_name", [15, "15"])
+async def test_numeric_holding_write_updates_canonical_cache(register_name):
+    """A numeric holding address is written and cached under its canonical name."""
+    manager = _manager()
+    manager._repository = _repository()
+    manager.coordinator = SimpleNamespace(
+        data={"holding_15": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_holding_register(register_name, 1) is True
+
+    manager._repository.write_holding_register.assert_awaited_once_with("holding_15", 1)
+    assert manager.coordinator.data["holding_15"]["value"] == 1
+
+
+async def test_read_register_methods_delegate_to_repository():
+    """Public single-register reads canonicalize names and use the repository."""
+    manager = _manager()
+    manager._repository = _repository(
+        read_holding_register=AsyncMock(return_value=123),
+        read_coil_register=AsyncMock(return_value=True),
+    )
+
+    assert await manager.read_holding_register(16) == 123
+    manager._repository.read_holding_register.assert_awaited_once_with("holding_16")
+    assert await manager.read_coil_register(1) is True
+    manager._repository.read_coil_register.assert_awaited_once_with("coil_1")
+
+
+async def test_write_caches_read_back_not_requested_value():
+    """The cache reflects the device read-back, not the requested value."""
+    manager = _manager()
+    manager._repository = _repository(
+        read_holding_register=AsyncMock(return_value=7),
+    )
+    manager.coordinator = SimpleNamespace(
+        data={"holding_3": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_holding_register("holding_3", 1) is True
+
+    manager._repository.read_holding_register.assert_awaited_once_with("holding_3")
+    assert manager.coordinator.data["holding_3"]["value"] == 7
+
+
+async def test_signed_holding_read_back_is_converted_and_scaled():
+    """Raw two's-complement read-backs become signed, scaled values."""
+    manager = _manager()
+    manager._repository = _repository(
+        read_holding_register=AsyncMock(return_value=65531),
+    )
+    manager.coordinator = SimpleNamespace(
+        data={"holding_54": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_holding_register("holding_54", -5) is True
+    assert manager.coordinator.data["holding_54"]["value"] == -5
+
+
+async def test_write_holds_io_lock_across_write_and_read_back():
+    """The shared I/O lock spans Modbus write, read-back and cache update.
+
+    Without this, a concurrent poll or write could interleave between the
+    write and its verifying read-back and make the read-back observe a
+    value belonging to a different operation.
+    """
+    manager = _manager()
+    lock = asyncio.Lock()
+    manager.io_lock = lock
+    seen = []
+
+    async def write_reg(name, value):
+        seen.append(("write", lock.locked()))
+        return True
+
+    async def read_reg(name):
+        seen.append(("read", lock.locked()))
+        return 1
+
+    manager._repository = _repository(
+        write_holding_register=write_reg,
+        read_holding_register=read_reg,
+    )
+
+    assert await manager.write_holding_register("holding_3", 1) is True
+    assert seen == [("write", True), ("read", True)]
+    assert not lock.locked()
+
+
+async def test_concurrent_writes_are_serialized():
+    """Two writes cannot interleave their write/read-back sequences."""
+    manager = _manager()
+    manager.io_lock = asyncio.Lock()
+    order = []
+
+    async def slow_write(name, value):
+        order.append(f"start-{value}")
+        await asyncio.sleep(0.01)
+        order.append(f"end-{value}")
+        return True
+
+    manager._repository = _repository(
+        write_holding_register=slow_write,
+        read_holding_register=AsyncMock(return_value=1),
+    )
+
+    await asyncio.gather(
+        manager.write_holding_register("holding_3", 1),
+        manager.write_holding_register("holding_3", 2),
+    )
+    assert order == ["start-1", "end-1", "start-2", "end-2"]
+
+
+async def test_read_back_failure_leaves_cache_unchanged():
+    """A failed read-back is not replaced by the optimistic write value."""
+    manager = _manager()
+    manager._repository = _repository(
+        read_holding_register=AsyncMock(
+            side_effect=ModbusReadException("read-back failed")
+        ),
+    )
+    manager.coordinator = SimpleNamespace(
+        data={"holding_3": {"value": 0}},
+        async_set_updated_data=Mock(),
+    )
+
+    assert await manager.write_holding_register("holding_3", 1) is True
+
+    assert manager.coordinator.data["holding_3"]["value"] == 0
+    manager.coordinator.async_set_updated_data.assert_not_called()
 
 
 async def test_writes_without_result_skip_coordinator_update():

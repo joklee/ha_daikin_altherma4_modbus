@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any
 
 from homeassistant.components.diagnostics import async_redact_data
@@ -42,6 +43,9 @@ async def async_get_config_entry_diagnostics(
     for coord_name, coordinator in manager.coordinators.items():
         coordinator_statuses[coord_name] = {
             "last_update_success": coordinator.last_update_success,
+            "consecutive_failures": int(
+                getattr(coordinator, "_consecutive_failures", 0) or 0
+            ),
             "update_interval": (
                 coordinator.update_interval.total_seconds()
                 if coordinator.update_interval
@@ -58,6 +62,21 @@ async def async_get_config_entry_diagnostics(
             "port": manager.port,
             "demo_mode": manager.demo_mode,
         },
+        "device_health": {
+            "tcp_connected": getattr(manager, "tcp_connected", None),
+            "input_registers_readable": getattr(
+                manager, "input_registers_readable", None
+            ),
+            "holding_registers_readable": getattr(
+                manager, "holding_registers_readable", None
+            ),
+            "device_status": getattr(manager, "device_status", None),
+            "max_consecutive_failures": getattr(
+                manager, "max_consecutive_failures", None
+            ),
+            "read_errors": getattr(manager, "read_errors", None),
+            "write_errors": getattr(manager, "write_errors", None),
+        },
         "coordinator_statuses": coordinator_statuses,
         "coordinator_data": coordinator_data,
     }
@@ -73,24 +92,29 @@ async def async_get_config_entry_diagnostics(
     }
     failed: dict[str, str] = {}
     register_version: str | None = None
+    io_lock = getattr(manager, "io_lock", None)
+    io_guard = io_lock if io_lock is not None else nullcontext()
     for coordinator in manager.coordinators.values():
         data_manager = getattr(coordinator, "data_manager", None)
         read_raw_snapshot = getattr(data_manager, "read_raw_snapshot", None)
         if not callable(read_raw_snapshot):
             continue
         detect_register_version = getattr(data_manager, "detect_register_version", None)
-        if callable(detect_register_version) and register_version is None:
+        async with io_guard:
+            if callable(detect_register_version) and register_version is None:
+                try:
+                    register_version = await detect_register_version()
+                except Exception as err:
+                    failed.setdefault(
+                        "register_version", f"{type(err).__name__}: {err}"
+                    )
+            if register_version is None:
+                register_version = getattr(data_manager, "register_version", None)
             try:
-                register_version = await detect_register_version()
+                space_map, space_failed = await read_raw_snapshot()
             except Exception as err:
-                failed.setdefault("register_version", f"{type(err).__name__}: {err}")
-        if register_version is None:
-            register_version = getattr(data_manager, "register_version", None)
-        try:
-            space_map, space_failed = await read_raw_snapshot()
-        except Exception as err:
-            failed.setdefault("snapshot", f"{type(err).__name__}: {err}")
-            continue
+                failed.setdefault("snapshot", f"{type(err).__name__}: {err}")
+                continue
         for space, values in space_map.items():
             registers.setdefault(space, {}).update(values)
         for space, error in space_failed.items():
@@ -108,6 +132,7 @@ async def async_get_config_entry_diagnostics(
         ),
         "config_entry_options": diagnostics_data["config_entry_options"],
         "connection": async_redact_data(diagnostics_data["connection"], TO_REDACT),
+        "device_health": diagnostics_data["device_health"],
         "coordinator_statuses": diagnostics_data["coordinator_statuses"],
         "coordinator_data": diagnostics_data["coordinator_data"],
         "registers": diagnostics_data["registers"],

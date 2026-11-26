@@ -416,6 +416,19 @@ def to_unsigned_16bit(value: int) -> int:
     return value
 
 
+def scaled_value_to_register(value: float, scale: float) -> int:
+    """Convert a scaled engineering value to a raw register integer.
+
+    Uses ``round()`` instead of ``int()`` truncation so binary float
+    artefacts cannot lose one register unit: ``48.29 / 0.01`` evaluates to
+    ``4828.999...`` and ``int()`` would write 4828 instead of 4829. Works
+    for negative offsets as well.
+    """
+    if scale == 0:
+        scale = 1.0
+    return round(value / scale)
+
+
 def clamp_16bit(value: int) -> int:
     """
     Clamp value to valid 16-bit unsigned range.

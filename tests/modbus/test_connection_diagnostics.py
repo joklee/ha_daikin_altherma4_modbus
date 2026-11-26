@@ -30,6 +30,9 @@ from modbus_connection.exceptions import (
 )
 from modbus_connection.mock import MockModbusConnection
 
+from custom_components.ha_daikin_altherma4_modbus.core.exceptions import (
+    ModbusConnectionException,
+)
 from custom_components.ha_daikin_altherma4_modbus.entities import (
     binary_sensor as binary_platform,
 )
@@ -39,12 +42,14 @@ from custom_components.ha_daikin_altherma4_modbus.entities import (
 from custom_components.ha_daikin_altherma4_modbus.entities.binary_sensor import (
     ConnectionActiveSensor,
     DeviceReachableSensor,
+    PollGroupReadableSensor,
 )
 from custom_components.ha_daikin_altherma4_modbus.entities.sensor import (
     ConnectionErrorSensor,
     ConnectionStateSensor,
     ConnectionTimestampSensor,
     ConsecutiveFailuresSensor,
+    DeviceStatusSensor,
 )
 from custom_components.ha_daikin_altherma4_modbus.integration.coordinator_manager import (
     CoordinatorManager,
@@ -445,23 +450,80 @@ def _polling_coordinator(*, last_update_success, consecutive_failures=0):
     )
 
 
-def test_reachable_sensor_reports_poll_outcome() -> None:
-    """device_reachable follows poll success, not link state."""
+def test_reachable_sensor_requires_all_poll_groups() -> None:
+    """device_reachable is ON only when both poll groups succeeded."""
+    manager = _reachable_manager(
+        _polling_coordinator(last_update_success=True, consecutive_failures=0),
+        _polling_coordinator(last_update_success=False),
+    )
     entity = DeviceReachableSensor(
-        coordinator=_coordinator(
-            _reachable_manager(
-                _polling_coordinator(last_update_success=True, consecutive_failures=0),
-                _polling_coordinator(last_update_success=False),
-            )
-        ),
+        coordinator=_coordinator(manager),
         entry=None,
         unique_id="device_reachable",
         translation_key="device_reachable",
         device_info=None,
     )
     assert entity.available is True
+    # One failing group means the device is not fully usable.
+    assert entity.is_on is False
+
+    manager.slow_coordinator.last_update_success = True
+    manager.slow_coordinator._consecutive_failures = 0
     assert entity.is_on is True
     assert entity.entity_registry_enabled_default is True
+
+
+def test_poll_group_sensors_report_each_group() -> None:
+    """Input and holding readability are exposed separately."""
+    manager = _reachable_manager(
+        _polling_coordinator(last_update_success=True, consecutive_failures=0),
+        _polling_coordinator(last_update_success=False, consecutive_failures=2),
+    )
+    coordinator = _coordinator(manager)
+    input_sensor = PollGroupReadableSensor(
+        coordinator=coordinator,
+        entry=None,
+        unique_id="input_registers_readable",
+        readable_kind="input_registers_readable",
+        translation_key="input_registers_readable",
+    )
+    holding_sensor = PollGroupReadableSensor(
+        coordinator=coordinator,
+        entry=None,
+        unique_id="holding_registers_readable",
+        readable_kind="holding_registers_readable",
+        translation_key="holding_registers_readable",
+    )
+    assert input_sensor.available is True
+    assert input_sensor.is_on is True
+    assert holding_sensor.is_on is False
+
+
+def test_device_status_sensor_reports_aggregate() -> None:
+    """The aggregate status distinguishes ok, degraded and unreachable."""
+    manager = _reachable_manager(
+        _polling_coordinator(last_update_success=True, consecutive_failures=0),
+        _polling_coordinator(last_update_success=False, consecutive_failures=2),
+    )
+    entity = DeviceStatusSensor(
+        coordinator=_coordinator(manager),
+        entry=None,
+        unique_id="device_status",
+        translation_key="device_status",
+    )
+    assert entity.available is True
+    assert entity.native_value == "degraded"
+    assert entity.options == ["ok", "degraded", "unreachable"]
+
+    manager.slow_coordinator.last_update_success = True
+    manager.slow_coordinator._consecutive_failures = 0
+    assert entity.native_value == "ok"
+
+    manager.normal_coordinator.last_update_success = False
+    manager.normal_coordinator._consecutive_failures = 1
+    manager.slow_coordinator.last_update_success = False
+    manager.slow_coordinator._consecutive_failures = 1
+    assert entity.native_value == "unreachable"
 
 
 def test_reachable_sensor_off_when_all_polls_failing() -> None:
@@ -575,12 +637,16 @@ async def test_total_outage_degrades_and_recovers() -> None:
     connection, repository, client = _live_repository()
     connection.for_unit(1).fail_requests(ModbusConnectionError("dead gateway"))
 
-    assert await repository.read_input_blocks() == []
-    assert await repository.read_discrete_inputs() is None
-    # One facade call per attempted read: input full batch + 2 fallback
-    # splits, then discrete (whose retry never reaches the facade because
-    # reconnect raises first).
-    assert client.error_counts["read_connection"] == 4
+    # Communication errors propagate so the coordinator reports UpdateFailed
+    # instead of silently treating the poll as successful with missing data.
+    with pytest.raises(ModbusConnectionException):
+        await repository.read_input_blocks()
+    with pytest.raises(ModbusConnectionException):
+        await repository.read_discrete_inputs()
+    # One facade call per attempted read: input full batch (no fallback on
+    # connection errors), then discrete (whose retry never reaches the
+    # facade because reconnect raises first).
+    assert client.error_counts["read_connection"] == 2
     assert client.last_read_at is None
 
     connection.for_unit(1).fail_requests(None)

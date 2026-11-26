@@ -102,6 +102,9 @@ def mock_runtime_data():
     runtime_data.coordinator.data_manager.write_coil_register = AsyncMock(
         return_value=True
     )
+    runtime_data.manager.get_all_data = MagicMock(
+        return_value={"holding_16": {"value": 45.0}}
+    )
     return runtime_data
 
 
@@ -307,9 +310,9 @@ class TestSetDHWStateService:
         # Execute service call
         await async_set_dhw_state(call)
 
-        # Verify the write was called with coil_1 and True
+        # Verify the write was called with the canonical coil name
         mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
-            1, True
+            "coil_1", True
         )
 
     async def test_set_dhw_state_off_success(
@@ -335,9 +338,9 @@ class TestSetDHWStateService:
         # Execute service call
         await async_set_dhw_state(call)
 
-        # Verify the write was called with coil_1 and False
+        # Verify the write was called with the canonical coil name
         mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
-            1, False
+            "coil_1", False
         )
 
     async def test_set_dhw_state_invalid_entry(self, hass):
@@ -390,9 +393,9 @@ class TestSetMainZoneStateService:
         # Execute service call
         await async_set_main_zone_state(call)
 
-        # Verify the write was called with coil_2 and True
+        # Verify the write was called with the canonical coil name
         mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
-            2, True
+            "coil_2", True
         )
 
     async def test_set_main_zone_state_off_success(
@@ -418,9 +421,9 @@ class TestSetMainZoneStateService:
         # Execute service call
         await async_set_main_zone_state(call)
 
-        # Verify the write was called with coil_2 and False
+        # Verify the write was called with the canonical coil name
         mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
-            2, False
+            "coil_2", False
         )
 
 
@@ -450,9 +453,9 @@ class TestSetAdditionalZoneStateService:
         # Execute service call
         await async_set_additional_zone_state(call)
 
-        # Verify the write was called with coil_3 and True
+        # Verify the write was called with the canonical coil name
         mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
-            3, True
+            "coil_3", True
         )
 
     async def test_set_additional_zone_state_off_success(
@@ -478,9 +481,9 @@ class TestSetAdditionalZoneStateService:
         # Execute service call
         await async_set_additional_zone_state(call)
 
-        # Verify the write was called with coil_3 and False
+        # Verify the write was called with the canonical coil name
         mock_runtime_data.coordinator.data_manager.write_coil_register.assert_called_once_with(
-            3, False
+            "coil_3", False
         )
 
 
@@ -976,14 +979,3 @@ class TestServiceWriteFailures:
 
         with pytest.raises(HomeAssistantError):
             await async_set_dhw_state(call)
-
-    def test_unknown_coil_raises_homeassistant_error(self):
-        """An unknown coil register raises HomeAssistantError, not ValueError."""
-        from homeassistant.exceptions import HomeAssistantError
-
-        from custom_components.ha_daikin_altherma4_modbus.integration.services import (
-            _get_coil_address,
-        )
-
-        with pytest.raises(HomeAssistantError):
-            _get_coil_address("coil_999")

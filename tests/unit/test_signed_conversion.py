@@ -2,6 +2,7 @@
 
 from custom_components.ha_daikin_altherma4_modbus.common import (
     clamp_16bit,
+    scaled_value_to_register,
     to_signed_16bit,
     to_unsigned_16bit,
 )
@@ -125,3 +126,45 @@ class TestRealWorldScenarios:
             assert reverse_result == unsigned_val, (
                 f"Reverse failed for {expected_signed}"
             )
+
+
+class TestScaledValueToRegister:
+    """Float-precision tests for scaled engineering value -> register."""
+
+    def test_float_artefact_does_not_truncate(self):
+        """x.xx / 0.01 can land just below the integer; int() truncates."""
+        assert int(20.15 / 0.01) == 2014  # documents the old bug
+        assert int(35.55 / 0.01) == 3554
+        assert int(0.29 / 0.01) == 28
+        assert scaled_value_to_register(20.15, 0.01) == 2015
+        assert scaled_value_to_register(35.55, 0.01) == 3555
+        assert scaled_value_to_register(0.29, 0.01) == 29
+        assert scaled_value_to_register(48.29, 0.01) == 4829
+
+    def test_typical_setpoints(self):
+        assert scaled_value_to_register(20.0, 0.01) == 2000
+        assert scaled_value_to_register(35.5, 0.01) == 3550
+        assert scaled_value_to_register(55.0, 0.01) == 5500
+
+    def test_negative_offsets(self):
+        assert scaled_value_to_register(-3.5, 0.01) == -350
+        assert scaled_value_to_register(-0.29, 0.01) == -29
+        assert scaled_value_to_register(-10.0, 0.01) == -1000
+
+    def test_power_limit_scale_0_001(self):
+        assert scaled_value_to_register(3.5, 0.001) == 3500
+        assert scaled_value_to_register(0.75, 0.001) == 750
+        assert int(1.005 / 0.001) == 1004  # documents the old bug
+        assert scaled_value_to_register(1.005, 0.001) == 1005
+
+    def test_unity_and_zero_scale(self):
+        assert scaled_value_to_register(42, 1) == 42
+        assert scaled_value_to_register(42.4, 1) == 42
+        assert scaled_value_to_register(42.6, 1) == 43
+        # scale == 0 falls back to 1.0 instead of dividing by zero
+        assert scaled_value_to_register(42.6, 0) == 43
+
+    def test_boundary_values(self):
+        assert scaled_value_to_register(0.0, 0.01) == 0
+        assert scaled_value_to_register(327.67, 0.01) == 32767
+        assert scaled_value_to_register(-327.68, 0.01) == -32768

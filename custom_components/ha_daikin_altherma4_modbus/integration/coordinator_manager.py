@@ -12,6 +12,13 @@ from .coordinator import DaikinAlthermaNormalCoordinator, DaikinAlthermaSlowCoor
 
 _LOGGER = logging.getLogger(__name__)
 
+# Aggregated device health. ``ok`` means every poll group is readable,
+# ``degraded`` means the link or at least one poll group still works but
+# others fail, and ``unreachable`` means nothing answers.
+DEVICE_STATUS_OK = "ok"
+DEVICE_STATUS_DEGRADED = "degraded"
+DEVICE_STATUS_UNREACHABLE = "unreachable"
+
 
 class CoordinatorManager:
     """Manages multiple coordinators and ensures they run independently."""
@@ -35,12 +42,31 @@ class CoordinatorManager:
         self.entry = entry
         self.unit_id = unit_id
 
+        # One I/O lock for the whole integration. Both coordinators and the
+        # write proxy share it so polling and writes never overlap on the
+        # physical Modbus connection.
+        self.io_lock = asyncio.Lock()
+
         # Create coordinators
         self.normal_coordinator = DaikinAlthermaNormalCoordinator(
-            hass, host, port, normal_interval, demo_mode, entry, unit_id
+            hass,
+            host,
+            port,
+            normal_interval,
+            demo_mode,
+            entry,
+            unit_id,
+            io_lock=self.io_lock,
         )
         self.slow_coordinator = DaikinAlthermaSlowCoordinator(
-            hass, host, port, slow_interval, demo_mode, entry, unit_id
+            hass,
+            host,
+            port,
+            slow_interval,
+            demo_mode,
+            entry,
+            unit_id,
+            io_lock=self.io_lock,
         )
 
         self.coordinators = {
@@ -108,19 +134,65 @@ class CoordinatorManager:
         return False
 
     @property
-    def device_reachable(self) -> bool:
-        """Whether the device recently answered polls.
+    def tcp_connected(self) -> bool:
+        """Whether any coordinator currently holds a connected TCP client.
 
-        Unlike :meth:`connection_active`, this reflects observed poll
-        outcomes: reachable when at least one coordinator's last update
-        succeeded without pending consecutive failures.
+        This is shared-link state, not device health: the link can be up
+        while the device stops answering.
         """
-        for coordinator in self.coordinators.values():
-            last_ok = getattr(coordinator, "last_update_success", False) is True
-            failures = int(getattr(coordinator, "_consecutive_failures", 0) or 0)
-            if last_ok and failures == 0:
-                return True
-        return False
+        return self.connection_active
+
+    @staticmethod
+    def _poll_group_readable(coordinator) -> bool:
+        """Whether one coordinator's last poll succeeded without failures."""
+        if coordinator is None:
+            return False
+        last_ok = getattr(coordinator, "last_update_success", False) is True
+        failures = int(getattr(coordinator, "_consecutive_failures", 0) or 0)
+        return last_ok and failures == 0
+
+    @property
+    def input_registers_readable(self) -> bool:
+        """Whether input/discrete registers were readable in the last poll.
+
+        Served by the normal (fast) coordinator.
+        """
+        return self._poll_group_readable(self.normal_coordinator)
+
+    @property
+    def holding_registers_readable(self) -> bool:
+        """Whether holding/coil registers were readable in the last poll.
+
+        Served by the slow coordinator.
+        """
+        return self._poll_group_readable(self.slow_coordinator)
+
+    @property
+    def device_status(self) -> str:
+        """Aggregated device health: ``ok``, ``degraded`` or ``unreachable``.
+
+        All poll groups readable -> ``ok``. Only some groups (or just the
+        TCP link) alive -> ``degraded``. Nothing answering -> ``unreachable``.
+        """
+        input_ok = self.input_registers_readable
+        holding_ok = self.holding_registers_readable
+        if input_ok and holding_ok:
+            return DEVICE_STATUS_OK
+        if input_ok or holding_ok or self.tcp_connected:
+            return DEVICE_STATUS_DEGRADED
+        return DEVICE_STATUS_UNREACHABLE
+
+    @property
+    def device_reachable(self) -> bool:
+        """Whether the device is fully usable for the integration.
+
+        True only when *all* poll groups succeeded without pending
+        consecutive failures. Previously a single working coordinator was
+        enough, which reported a device whose holding registers could not
+        be read as reachable. Use :attr:`device_status` to distinguish a
+        partially working device (``degraded``) from a dead one.
+        """
+        return self.input_registers_readable and self.holding_registers_readable
 
     @property
     def max_consecutive_failures(self) -> int:
@@ -229,9 +301,12 @@ class CoordinatorManager:
         """Refresh the Modbus connection by reconnecting all coordinators."""
         _LOGGER.debug("Refreshing Modbus connection for all coordinators")
         try:
-            # Refresh both coordinators' connections
-            await self.normal_coordinator.data_manager.refresh_connection()
-            await self.slow_coordinator.data_manager.refresh_connection()
+            # Reconnect under the shared I/O lock so no poll or write can
+            # race the reconnect. Refresh requests are scheduled only after
+            # the lock is released (the coordinators acquire it themselves).
+            async with self.io_lock:
+                await self.normal_coordinator.data_manager.refresh_connection()
+                await self.slow_coordinator.data_manager.refresh_connection()
 
             # Trigger data refresh after reconnection
             await self.async_request_refresh_all()
@@ -249,9 +324,11 @@ class UnifiedWriteProxy:
         self,
         normal_coordinator: DaikinAlthermaNormalCoordinator,
         slow_coordinator: DaikinAlthermaSlowCoordinator,
+        io_lock: asyncio.Lock | None = None,
     ):
         self._normal_coordinator = normal_coordinator
         self._slow_coordinator = slow_coordinator
+        self._io_lock = io_lock if io_lock is not None else asyncio.Lock()
 
     @property
     def register_version(self) -> str | None:
@@ -279,8 +356,27 @@ class UnifiedWriteProxy:
             f"{DOMAIN}_register_written", event_data
         )
 
+    async def read_holding_register(self, register_name: str) -> int | None:
+        """Read one holding register directly, serialized with writes."""
+        async with self._io_lock:
+            return await self._slow_coordinator.data_manager.read_holding_register(
+                register_name
+            )
+
+    async def read_coil_register(self, register_name: str) -> bool | None:
+        """Read one coil directly, serialized with writes."""
+        async with self._io_lock:
+            return await self._slow_coordinator.data_manager.read_coil_register(
+                register_name
+            )
+
     async def write_holding_register(self, register_name: str, value: int) -> Any:
-        """Write a holding register and fire domain event."""
+        """Write a holding register and fire domain event.
+
+        No proxy-level lock here: ``ModbusDataManager.write_*`` acquires the
+        shared I/O lock itself so the Modbus write and its verifying
+        read-back form a single atomic transaction.
+        """
         result = await self._slow_coordinator.data_manager.write_holding_register(
             register_name, value
         )
@@ -289,7 +385,10 @@ class UnifiedWriteProxy:
         return result
 
     async def write_coil_register(self, register_name: str, value: bool) -> Any:
-        """Write a coil register and refresh coordinators."""
+        """Write a coil register and refresh coordinators.
+
+        See :meth:`write_holding_register` for the locking contract.
+        """
         result = await self._slow_coordinator.data_manager.write_coil_register(
             register_name, value
         )
@@ -317,7 +416,9 @@ class UnifiedCoordinator(DataUpdateCoordinator):
         self.manager = manager
         self.normal_coordinator = normal_coordinator
         self.slow_coordinator = slow_coordinator
-        self.data_manager = UnifiedWriteProxy(normal_coordinator, slow_coordinator)
+        self.data_manager = UnifiedWriteProxy(
+            normal_coordinator, slow_coordinator, manager.io_lock
+        )
         self._unsubscribers: list = []
         self._refresh_tasks: set[asyncio.Task[Any]] = set()
 

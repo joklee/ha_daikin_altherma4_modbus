@@ -160,7 +160,7 @@ async def test_mapping_consumes_flat_lists() -> None:
 
 
 async def test_input_invalid_address_falls_back_without_reconnect() -> None:
-    """A rejected full batch tries the splits; still no reconnect is spent."""
+    """A rejected full batch tries the splits; a refused split fails the poll."""
     split = [100 + i for i in range(33)]
     repository, client, session = _repository(
         [
@@ -169,17 +169,18 @@ async def test_input_invalid_address_falls_back_without_reconnect() -> None:
             ModbusInvalidAddressException("second split missing"),
         ]
     )
-    blocks = await repository.read_input_blocks()
+    with pytest.raises(ModbusReadException):
+        await repository.read_input_blocks()
     assert client.calls == [("input", 21, 67), ("input", 21, 33), ("input", 54, 34)]
-    assert [(b[1], b[2], b[3]) for b in blocks] == [(21, 53, 21)]
     assert session.reconnect_count == 0
 
 
-async def test_input_invalid_address_everywhere_returns_no_blocks() -> None:
+async def test_input_invalid_address_everywhere_propagates() -> None:
     repository, _client, session = _repository(
         [ModbusInvalidAddressException("illegal data address")] * 3
     )
-    assert await repository.read_input_blocks() == []
+    with pytest.raises(ModbusReadException):
+        await repository.read_input_blocks()
     assert session.reconnect_count == 0
 
 

@@ -1,10 +1,12 @@
 """Facade data manager composed of transport/session, repository and mapping layers."""
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..common.helpers import to_signed_16bit
 from ..modbus.register_repository import ModbusRegisterRepository
 from ..modbus.transport_session import ModbusTransportSession
 from .data_types import StateData
@@ -20,6 +22,28 @@ from .register_constants import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def _canonical_register_name(register_name: str | int, prefix: str) -> str:
+    """Return the canonical register name for a name or numeric address.
+
+    Write callers historically passed either the canonical name
+    (``"coil_1"``) or the bare Modbus address (``1``). Coordinator data is
+    keyed by canonical names, so numeric input must be normalized before
+    both the write and the cache update - not only immediately before the
+    Modbus call. Invalid values are rejected here instead of surfacing as
+    a missing cache entry after a successful write.
+    """
+    if isinstance(register_name, bool):
+        raise TypeError(f"Invalid register name: {register_name!r}")
+    if isinstance(register_name, int):
+        return f"{prefix}_{register_name}"
+    if isinstance(register_name, str):
+        name = register_name.strip()
+        if name.isdigit():
+            return f"{prefix}_{int(name)}"
+        return name
+    raise TypeError(f"Invalid register name: {register_name!r}")
+
+
 @dataclass
 class ModbusDataManager:
     """Compatibility facade orchestrating the three data layers."""
@@ -30,6 +54,11 @@ class ModbusDataManager:
     hass: Any | None = None
     entry: Any | None = None
     unit_id: int | None = None
+    # Shared integration-wide I/O lock. Write transactions (Modbus write +
+    # verifying read-back + cache update) acquire it internally so the
+    # sequence is atomic even for callers that bypass UnifiedWriteProxy.
+    # Bulk poll paths keep acquiring it in the coordinators instead.
+    io_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     _session: ModbusTransportSession = field(init=False)
     _repository: ModbusRegisterRepository = field(init=False)
@@ -77,19 +106,68 @@ class ModbusDataManager:
         return {}
 
     def _update_coordinator_data(self, register_name: str, value: Any) -> None:
-        """Update coordinator data after successful write operation."""
-        if self.coordinator and register_name in self.coordinator.data:
-            self.coordinator.data.get(register_name, {})["value"] = value
-            self.coordinator.data.get(register_name, {})["last_updated"] = time.time()
-            if hasattr(self.coordinator, "async_set_updated_data"):
-                try:
-                    self.coordinator.async_set_updated_data(
-                        self.coordinator.data.copy()
-                    )
-                except Exception as err:
-                    _LOGGER.warning(
-                        "Failed to notify coordinator of data change: %s", err
-                    )
+        """Update coordinator data from a post-write register read-back.
+
+        Stores the value in the same scaled form as polled data. Callers
+        pass the value actually read from the device after the write, never
+        the requested value: an acknowledged write alone is not treated as
+        a confirmed device state. If the read-back fails, the cache is left
+        untouched and the regular post-write refresh is the only source of
+        truth.
+        """
+        coordinator = self.coordinator
+        if coordinator is None or register_name not in coordinator.data:
+            return
+        payload = coordinator.data.get(register_name)
+        if payload is None:
+            return
+
+        # Normalize bool coil read-backs to the 0/1 ints produced by polling.
+        if isinstance(value, bool):
+            value = int(value)
+
+        # Apply the register's scaling so the stored value matches the
+        # format produced by ModbusMappingTransform (e.g. TEMP16 -> °C).
+        register_config = next(
+            (
+                r
+                for r in (*HOLDING_REGISTERS, *COIL_REGISTERS)
+                if getattr(r, "register_name", None) == register_name
+            ),
+            None,
+        )
+        data_type = getattr(register_config, "data_type", None)
+        # Read-backs are raw unsigned 16-bit values; signed registers must be
+        # converted before scaling (e.g. 65531 -> -5 -> -5.00 °C).
+        if (
+            data_type is not None
+            and getattr(data_type, "signed", False)
+            and isinstance(value, int)
+        ):
+            value = to_signed_16bit(value)
+
+        scale = 1
+        if data_type is not None:
+            scale = getattr(data_type, "scaling", 1) or 1
+        try:
+            scale = float(scale)
+        except (TypeError, ValueError):
+            scale = 1.0
+        stored_value = round(float(value) * scale, 2) if scale != 1 else value
+
+        now = time.time()
+        if isinstance(payload, dict):
+            payload["value"] = stored_value
+            payload["last_updated"] = now
+        else:
+            payload.value = stored_value
+            payload.last_updated = now
+
+        if hasattr(coordinator, "async_set_updated_data"):
+            try:
+                coordinator.async_set_updated_data(coordinator.data.copy())
+            except Exception as err:
+                _LOGGER.warning("Failed to notify coordinator of data change: %s", err)
 
     async def fetch_input_registers_data(self) -> StateData:
         """Fetch only input registers."""
@@ -332,18 +410,64 @@ class ModbusDataManager:
         _LOGGER.debug("Holding Registers fully read in %.3fs", time.time() - start_time)
         return data
 
-    async def write_holding_register(self, register_name: str, value: int) -> Any:
-        """Write to a holding register by register name."""
-        result = await self._repository.write_holding_register(register_name, value)
-        if result is not None:
-            self._update_coordinator_data(register_name, value)
+    async def _read_back_register(self, register_name: str, reader_name: str) -> Any:
+        """Read a register back after a write, returning None on failure."""
+        reader = getattr(self._repository, reader_name, None)
+        if not callable(reader):
+            return None
+        try:
+            return await reader(register_name)
+        except Exception as err:
+            _LOGGER.warning(
+                "Could not read back %s after write; leaving cached state "
+                "unchanged until the next poll: %s",
+                register_name,
+                err,
+            )
+            return None
+
+    async def read_holding_register(self, register_name: str | int) -> int | None:
+        """Read one holding register directly from the device."""
+        register_name = _canonical_register_name(register_name, "holding")
+        return await self._repository.read_holding_register(register_name)
+
+    async def read_coil_register(self, register_name: str | int) -> bool | None:
+        """Read one coil directly from the device."""
+        register_name = _canonical_register_name(register_name, "coil")
+        return await self._repository.read_coil_register(register_name)
+
+    async def write_holding_register(self, register_name: str | int, value: int) -> Any:
+        """Write to a holding register and cache the device read-back.
+
+        The Modbus write and the verifying read-back run as one transaction
+        under the shared I/O lock: no poll or other write can interleave and
+        make the read-back observe a value belonging to a different operation.
+        """
+        register_name = _canonical_register_name(register_name, "holding")
+        async with self.io_lock:
+            result = await self._repository.write_holding_register(register_name, value)
+            if result is not None:
+                actual = await self._read_back_register(
+                    register_name, "read_holding_register"
+                )
+                if actual is not None:
+                    self._update_coordinator_data(register_name, actual)
         return result
 
-    async def write_coil_register(self, register_name: str, value: bool) -> Any:
-        """Write to a coil register by register name."""
-        result = await self._repository.write_coil_register(register_name, value)
-        if result is not None:
-            self._update_coordinator_data(register_name, value)
+    async def write_coil_register(self, register_name: str | int, value: bool) -> Any:
+        """Write to a coil register and cache the device read-back.
+
+        See :meth:`write_holding_register` for the transaction semantics.
+        """
+        register_name = _canonical_register_name(register_name, "coil")
+        async with self.io_lock:
+            result = await self._repository.write_coil_register(register_name, value)
+            if result is not None:
+                actual = await self._read_back_register(
+                    register_name, "read_coil_register"
+                )
+                if actual is not None:
+                    self._update_coordinator_data(register_name, actual)
         return result
 
     async def refresh_connection(self) -> None:

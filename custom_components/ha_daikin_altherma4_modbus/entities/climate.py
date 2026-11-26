@@ -20,6 +20,7 @@ from ..common import (
     is_entity_available,
     is_unavailable_value,
     safe_write_register,
+    scaled_value_to_register,
     to_unsigned_16bit,
 )
 from ..core.const import (
@@ -629,7 +630,7 @@ class DaikinRoomThermostatMainClimate(
 
         data = self._get_register_data(f"{DOMAIN}_{setpoint_register}")
         scale = get_register_scale(data) or 1
-        raw_value = round(clamped / scale) if scale else int(clamped)
+        raw_value = scaled_value_to_register(clamped, scale)
 
         await safe_write_register(
             self.coordinator.data_manager.write_holding_register,
@@ -829,9 +830,7 @@ class DaikinDHWThermostat(
         scale_factor = get_register_scale(data)
 
         # Convert temperature to raw register value
-        raw_value = (
-            int(temperature / scale_factor) if scale_factor != 0 else int(temperature)
-        )
+        raw_value = scaled_value_to_register(temperature, scale_factor)
         await safe_write_register(
             self.coordinator.data_manager.write_holding_register,
             self._setpoint_register,
